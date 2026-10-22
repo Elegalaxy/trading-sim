@@ -157,7 +157,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 2: Architecture boundary test
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 1
 - Files to create or change: `trading-sim/tests/architecture.test.ts`
 - What changes:
@@ -171,7 +171,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: read the `[DEBUG architecture]` lines in the test output and check that `src/ui/App.tsx` is listed with layer `ui`.
-- Progress:
+- Progress: 2026-10-22: Added tests/architecture.test.ts. Temporary src/sim/probe.ts failed with src/sim/probe.ts:1: src/sim must not use Math.random, then the probe and the empty src/sim directory were removed. Checks: npm test passed (files=4, src/ui/App.tsx layer ui, violations=0); npm run typecheck passed; npm run lint passed.
 
 ### Step 3: Seeded RNG with named streams
 

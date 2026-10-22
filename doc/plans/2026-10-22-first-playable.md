@@ -241,7 +241,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 6: Environment and per-day event rolls
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 5
 - Files to create or change: `src/sim/environment.ts`, `src/sim/events.ts`, `src/sim/events.test.ts`, `src/sim/market.ts`, `src/sim/types.ts`, `src/sim/constants.ts`, `src/sim/log.ts`, `src/content/environment.ts`, `src/content/events.ts`, `src/content/content.test.ts`, `src/harness/cli.ts`
 - What changes:
@@ -261,7 +261,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`, `npm run sim -- --seed demo --days 30 --events-only`.
   - User: find a fired event in the output and follow it: its roll, its direction, the fair value change on the following days, and the price moving toward the new fair value.
-- Progress:
+- Progress: 2026-10-22: Added environment drift and eight provisional event types. Growth starts at 2 with drift 0.01, inflation at 3 with drift 0.01, and the policy rate at 4 with drift 0 (percent). Per-target daily chances: earnings 0.08, product launch 0.05, scandal 0.04, management change 0.05, regulation 0.06, supply shock 0.05, demand shift 0.06, sentiment swing 0.10. Magnitudes, durations, decay shapes, and environment modifiers are provisional. The golden price log was updated because fair value now moves. noiseRoll lines were checked against Step 4. Checks: npm test passed (5 files, 26 tests); npm run typecheck passed; npm run lint passed; `npm run sim -- --seed demo --days 30 --events-only` passed, stateHash=ef5ddf1096ed860e.
 
 ### Step 7: Macro calendar
 

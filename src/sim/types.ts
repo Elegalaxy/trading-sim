@@ -58,6 +58,10 @@ export type AssetDefinition = {
 
 export type MarketDefinitions = {
   assets: readonly AssetDefinition[]
+  /** Growth, inflation, policy rate, and any later entries. Order is the drift order. */
+  environment: readonly EnvironmentEntryDefinition[]
+  /** Rolled in this order, then each type's targets in listed order. */
+  events: readonly EventTypeDefinition[]
 }
 
 /** Price in integer cents. Fair value is cents as a float. */
@@ -65,6 +69,96 @@ export type AssetState = {
   id: string
   priceCents: number
   fairValue: number
+}
+
+/**
+ * One environment level. `start` and `value` use the same unit (provisional: percent).
+ * `driftSpeed` is added each day as speed × one events-stream normal.
+ * Zero speed does not draw, so a fixed entry such as the policy rate stays put.
+ */
+export type EnvironmentEntryDefinition = {
+  id: string
+  start: number
+  driftSpeed: number
+}
+
+export type EnvironmentEntryState = {
+  id: string
+  value: number
+}
+
+/** Added per unit of (environment value − center), then chances are clamped and directions renormalized. */
+export type EnvironmentModifier = {
+  entryId: string
+  center: number
+  chancePerUnit: number
+  upPerUnit: number
+  downPerUnit: number
+  nonePerUnit: number
+}
+
+export type EventScope = 'stock' | 'sector' | 'market'
+
+export type DecayShape = 'frontLoaded' | 'linear'
+
+/** `none` is a fired event that does not move fair value. */
+export type EventDirection = 'up' | 'down' | 'none'
+
+export type DirectionChances = {
+  up: number
+  down: number
+  none: number
+}
+
+/**
+ * Placeholder event type. `chance` is per target per day.
+ * Stock targets are stock ids. Sector targets are `A` or `B`. The market target is `market`.
+ * Magnitude is a percent of fair value. Duration is in days, including the event day.
+ */
+export type EventTypeDefinition = {
+  id: string
+  scope: EventScope
+  targets: readonly string[]
+  chance: number
+  direction: DirectionChances
+  magnitudeMin: number
+  magnitudeMax: number
+  duration: number
+  decay: DecayShape
+  /** Placeholders: `{target}`, `{direction}`, `{magnitude}`. */
+  headline: string
+  modifiers: readonly EnvironmentModifier[]
+}
+
+/** A fired event waiting for `eventDay`. Direction `none` is not stored. */
+export type ScheduledEvent = {
+  id: string
+  typeId: string
+  target: string
+  eventDay: number
+  direction: 'up' | 'down'
+  magnitudePercent: number
+  duration: number
+  decay: DecayShape
+  headline: string
+}
+
+export type ActiveEffectPart = {
+  asset: string
+  /** Signed fair-value cents, fixed when the effect becomes active. */
+  totalDelta: number
+}
+
+/** Spreads `parts` across `duration` days. `dayIndex` is the next day to apply, starting at 0. */
+export type ActiveEffect = {
+  id: string
+  typeId: string
+  target: string
+  eventDay: number
+  decay: DecayShape
+  duration: number
+  dayIndex: number
+  parts: ActiveEffectPart[]
 }
 
 export type NoiseRollEvent = {
@@ -102,17 +196,102 @@ export type IndexStepEvent = {
   gapAfter: number
 }
 
-export type LogEvent = NoiseRollEvent | PriceStepEvent | IndexStepEvent
+export type EnvDriftEvent = {
+  kind: 'envDrift'
+  day: number
+  entry: string
+  before: number
+  shock: number
+  delta: number
+  after: number
+}
+
+export type EventRollEvent = {
+  kind: 'eventRoll'
+  /** Day the roll was made. Creation rolls use 0. */
+  day: number
+  /** Day the event becomes active. */
+  eventDay: number
+  type: string
+  target: string
+  roll: number
+  /** Per-day chance after environment modifiers, clamped to [0, 1]. */
+  chance: number
+  fired: boolean
+}
+
+export type EventDirectionEvent = {
+  kind: 'eventDirection'
+  day: number
+  eventDay: number
+  type: string
+  target: string
+  roll: number
+  up: number
+  down: number
+  none: number
+  shiftUp: number
+  shiftDown: number
+  shiftNone: number
+  result: EventDirection
+}
+
+export type EventMagnitudeEvent = {
+  kind: 'eventMagnitude'
+  day: number
+  eventDay: number
+  type: string
+  target: string
+  roll: number
+  min: number
+  max: number
+  magnitude: number
+}
+
+export type EffectAppliedEvent = {
+  kind: 'effectApplied'
+  day: number
+  asset: string
+  effect: string
+  dayIndex: number
+  delta: number
+}
+
+export type FairValueChangeEvent = {
+  kind: 'fairValueChange'
+  day: number
+  asset: string
+  before: number
+  /** Sum of today's effect deltas before the daily limit. */
+  total: number
+  /** Delta actually added. Excess (`total` − `clipped`) is dropped, not carried. */
+  clipped: number
+  after: number
+}
+
+export type LogEvent =
+  | NoiseRollEvent
+  | PriceStepEvent
+  | IndexStepEvent
+  | EnvDriftEvent
+  | EventRollEvent
+  | EventDirectionEvent
+  | EventMagnitudeEvent
+  | EffectAppliedEvent
+  | FairValueChangeEvent
 
 /**
  * Seeded market. `day` is 0 before the first step.
- * `log` is only the latest day's events; the next step replaces it.
- * Stock `fairValue` is hidden and is not moved by the price step.
+ * `log` is the creation rolls, then only the latest day's events. The next step replaces it.
+ * Stock `fairValue` is hidden. Event effects move it before the price step.
  * The index `fairValue` is the uncapped index quote in cents (float).
  */
 export type MarketState = {
   day: number
   streams: RngState
   assets: Record<string, AssetState>
+  environment: EnvironmentEntryState[]
+  scheduled: ScheduledEvent[]
+  active: ActiveEffect[]
   log: LogEvent[]
 }

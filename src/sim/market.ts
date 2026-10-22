@@ -5,10 +5,13 @@ import {
   CENTS_PER_UNIT,
   DAILY_MOVE_CAP_DENOMINATOR,
   DAILY_MOVE_CAP_NUMERATOR,
+  EVENT_LOOKAHEAD_DAYS,
   FAIR_VALUE_PULL_DENOMINATOR,
   FAIR_VALUE_PULL_NUMERATOR,
   INDEX_LEVEL_SCALE,
 } from './constants.ts'
+import { assertEnvironmentDefinitions, driftEnvironment, initialEnvironment } from './environment.ts'
+import { applyDueEffects, assertEventDefinitions, rollEventsForDay } from './events.ts'
 import { createRng, nextNormal } from './rng.ts'
 import { RNG_STREAM_NAMES, type AssetState, type IndexStepEvent, type MarketDefinitions, type MarketState, type NoiseRollEvent, type PriceStepEvent } from './types.ts'
 
@@ -78,6 +81,8 @@ function assertDefinitions(defs: MarketDefinitions): void {
   }
   if (stocks < 1) throw new Error('market definitions need at least one stock')
   if (indexes !== 1) throw new Error(`market definitions need exactly one index, received ${indexes}`)
+  assertEnvironmentDefinitions(defs.environment)
+  assertEventDefinitions(defs.events, defs.assets, defs.environment)
 }
 
 function assertState(state: MarketState, defs: MarketDefinitions): void {
@@ -123,6 +128,27 @@ function assertState(state: MarketState, defs: MarketDefinitions): void {
     if (typeof asset.fairValue !== 'number' || !Number.isFinite(asset.fairValue)) {
       throw new Error(`asset ${def.id} fairValue must be a finite number, received ${describeValue(asset.fairValue)}`)
     }
+  }
+  if (!Array.isArray(state.environment) || state.environment.length !== defs.environment.length) {
+    throw new Error(
+      `market environment must match definitions, received ${describeValue(state.environment?.length)} entries`,
+    )
+  }
+  for (let i = 0; i < defs.environment.length; i += 1) {
+    const entry = state.environment[i]
+    const def = defs.environment[i]
+    if (typeof entry !== 'object' || entry === null || entry.id !== def.id) {
+      throw new Error(`environment state[${i}] must be ${def.id}, received ${describeValue(entry?.id)}`)
+    }
+    if (typeof entry.value !== 'number' || !Number.isFinite(entry.value)) {
+      throw new Error(`environment ${def.id} value must be a finite number, received ${describeValue(entry.value)}`)
+    }
+  }
+  if (!Array.isArray(state.scheduled)) {
+    throw new Error(`market scheduled events must be an array, received ${describeValue(state.scheduled)}`)
+  }
+  if (!Array.isArray(state.active)) {
+    throw new Error(`market active effects must be an array, received ${describeValue(state.active)}`)
   }
 }
 
@@ -192,7 +218,7 @@ function indexQuoteCents(defs: MarketDefinitions, assets: MarketState['assets'])
   return INDEX_LEVEL_SCALE * CENTS_PER_UNIT * (ratioSum / count)
 }
 
-/** Day 0, start prices, fair value equal to the start price, empty log, four streams. */
+/** Day 0. Start prices, fair value at the start price, four streams. Days 1–3 are rolled into the log. */
 export function createMarket(defs: MarketDefinitions, seed: string): MarketState {
   assertDefinitions(defs)
   const streams = createRng(seed)
@@ -225,16 +251,33 @@ export function createMarket(defs: MarketDefinitions, seed: string): MarketState
       fairValue: opening,
     }
   }
-  return { day: 0, streams, assets, log: [] }
+  const state: MarketState = {
+    day: 0,
+    streams,
+    assets,
+    environment: initialEnvironment(defs.environment),
+    scheduled: [],
+    active: [],
+    log: [],
+  }
+  // Days 1–3 are rolled now, at the starting environment, before any drift.
+  for (let eventDay = 1; eventDay <= EVENT_LOOKAHEAD_DAYS; eventDay += 1) {
+    const rolled = rollEventsForDay(defs, state.environment, state.streams.events, 0, eventDay)
+    for (const event of rolled.scheduled) state.scheduled.push(event)
+    for (const event of rolled.log) state.log.push(event)
+  }
+  return state
 }
 
 /**
- * Advance one day. Each stock, in definition order:
+ * Advance one day, in the plan's end-of-day order for this step:
+ * apply event effects to fair value, step prices, drift the environment, pre-roll day+3.
+ * Each stock, in definition order:
  * pull = 35% of (fair value − price), noise = z × daily volatility × price,
  * raw move = pull + noise, then the 8% cent cap above.
- * Fair value of a stock is unchanged. The index is then
- * 1000 × the equal-weight average of (price / start price), in cents, with the same cap.
- * One `nextNormal` draw per stock from the market stream. No other stream is read.
+ * The index is then 1000 × the equal-weight average of (price / start price), in cents, with the same cap.
+ * The market stream is one `nextNormal` per stock, in definition order, and nothing else.
+ * Drift and event rolls read only the events stream.
  */
 export function stepMarketDay(state: MarketState, defs: MarketDefinitions): MarketState {
   assertDefinitions(defs)
@@ -245,6 +288,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   state.day += 1
   state.log = []
   const day = state.day
+  for (const event of applyDueEffects(state, defs)) state.log.push(event)
 
   for (const def of defs.assets) {
     if (def.kind !== 'stock') continue
@@ -300,5 +344,16 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   state.log.push(indexEvent)
   index.priceCents = applied.newPrice
   index.fairValue = quote
+
+  for (const event of driftEnvironment(state, defs.environment)) state.log.push(event)
+  const rolled = rollEventsForDay(
+    defs,
+    state.environment,
+    state.streams.events,
+    day,
+    day + EVENT_LOOKAHEAD_DAYS,
+  )
+  for (const event of rolled.scheduled) state.scheduled.push(event)
+  for (const event of rolled.log) state.log.push(event)
   return state
 }

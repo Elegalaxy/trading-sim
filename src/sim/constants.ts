@@ -14,3 +14,13 @@ export const INDEX_LEVEL_SCALE = 1000
 
 /** Stored prices are integer cents. One currency unit = 100 cents. */
 export const CENTS_PER_UNIT = 100
+
+/** Section 5. Events are rolled this many days before they become active. Provisional. */
+export const EVENT_LOOKAHEAD_DAYS = 3
+
+/**
+ * Section 5. Maximum absolute fair-value change per asset per day: 12%. Provisional.
+ * The excess is dropped and logged. It is not added on a later day (plan Q12).
+ */
+export const FAIR_VALUE_CHANGE_LIMIT_NUMERATOR = 12
+export const FAIR_VALUE_CHANGE_LIMIT_DENOMINATOR = 100

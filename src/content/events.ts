@@ -1,0 +1,136 @@
+// Provisional event types from plan Step 6 / GAME_DESIGN section 5.
+// Eight placeholders. Step 26 grows the list. Every number here is provisional.
+// `chance` is per target per day. Company types list each stock. Sector types list A and B.
+// Centers match the environment starts, so a fresh market has no shift until drift moves them.
+// chancePerUnit is small so a slow drift does not pull the fire rate far from the base chance.
+
+import type { EnvironmentModifier, EventTypeDefinition } from '../sim/types.ts'
+
+const STOCKS = ['NOVA', 'BLSW', 'HRBU', 'KSR'] as const
+const SECTORS = ['A', 'B'] as const
+
+function modifier(
+  entryId: string,
+  center: number,
+  chancePerUnit: number,
+  upPerUnit: number,
+  downPerUnit: number,
+): EnvironmentModifier {
+  return { entryId, center, chancePerUnit, upPerUnit, downPerUnit, nonePerUnit: 0 }
+}
+
+export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
+  {
+    id: 'earningsBeat',
+    scope: 'stock',
+    targets: STOCKS,
+    chance: 0.08,
+    direction: { up: 0.45, down: 0.45, none: 0.1 },
+    magnitudeMin: 2,
+    magnitudeMax: 6,
+    duration: 3,
+    decay: 'frontLoaded',
+    headline: '{target} earnings {direction}',
+    modifiers: [
+      modifier('growth', 2, 0.001, 0.02, -0.02),
+      modifier('inflation', 3, 0, -0.01, 0.01),
+    ],
+  },
+  {
+    id: 'productLaunch',
+    scope: 'stock',
+    targets: STOCKS,
+    chance: 0.05,
+    direction: { up: 0.7, down: 0.1, none: 0.2 },
+    magnitudeMin: 1,
+    magnitudeMax: 4,
+    duration: 2,
+    decay: 'frontLoaded',
+    headline: '{target} product launch',
+    modifiers: [modifier('growth', 2, 0.001, 0.02, -0.01)],
+  },
+  {
+    id: 'scandal',
+    scope: 'stock',
+    targets: STOCKS,
+    chance: 0.04,
+    direction: { up: 0.1, down: 0.75, none: 0.15 },
+    magnitudeMin: 3,
+    magnitudeMax: 8,
+    duration: 4,
+    decay: 'frontLoaded',
+    headline: '{target} scandal',
+    modifiers: [
+      modifier('inflation', 3, 0.001, -0.02, 0.02),
+      modifier('policyRate', 4, 0, -0.01, 0.01),
+    ],
+  },
+  {
+    id: 'managementChange',
+    scope: 'stock',
+    targets: STOCKS,
+    chance: 0.05,
+    direction: { up: 0.4, down: 0.4, none: 0.2 },
+    magnitudeMin: 1,
+    magnitudeMax: 3,
+    duration: 2,
+    decay: 'linear',
+    headline: '{target} management change',
+    modifiers: [modifier('policyRate', 4, 0.001, -0.01, 0.01)],
+  },
+  {
+    id: 'regulation',
+    scope: 'sector',
+    targets: SECTORS,
+    chance: 0.06,
+    direction: { up: 0.25, down: 0.55, none: 0.2 },
+    magnitudeMin: 2,
+    magnitudeMax: 5,
+    duration: 5,
+    decay: 'linear',
+    headline: 'Sector {target} faces regulation',
+    modifiers: [modifier('policyRate', 4, 0.001, -0.02, 0.02)],
+  },
+  {
+    id: 'supplyShock',
+    scope: 'sector',
+    targets: SECTORS,
+    chance: 0.05,
+    direction: { up: 0.2, down: 0.65, none: 0.15 },
+    magnitudeMin: 2,
+    magnitudeMax: 6,
+    duration: 3,
+    decay: 'frontLoaded',
+    headline: 'Sector {target} supply shock',
+    modifiers: [modifier('inflation', 3, 0.001, -0.02, 0.02)],
+  },
+  {
+    id: 'demandShift',
+    scope: 'sector',
+    targets: SECTORS,
+    chance: 0.06,
+    direction: { up: 0.5, down: 0.35, none: 0.15 },
+    magnitudeMin: 1,
+    magnitudeMax: 4,
+    duration: 3,
+    decay: 'linear',
+    headline: 'Sector {target} demand shift',
+    modifiers: [modifier('growth', 2, 0.001, 0.02, -0.02)],
+  },
+  {
+    id: 'sentimentSwing',
+    scope: 'market',
+    targets: ['market'],
+    chance: 0.1,
+    direction: { up: 0.4, down: 0.4, none: 0.2 },
+    magnitudeMin: 1,
+    magnitudeMax: 3,
+    duration: 2,
+    decay: 'linear',
+    headline: 'Market sentiment {direction}',
+    modifiers: [
+      modifier('growth', 2, 0.001, 0.02, -0.02),
+      modifier('inflation', 3, 0, -0.02, 0.02),
+    ],
+  },
+]

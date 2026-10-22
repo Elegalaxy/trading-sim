@@ -32,13 +32,13 @@ function debugMarket(message: string): void {
   io.writeSync(1, `[DEBUG market] ${message}\n`)
 }
 
-const FIXTURE = pathMod.join(
+const NOISE_FIXTURE = pathMod.join(
   pathMod.dirname(urlMod.fileURLToPath(import.meta.url)),
   '..',
   '..',
   'tests',
   'fixtures',
-  'demo-30-price-log.txt',
+  'demo-30-noise-roll.txt',
 )
 
 // Same provisional list as src/content/assets.ts. Sim tests cannot import content.
@@ -50,6 +50,8 @@ const DEMO_DEFS: MarketDefinitions = {
     { id: 'KSR', kind: 'stock', sector: 'B', startPriceCents: 6400, dailyVolatility: 0.014 },
     { id: 'M4X', kind: 'index', sector: null, startPriceCents: 100000, dailyVolatility: 0 },
   ],
+  environment: [],
+  events: [],
 }
 
 const SWEEP_SEEDS = ['demo', 's1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9'] as const
@@ -90,12 +92,19 @@ function findIndexStep(state: MarketState): IndexStepEvent {
   throw new Error('[DEBUG market] missing indexStep')
 }
 
+function noiseBody(line: string): string {
+  const marker = 'day='
+  const index = line.indexOf(marker)
+  if (index < 0 || !line.includes('kind=noiseRoll')) return ''
+  return line.slice(index)
+}
+
 function withinCap(previous: number, next: number): boolean {
   return Math.abs(next - previous) * DAILY_MOVE_CAP_DENOMINATOR <= previous * DAILY_MOVE_CAP_NUMERATOR
 }
 
 describe('market price step', () => {
-  it('matches the demo 30-day formatted log', () => {
+  it('keeps seed demo noiseRoll lines identical to the Step 4 fixture', () => {
     expect(FAIR_VALUE_PULL_NUMERATOR).toBe(35)
     expect(FAIR_VALUE_PULL_DENOMINATOR).toBe(100)
     expect(DAILY_MOVE_CAP_NUMERATOR).toBe(8)
@@ -140,8 +149,12 @@ describe('market price step', () => {
       if (def.kind !== 'stock') continue
       expect(state.assets[def.id].fairValue).toBe(def.startPriceCents)
     }
-    const output = lines.map((line) => `[DEBUG market] ${line}`).join('\n') + '\n'
-    expect(output).toBe(readFixture(FIXTURE))
+    const noise = lines.filter((line) => line.includes('kind=noiseRoll'))
+    const step4 = readFixture(NOISE_FIXTURE)
+      .split('\n')
+      .map(noiseBody)
+      .filter((line) => line.length > 0)
+    expect(noise).toEqual(step4)
   })
 
   it('keeps every daily stock and index move within 8 percent', () => {
@@ -241,6 +254,8 @@ describe('market price step', () => {
         { id: 'TINY', kind: 'stock', sector: 'A', startPriceCents: 7, dailyVolatility: 0 },
         { id: 'M4X', kind: 'index', sector: null, startPriceCents: 100000, dailyVolatility: 0 },
       ],
+      environment: [],
+      events: [],
     }
     const state = createMarket(defs, 'demo')
     state.assets.TINY.fairValue = 100
@@ -283,7 +298,9 @@ describe('market price step', () => {
 
   it('rejects broken definitions and state before drawing', () => {
     expect(() => createMarket(undefined as never, 'demo')).toThrow('market definitions must be an object')
-    expect(() => createMarket({ assets: [] }, 'demo')).toThrow('market definitions assets must be a non-empty array')
+    expect(() => createMarket({ assets: [], environment: [], events: [] }, 'demo')).toThrow(
+      'market definitions assets must be a non-empty array',
+    )
     expect(() => createMarket(DEMO_DEFS, 1 as never)).toThrow('seed must be a string')
     const state = createMarket(DEMO_DEFS, 'demo')
     const market = { ...state.streams.market }

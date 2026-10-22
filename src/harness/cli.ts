@@ -2,12 +2,13 @@
 // Price steps stay in src/sim. This file only validates args and prints [sim] lines.
 // --asset filters the event log. The closes table still lists every asset.
 
-import { MARKET_DEFINITIONS } from '../content/assets.ts'
+import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { stateHash } from '../sim/hash.ts'
 import { formatEvent } from '../sim/log.ts'
 import { createMarket, stepMarketDay } from '../sim/market.ts'
+import type { LogEvent } from '../sim/types.ts'
 
-const USAGE = 'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>]'
+const USAGE = 'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>] [--events-only]'
 const SEED_PATTERN = /^[A-Za-z0-9-]{1,32}$/
 const DAYS_MIN = 1
 const DAYS_MAX = 1000
@@ -16,6 +17,7 @@ type CliOptions = {
   seed: string
   days: number
   quiet: boolean
+  eventsOnly: boolean
   asset: string | undefined
 }
 
@@ -81,6 +83,7 @@ function parseArgs(argv: readonly string[]): CliOptions {
   let seed: string | undefined
   let days: number | undefined
   let quiet = false
+  let eventsOnly = false
   let asset: string | undefined
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -92,6 +95,11 @@ function parseArgs(argv: readonly string[]): CliOptions {
     if (name === '--quiet') {
       if (inline !== undefined) fail('--quiet does not take a value')
       quiet = true
+      continue
+    }
+    if (name === '--events-only') {
+      if (inline !== undefined) fail('--events-only does not take a value')
+      eventsOnly = true
       continue
     }
     if (name === '--seed') {
@@ -126,7 +134,41 @@ function parseArgs(argv: readonly string[]): CliOptions {
     fail(`missing ${missing.join(' and ')}`, true)
   }
 
-  return { seed, days, quiet, asset }
+  return { seed, days, quiet, eventsOnly, asset }
+}
+
+function isPriceKind(kind: LogEvent['kind']): boolean {
+  return kind === 'noiseRoll' || kind === 'priceStep' || kind === 'indexStep'
+}
+
+function matchesAsset(event: LogEvent, asset: string): boolean {
+  switch (event.kind) {
+    case 'noiseRoll':
+    case 'priceStep':
+    case 'indexStep':
+    case 'effectApplied':
+    case 'fairValueChange':
+      return event.asset === asset
+    case 'eventRoll':
+    case 'eventDirection':
+    case 'eventMagnitude':
+      return event.target === asset
+    case 'envDrift':
+      return false
+    default: {
+      const unknown: never = event
+      throw new Error(`cannot filter log event ${JSON.stringify(unknown)}`)
+    }
+  }
+}
+
+function printDayLog(log: readonly LogEvent[], options: CliOptions): void {
+  if (options.quiet && !options.eventsOnly) return
+  for (const event of log) {
+    if (options.eventsOnly && isPriceKind(event.kind)) continue
+    if (options.asset !== undefined && !matchesAsset(event, options.asset)) continue
+    console.log(`[sim] ${formatEvent(event)}`)
+  }
 }
 
 function priceAt(row: CloseRow, index: number, id: string): number {
@@ -161,16 +203,12 @@ function run(options: CliOptions): void {
   const ids = defs.assets.map((asset) => asset.id)
   const state = createMarket(defs, options.seed)
   console.log(`[sim] seed=${options.seed} days=${options.days} assets=${ids.join(',')}`)
+  printDayLog(state.log, options)
 
   const closes: CloseRow[] = []
   for (let step = 0; step < options.days; step += 1) {
     stepMarketDay(state, defs)
-    if (!options.quiet) {
-      for (const event of state.log) {
-        if (options.asset !== undefined && event.asset !== options.asset) continue
-        console.log(`[sim] ${formatEvent(event)}`)
-      }
-    }
+    printDayLog(state.log, options)
     closes.push({
       day: state.day,
       prices: ids.map((id) => {
@@ -181,9 +219,9 @@ function run(options: CliOptions): void {
     })
   }
 
-  if (options.quiet) {
+  if (options.quiet && !options.eventsOnly) {
     for (const row of closes) console.log(closeLine(ids, row))
-  } else {
+  } else if (!options.eventsOnly) {
     console.log('[sim] closes')
     for (const line of closeTable(ids, closes)) console.log(`[sim] ${line}`)
   }

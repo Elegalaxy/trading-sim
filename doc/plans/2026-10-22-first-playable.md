@@ -265,7 +265,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 7: Macro calendar
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 6
 - Files to create or change: `src/sim/calendar.ts`, `src/sim/calendar.test.ts`, `src/content/calendar.ts`, `src/sim/market.ts`, `src/sim/types.ts`, `src/sim/log.ts`
 - What changes:
@@ -283,7 +283,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`, `npm run sim -- --seed demo --days 60 --events-only`.
   - User: check for a `calendarItem` line on day 25 and day 55, and the policy rate before and after.
-- Progress:
+- Progress: 2026-10-22: Added the macro calendar. Growth release day 10, inflation day 20, policy decision day 25 of each 30-day month. Outcomes are one events-stream float, drawn after that day's ordinary event rolls, with the 3-day lookahead. Policy step is 0.25 percentage points, floored at 0. A hike is -1.5% fair value on sector A and -4% on sector B, clipped with other effects at ±12%. The golden full log was updated on purpose: calendar draws on the events stream change which ordinary events fire and change price lines. noiseRoll lines were checked against Step 4 and did not change. Checks: npm test passed (6 files, 32 tests, architecture violations=0); npm run typecheck passed; npm run lint passed; `npm run sim -- --seed demo --days 60 --events-only` passed. Day 25 policy 4->4.25 (up). Day 55 policy 4.25->4.25 (hold).
 
 ### Step 8: News feed, rumours, source reliability, and the day summary
 

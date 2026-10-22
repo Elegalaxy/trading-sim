@@ -56,12 +56,112 @@ export type AssetDefinition = {
   dailyVolatility: number
 }
 
+/** Coarse band for the calendar lookup. Thresholds live on the calendar definition. */
+export type CalendarBand = 'low' | 'mid' | 'high'
+
+/** One known macro date per month. Outcomes are not known until the events-stream roll. */
+export type CalendarItemKind = 'growthRelease' | 'inflationRelease' | 'policyDecision'
+
+export type PolicyOutcome = 'hold' | 'up' | 'down'
+
+export type ReleaseOutcome = 'above' | 'inline' | 'below'
+
+export type CalendarOutcome = PolicyOutcome | ReleaseOutcome
+
+export type CalendarScheduleEntry = {
+  kind: CalendarItemKind
+  /** Day within the month, from 1 through `daysPerMonth`. */
+  dayOfMonth: number
+  /** Environment entry a release publishes, or the policy rate a decision changes. */
+  entryId: string
+}
+
+export type PolicyChanceCell = {
+  inflationBand: CalendarBand
+  growthBand: CalendarBand
+  hold: number
+  up: number
+  down: number
+}
+
+export type ReleaseChanceCell = {
+  band: CalendarBand
+  above: number
+  inline: number
+  below: number
+}
+
+/**
+ * Fair-value effect for one sector. `percent` is signed and is a percent of the
+ * morning fair value. It is applied in one day, then clipped with every other effect.
+ */
+export type CalendarEffectCell = {
+  kind: CalendarItemKind
+  outcome: CalendarOutcome
+  sector: SectorId
+  percent: number
+}
+
+/**
+ * Provisional macro calendar. Passed in with the other definitions.
+ * `src/sim` does not import the content file that fills these numbers.
+ */
+export type CalendarDefinitions = {
+  daysPerMonth: number
+  schedule: readonly CalendarScheduleEntry[]
+  growthEntryId: string
+  inflationEntryId: string
+  policyEntryId: string
+  /** Inflation strictly below this is `low`. Inflation at or above `inflationHighAt` is `high`. */
+  inflationLowBelow: number
+  inflationHighAt: number
+  /** Growth strictly below this is `low`. Growth at or above `growthHighAt` is `high`. */
+  growthLowBelow: number
+  growthHighAt: number
+  /** Percentage points added or removed by a policy decision. A cut is floored at 0. */
+  rateStep: number
+  policy: readonly PolicyChanceCell[]
+  growthRelease: readonly ReleaseChanceCell[]
+  inflationRelease: readonly ReleaseChanceCell[]
+  effects: readonly CalendarEffectCell[]
+}
+
+/** Date rules copied onto the market so `upcomingCalendar` does not need definitions. */
+export type CalendarRules = {
+  daysPerMonth: number
+  schedule: CalendarScheduleEntry[]
+}
+
+/** Outcome rolled ahead of the calendar day. `applied` flips when that day starts. */
+export type CalendarRoll = {
+  kind: CalendarItemKind
+  day: number
+  roll: number
+  outcome: CalendarOutcome
+  applied: boolean
+}
+
+/**
+ * A known calendar date. `roll` and `outcome` are omitted until the events stream has rolled them.
+ */
+export type UpcomingCalendarItem = {
+  kind: CalendarItemKind
+  day: number
+  roll?: number
+  outcome?: CalendarOutcome
+}
+
 export type MarketDefinitions = {
   assets: readonly AssetDefinition[]
   /** Growth, inflation, policy rate, and any later entries. Order is the drift order. */
   environment: readonly EnvironmentEntryDefinition[]
   /** Rolled in this order, then each type's targets in listed order. */
   events: readonly EventTypeDefinition[]
+  /**
+   * Macro calendar. Omitted means no releases and no policy decisions, and no extra
+   * events-stream draws. Dates are known before the outcome is rolled.
+   */
+  calendar?: CalendarDefinitions
 }
 
 /** Price in integer cents. Fair value is cents as a float. */
@@ -74,7 +174,7 @@ export type AssetState = {
 /**
  * One environment level. `start` and `value` use the same unit (provisional: percent).
  * `driftSpeed` is added each day as speed × one events-stream normal.
- * Zero speed does not draw, so a fixed entry such as the policy rate stays put.
+ * Zero speed does not draw. The policy rate stays put until a calendar decision changes it.
  */
 export type EnvironmentEntryDefinition = {
   id: string
@@ -85,6 +185,8 @@ export type EnvironmentEntryDefinition = {
 export type EnvironmentEntryState = {
   id: string
   value: number
+  /** Last published value. Absent until a calendar release prints this entry. */
+  lastReleased?: number
 }
 
 /** Added per unit of (environment value − center), then chances are clamped and directions renormalized. */
@@ -255,6 +357,8 @@ export type EffectAppliedEvent = {
   effect: string
   dayIndex: number
   delta: number
+  /** Calendar item kind when this slice came from the calendar. Omitted for ordinary events. */
+  calendar?: string
 }
 
 export type FairValueChangeEvent = {
@@ -267,6 +371,30 @@ export type FairValueChangeEvent = {
   /** Delta actually added. Excess (`total` − `clipped`) is dropped, not carried. */
   clipped: number
   after: number
+  /** Calendar item kind when today's sum includes a calendar effect for this asset. */
+  calendar?: string
+}
+
+/** One environment entry as logged on a calendar item, before or after the outcome is applied. */
+export type EnvironmentView = {
+  id: string
+  value: number
+  /** Null until a release has published this entry. */
+  lastReleased: number | null
+}
+
+/**
+ * Logged on the calendar day, when the outcome is applied.
+ * The roll itself happened `EVENT_LOOKAHEAD_DAYS` earlier and is stored until then.
+ */
+export type CalendarItemEvent = {
+  kind: 'calendarItem'
+  day: number
+  item: CalendarItemKind
+  roll: number
+  outcome: CalendarOutcome
+  before: EnvironmentView[]
+  after: EnvironmentView[]
 }
 
 export type LogEvent =
@@ -279,18 +407,24 @@ export type LogEvent =
   | EventMagnitudeEvent
   | EffectAppliedEvent
   | FairValueChangeEvent
+  | CalendarItemEvent
 
 /**
  * Seeded market. `day` is 0 before the first step.
  * `log` is the creation rolls, then only the latest day's events. The next step replaces it.
  * Stock `fairValue` is hidden. Event effects move it before the price step.
  * The index `fairValue` is the uncapped index quote in cents (float).
+ * `calendarRolls` is not part of `scheduled`. A later distortion step must not filter it.
  */
 export type MarketState = {
   day: number
   streams: RngState
   assets: Record<string, AssetState>
   environment: EnvironmentEntryState[]
+  /** Copied at creation. Empty schedule means this run has no macro dates. */
+  calendarRules: CalendarRules
+  /** Rolled outcomes waiting for their day, plus today's item after it is applied. */
+  calendarRolls: CalendarRoll[]
   scheduled: ScheduledEvent[]
   active: ActiveEffect[]
   log: LogEvent[]

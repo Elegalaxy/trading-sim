@@ -154,6 +154,7 @@ function matchesAsset(event: LogEvent, asset: string): boolean {
     case 'eventMagnitude':
       return event.target === asset
     case 'envDrift':
+    case 'calendarItem':
       return false
     default: {
       const unknown: never = event

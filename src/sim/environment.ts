@@ -1,5 +1,6 @@
 // Environment levels are data. Drift walks the list in order and draws the events
-// stream only when driftSpeed is not 0. The policy rate uses speed 0 until Step 7.
+// stream only when driftSpeed is not 0. The policy rate uses speed 0. A calendar
+// decision changes it on its day and does not draw a drift sample for it.
 
 import { nextNormal } from './rng.ts'
 import type {

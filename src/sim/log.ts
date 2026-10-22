@@ -1,6 +1,6 @@
 // One text line per log event. The simulation does not print; tests and the harness do.
 
-import type { LogEvent } from './types.ts'
+import type { EnvironmentView, LogEvent } from './types.ts'
 
 function describeValue(value: unknown): string {
   if (typeof value === 'number' && Number.isNaN(value)) return 'NaN'
@@ -50,6 +50,41 @@ function formatEffectId(value: string): string {
 function formatDirection(value: string): string {
   if (value === 'up' || value === 'down' || value === 'none') return value
   throw new Error(`formatEvent result must be up, down, or none, received ${describeValue(value)}`)
+}
+
+function formatCalendarTag(calendar: string | undefined): string {
+  if (calendar === undefined) return ''
+  return ` calendar=${formatToken(calendar, 'calendar')}`
+}
+
+function formatOptionalNumber(value: number | null, label: string): string {
+  if (value === null) return 'none'
+  if (typeof value !== 'number') {
+    throw new Error(`formatEvent ${label} must be a number or null, received ${describeValue(value)}`)
+  }
+  return formatNumber(value)
+}
+
+function formatEnvironmentChange(before: readonly EnvironmentView[], after: readonly EnvironmentView[]): string {
+  if (!Array.isArray(before) || !Array.isArray(after) || before.length !== after.length || before.length === 0) {
+    throw new Error(
+      `formatEvent calendar environment before and after must be the same non-empty list, received ${describeValue(before?.length)} and ${describeValue(after?.length)}`,
+    )
+  }
+  const parts: string[] = []
+  for (let i = 0; i < before.length; i += 1) {
+    const left = before[i]
+    const right = after[i]
+    if (left === undefined || right === undefined || left.id !== right.id) {
+      throw new Error('formatEvent calendar environment before and after must list the same entries in order')
+    }
+    const id = formatToken(left.id, 'environment id')
+    parts.push(`${id}=${formatNumber(left.value)}->${formatNumber(right.value)}`)
+    parts.push(
+      `${id}Released=${formatOptionalNumber(left.lastReleased, 'released')}->${formatOptionalNumber(right.lastReleased, 'released')}`,
+    )
+  }
+  return parts.join(' ')
 }
 
 /** One line. Prices and gaps are cents. `gapAfter` is fair (or the index quote) minus the new price. */
@@ -142,7 +177,7 @@ export function formatEvent(event: LogEvent): string {
         `effect=${formatEffectId(event.effect)}`,
         `dayIndex=${formatNumber(event.dayIndex)}`,
         `delta=${formatNumber(event.delta)}`,
-      ].join(' ')
+      ].join(' ') + formatCalendarTag(event.calendar)
     case 'fairValueChange':
       return [
         `day=${formatNumber(event.day)}`,
@@ -152,6 +187,15 @@ export function formatEvent(event: LogEvent): string {
         `total=${formatNumber(event.total)}`,
         `clipped=${formatNumber(event.clipped)}`,
         `after=${formatNumber(event.after)}`,
+      ].join(' ') + formatCalendarTag(event.calendar)
+    case 'calendarItem':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=calendarItem',
+        `item=${formatToken(event.item, 'item')}`,
+        `roll=${formatNumber(event.roll)}`,
+        `outcome=${formatToken(event.outcome, 'outcome')}`,
+        formatEnvironmentChange(event.before, event.after),
       ].join(' ')
     default: {
       const unknown: never = event

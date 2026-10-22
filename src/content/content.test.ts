@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
+import { lookupPolicyChances } from '../sim/calendar.ts'
 import { createMarket, stepMarketDay } from '../sim/market.ts'
 import { formatEvent } from '../sim/log.ts'
 import type { FairValueChangeEvent, LogEvent } from '../sim/types.ts'
+import { CALENDAR_DEFINITIONS } from './calendar.ts'
 import { ENVIRONMENT_DEFINITIONS } from './environment.ts'
 import { EVENT_DEFINITIONS } from './events.ts'
 import { MARKET_DEFINITIONS } from './index.ts'
@@ -79,6 +81,39 @@ describe('provisional content', () => {
         `type=${eventType.id} scope=${eventType.scope} chance=${eventType.chance} up=${eventType.direction.up} down=${eventType.direction.down} none=${eventType.direction.none} magnitude=${eventType.magnitudeMin}-${eventType.magnitudeMax} duration=${eventType.duration}`,
       )
     }
+
+    expect(CALENDAR_DEFINITIONS.daysPerMonth).toBe(30)
+    expect(CALENDAR_DEFINITIONS.rateStep).toBe(0.25)
+    expect(CALENDAR_DEFINITIONS.schedule).toEqual([
+      { kind: 'growthRelease', dayOfMonth: 10, entryId: 'growth' },
+      { kind: 'inflationRelease', dayOfMonth: 20, entryId: 'inflation' },
+      { kind: 'policyDecision', dayOfMonth: 25, entryId: 'policyRate' },
+    ])
+    for (const cell of CALENDAR_DEFINITIONS.policy) {
+      expect(cell.hold + cell.up + cell.down).toBeCloseTo(1)
+      expect(cell.up).toBeGreaterThanOrEqual(0)
+      expect(cell.down).toBeGreaterThanOrEqual(0)
+      expect(cell.hold).toBeGreaterThanOrEqual(0)
+    }
+    for (const growth of [0, 2, 5]) {
+      const high = lookupPolicyChances(CALENDAR_DEFINITIONS, 6, growth)
+      const low = lookupPolicyChances(CALENDAR_DEFINITIONS, 0, growth)
+      expect(high.up).toBeGreaterThan(low.up)
+      debugContent(`policy growth=${growth} highInflationUp=${high.up} lowInflationUp=${low.up}`)
+    }
+    expect(lookupPolicyChances(CALENDAR_DEFINITIONS, 6, 2)).toEqual({ hold: 0.2, up: 0.7, down: 0.1 })
+    expect(lookupPolicyChances(CALENDAR_DEFINITIONS, 0, 2)).toEqual({ hold: 0.65, up: 0.1, down: 0.25 })
+    const hike = (sector: 'A' | 'B'): number => {
+      const row = CALENDAR_DEFINITIONS.effects.find(
+        (cell) => cell.kind === 'policyDecision' && cell.outcome === 'up' && cell.sector === sector,
+      )
+      if (row === undefined) throw new Error(`[DEBUG content] missing hike effect for sector ${sector}`)
+      return row.percent
+    }
+    expect(hike('A')).toBe(-1.5)
+    expect(hike('B')).toBe(-4)
+    expect(hike('B')).toBeLessThan(hike('A'))
+    debugContent(`hike percent A=${hike('A')} B=${hike('B')}`)
   })
 
   it('fires each event type within 10 percent of the chance it rolled', { timeout: 20000 }, () => {

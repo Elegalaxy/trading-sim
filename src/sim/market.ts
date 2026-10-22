@@ -1,6 +1,7 @@
 // Daily price step. Definitions are passed in. Only the market stream is drawn.
 // Mutates `state` and returns it: the streams inside the state advance in place.
 
+import { assertCalendarDefinitions, beginCalendarDay, calendarRulesFrom, rollCalendarForDay } from './calendar.ts'
 import {
   CENTS_PER_UNIT,
   DAILY_MOVE_CAP_DENOMINATOR,
@@ -13,7 +14,17 @@ import {
 import { assertEnvironmentDefinitions, driftEnvironment, initialEnvironment } from './environment.ts'
 import { applyDueEffects, assertEventDefinitions, rollEventsForDay } from './events.ts'
 import { createRng, nextNormal } from './rng.ts'
-import { RNG_STREAM_NAMES, type AssetState, type IndexStepEvent, type MarketDefinitions, type MarketState, type NoiseRollEvent, type PriceStepEvent } from './types.ts'
+import {
+  RNG_STREAM_NAMES,
+  type AssetState,
+  type EffectAppliedEvent,
+  type FairValueChangeEvent,
+  type IndexStepEvent,
+  type MarketDefinitions,
+  type MarketState,
+  type NoiseRollEvent,
+  type PriceStepEvent,
+} from './types.ts'
 
 const INDEX_PAR_CENTS = INDEX_LEVEL_SCALE * CENTS_PER_UNIT
 
@@ -83,6 +94,7 @@ function assertDefinitions(defs: MarketDefinitions): void {
   if (indexes !== 1) throw new Error(`market definitions need exactly one index, received ${indexes}`)
   assertEnvironmentDefinitions(defs.environment)
   assertEventDefinitions(defs.events, defs.assets, defs.environment)
+  if (defs.calendar !== undefined) assertCalendarDefinitions(defs.calendar, defs.environment, defs.assets)
 }
 
 function assertState(state: MarketState, defs: MarketDefinitions): void {
@@ -143,6 +155,17 @@ function assertState(state: MarketState, defs: MarketDefinitions): void {
     if (typeof entry.value !== 'number' || !Number.isFinite(entry.value)) {
       throw new Error(`environment ${def.id} value must be a finite number, received ${describeValue(entry.value)}`)
     }
+    if (entry.lastReleased !== undefined && (typeof entry.lastReleased !== 'number' || !Number.isFinite(entry.lastReleased))) {
+      throw new Error(
+        `environment ${def.id} lastReleased must be a finite number when set, received ${describeValue(entry.lastReleased)}`,
+      )
+    }
+  }
+  if (typeof state.calendarRules !== 'object' || state.calendarRules === null || !Array.isArray(state.calendarRules.schedule)) {
+    throw new Error(`calendar rules must be an object with a schedule, received ${describeValue(state.calendarRules)}`)
+  }
+  if (!Array.isArray(state.calendarRolls)) {
+    throw new Error(`calendar rolls must be an array, received ${describeValue(state.calendarRolls)}`)
   }
   if (!Array.isArray(state.scheduled)) {
     throw new Error(`market scheduled events must be an array, received ${describeValue(state.scheduled)}`)
@@ -256,28 +279,57 @@ export function createMarket(defs: MarketDefinitions, seed: string): MarketState
     streams,
     assets,
     environment: initialEnvironment(defs.environment),
+    calendarRules: calendarRulesFrom(defs),
+    calendarRolls: [],
     scheduled: [],
     active: [],
     log: [],
   }
   // Days 1–3 are rolled now, at the starting environment, before any drift.
+  // The standard calendar starts on day 10, so this loop draws no calendar float.
   for (let eventDay = 1; eventDay <= EVENT_LOOKAHEAD_DAYS; eventDay += 1) {
     const rolled = rollEventsForDay(defs, state.environment, state.streams.events, 0, eventDay)
     for (const event of rolled.scheduled) state.scheduled.push(event)
     for (const event of rolled.log) state.log.push(event)
+    rollCalendarForDay(state, defs, eventDay)
   }
   return state
 }
 
 /**
+ * Tag calendar slices after they share the ordinary effect clip.
+ * The effect id is `calendar:<item>:<day>`. Fair-value lines for those assets get the same item.
+ */
+function tagCalendarEffects(events: Array<EffectAppliedEvent | FairValueChangeEvent>): void {
+  const kindByAsset = new Map<string, string>()
+  for (const event of events) {
+    if (event.kind !== 'effectApplied') continue
+    const parts = event.effect.split(':')
+    if (parts[0] !== 'calendar' || parts.length !== 3) continue
+    const kind = parts[1]
+    if (kind === undefined || kind.length === 0) {
+      throw new Error(`calendar effect id must be calendar:item:day, received ${event.effect}`)
+    }
+    event.calendar = kind
+    kindByAsset.set(event.asset, kind)
+  }
+  for (const event of events) {
+    if (event.kind !== 'fairValueChange') continue
+    const kind = kindByAsset.get(event.asset)
+    if (kind !== undefined) event.calendar = kind
+  }
+}
+
+/**
  * Advance one day, in the plan's end-of-day order for this step:
- * apply event effects to fair value, step prices, drift the environment, pre-roll day+3.
+ * apply calendar outcome and event effects to fair value, step prices, drift the environment, pre-roll day+3.
  * Each stock, in definition order:
  * pull = 35% of (fair value − price), noise = z × daily volatility × price,
  * raw move = pull + noise, then the 8% cent cap above.
  * The index is then 1000 × the equal-weight average of (price / start price), in cents, with the same cap.
  * The market stream is one `nextNormal` per stock, in definition order, and nothing else.
- * Drift and event rolls read only the events stream.
+ * Drift, ordinary event rolls, and calendar outcomes read only the events stream.
+ * A calendar float, when day+3 is a calendar date, is drawn after that day's ordinary event rolls.
  */
 export function stepMarketDay(state: MarketState, defs: MarketDefinitions): MarketState {
   assertDefinitions(defs)
@@ -288,7 +340,10 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   state.day += 1
   state.log = []
   const day = state.day
-  for (const event of applyDueEffects(state, defs)) state.log.push(event)
+  for (const event of beginCalendarDay(state, defs)) state.log.push(event)
+  const effects = applyDueEffects(state, defs)
+  tagCalendarEffects(effects)
+  for (const event of effects) state.log.push(event)
 
   for (const def of defs.assets) {
     if (def.kind !== 'stock') continue
@@ -355,5 +410,6 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   )
   for (const event of rolled.scheduled) state.scheduled.push(event)
   for (const event of rolled.log) state.log.push(event)
+  rollCalendarForDay(state, defs, day + EVENT_LOOKAHEAD_DAYS)
   return state
 }

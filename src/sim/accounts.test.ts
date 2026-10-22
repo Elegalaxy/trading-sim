@@ -346,7 +346,7 @@ describe('accounts and transfers', () => {
         reason: 'sameAccount',
         command: 'transfer',
       },
-      { cmd: { type: 'order', asset: 'NOVA' }, reason: 'notTransfer', command: 'order' },
+      { cmd: { type: 'eat' }, reason: 'notTransfer', command: 'eat' },
       { cmd: null, reason: 'notTransfer', command: 'invalid' },
       { cmd: 'transfer', reason: 'notTransfer', command: 'invalid' },
     ]
@@ -367,8 +367,8 @@ describe('accounts and transfers', () => {
     }
 
     const game = createGame(defs, 'reject')
-    applyCommand(game, defs, { type: 'order' })
-    expect(formatEvent(game.log[0]!)).toBe('day=0 kind=commandRejected command="order" reason=notTransfer')
+    applyCommand(game, defs, { type: 'eat' })
+    expect(formatEvent(game.log[0]!)).toBe('day=0 kind=commandRejected command="eat" reason=notTransfer')
   })
 
   it('rounds half away from zero and pays nothing at or below the spread', () => {

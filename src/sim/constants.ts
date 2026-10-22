@@ -69,3 +69,24 @@ export const SAVINGS_PAY_INTERVAL_DAYS = 30
 
 /** Section 6. Provisional policy-rate entry when the run has no calendar. */
 export const POLICY_RATE_ENTRY_ID = 'policyRate'
+
+/**
+ * Section 7. Provisional trade fee: 0.1% of the fill notional (shares × fill price).
+ * Fee cents = round half away from zero of notional × numerator / denominator.
+ * There is no leverage, no margin interest, and no liquidation in this step.
+ * The equity rule is documented on `interpretOrder` in trading.ts.
+ * Spreads and borrow rates live on each asset as parts per million of price.
+ */
+export const TRADE_FEE_NUMERATOR = 1
+export const TRADE_FEE_DENOMINATOR = 1000
+
+/** Section 7. 1,000,000 ppm = 100% of the price. 1000 ppm = 0.10%. 100 ppm = 0.01%. */
+export const RATE_PPM_SCALE = 1_000_000
+
+/** Section 7. Provisional full spread on an asset: 0.10% to 0.40% of the current price. */
+export const SPREAD_PPM_MIN = 1000
+export const SPREAD_PPM_MAX = 4000
+
+/** Section 7. Provisional daily short borrow fee: 0.01% to 0.03% of abs(shares) × price. */
+export const BORROW_FEE_PPM_MIN = 100
+export const BORROW_FEE_PPM_MAX = 300

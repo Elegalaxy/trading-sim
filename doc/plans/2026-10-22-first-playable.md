@@ -336,7 +336,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 10: Orders: long and short, with fee and spread
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 9
 - Files to create or change: `src/sim/trading.ts`, `src/sim/trading.test.ts`, `src/sim/game.ts`, `src/sim/types.ts`, `src/sim/constants.ts`, `src/content/assets.ts`, `src/sim/log.ts`
 - What changes:
@@ -357,7 +357,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: read the `orderFill` lines in the test output and check that the fill price equals price ± half spread.
-- Progress:
+- Progress: 2026-10-22: Added market orders, provisional fee, spread, and short borrow. Files: src/sim/trading.ts, src/sim/trading.test.ts, src/sim/game.ts, src/sim/types.ts, src/sim/constants.ts, src/content/assets.ts, src/sim/log.ts, src/sim/accounts.test.ts. Fee is 0.1% of fill notional. Spreads and borrow rates are integer ppm on the asset (optional on the type, so market fixtures were not edited): NOVA 4000/300, BLSW 3000/200, HRBU 1000/100, KSR 2000/150, M4X 1500/100. Half spread and fee round half away from zero; event-day doubling happens before that rounding. No leverage: after the fill, gross at the quoted price must be <= equity, and trading cash must stay >= 0. Equity is trading cash plus signed shares times the quoted price. Borrow runs in endDay after the market step, on the post-step day, and an unpaid remainder is logged without a loan. The realized ledger is closed-position P&L minus fees and the full assessed borrow fee. Accounts tests that used `order` as a non-transfer example now use `eat`. The golden market log was not updated. Checks: npm test passed (10 files, 56 tests, architecture violations=0); npm run typecheck passed; npm run lint passed. Round trip of 10 NOVA: buy fill 4810 = 4800 + 10, sell fill 4790 = 4800 - 10, loss 296 cents. Seed demo market lines matched with and without trades (noiseRoll, eventRoll, calendarItem, headline, rumourGenerated), quietHash=ba43369cc235c769.
 
 ### Step 11: Leverage, margin, liquidation, and the loss-cap backstop
 

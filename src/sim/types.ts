@@ -47,6 +47,10 @@ export type AssetKind = 'stock' | 'index'
  * One tradable instrument. Passed into the simulation; `src/sim` does not import content.
  * Prices and fair value are in cents. `dailyVolatility` is the one-day return standard deviation
  * (0.022 means 2.2%). Stock order is the order `stepMarketDay` draws market-stream noise.
+ *
+ * `spreadPpm` and `borrowFeePpm` are provisional section 7 rates in parts per million of price
+ * (1000 ppm = 0.10%, 100 ppm = 0.01%). They are optional on the type so a market fixture that
+ * never trades does not need them. An order or a short borrow throws if the one it needs is missing.
  */
 export type AssetDefinition = {
   id: string
@@ -54,6 +58,10 @@ export type AssetDefinition = {
   sector: SectorId | null
   startPriceCents: number
   dailyVolatility: number
+  /** Full spread. 1000 is 0.10% and 4000 is 0.40% of the current price. */
+  spreadPpm?: number
+  /** Daily short borrow fee. 100 is 0.01% and 300 is 0.03% of abs(shares) × price. */
+  borrowFeePpm?: number
 }
 
 /** Coarse band for the calendar lookup. Thresholds live on the calendar definition. */
@@ -540,7 +548,78 @@ export type SavingsInterestPaidEvent = {
   accruedCents: number
 }
 
-export type AccountLogEvent = TransferEvent | CommandRejectedEvent | SavingsAccrualEvent | SavingsInterestPaidEvent
+/** Buy pays the fill. Sell receives the fill. Quantity is whole shares, never a signed position. */
+export const ORDER_SIDES = ['buy', 'sell'] as const
+
+export type OrderSide = (typeof ORDER_SIDES)[number]
+
+/**
+ * One net position. Positive shares are long, negative shares are short.
+ * `costCents` is the entry notional of the open shares (always >= 0), so the
+ * entry average is costCents / abs(signedShares). A flat asset is omitted.
+ */
+export type OpenPosition = {
+  asset: string
+  signedShares: number
+  costCents: number
+}
+
+/**
+ * One market day's net realized result, in cents: closed-position P&L minus
+ * trade fees and borrow fees. Kept for the Step 17 FI window. This step does
+ * not check FI. A missing day means zero.
+ */
+export type RealizedDay = {
+  day: number
+  cents: number
+}
+
+/** Prices are cents. `halfSpread` is cents. `fee` is cents, 0.1% of shares × fill price. */
+export type OrderFillEvent = {
+  kind: 'orderFill'
+  day: number
+  asset: string
+  side: OrderSide
+  quantity: number
+  price: number
+  halfSpread: number
+  fillPrice: number
+  fee: number
+}
+
+/**
+ * Daily borrow fee for a short, charged after the market step.
+ * `ratePpm` is parts per million. `assessed`, `paid`, and `unpaid` are cents.
+ * Unpaid is the part the trading account could not cover. It is not a loan.
+ */
+export type BorrowFeeEvent = {
+  kind: 'borrowFee'
+  day: number
+  asset: string
+  shares: number
+  price: number
+  ratePpm: number
+  assessed: number
+  paid: number
+  unpaid: number
+}
+
+/** Closed-position P&L in cents, before the fee. Positive is a gain. */
+export type RealizedEvent = {
+  kind: 'realized'
+  day: number
+  asset: string
+  amount: number
+}
+
+/** Player commands since the previous end of day. */
+export type CommandLogEvent = TransferEvent | CommandRejectedEvent | OrderFillEvent | RealizedEvent
+
+export type AccountLogEvent =
+  | CommandLogEvent
+  | BorrowFeeEvent
+  | SavingsAccrualEvent
+  | SavingsInterestPaidEvent
 
 export type LogEvent =
   | NoiseRollEvent
@@ -589,14 +668,18 @@ export type PlayerAccounts = {
 }
 
 /**
- * Market plus the player. Commands and interest live on `pending` and `log`.
+ * Market plus the player. Commands, fills, and interest live on `pending` and `log`.
  * They are not written onto `market`, so a command cannot change the market hash.
  * `pending` holds commands since the previous `endDay`. `log` is those commands
- * until `endDay` replaces it with the commands plus that day's savings events.
+ * until `endDay` replaces it with the commands, that day's borrow fees, and savings.
+ * `realized` is the per-day ledger (P&L minus fees and borrow fees). One row per day
+ * that had a non-zero change. Days stay in increasing order.
  */
 export type GameState = {
   market: MarketState
   accounts: PlayerAccounts
-  pending: Array<TransferEvent | CommandRejectedEvent>
+  positions: Record<string, OpenPosition>
+  realized: RealizedDay[]
+  pending: CommandLogEvent[]
   log: AccountLogEvent[]
 }

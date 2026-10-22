@@ -275,6 +275,37 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
         `savings=${formatNumber(event.savingsCents)}`,
         `accrued=${formatNumber(event.accruedCents)}`,
       ].join(' ')
+    case 'orderFill':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=orderFill',
+        `asset=${formatAsset(event.asset)}`,
+        `side=${formatToken(event.side, 'side')}`,
+        `quantity=${formatNumber(event.quantity)}`,
+        `price=${formatNumber(event.price)}`,
+        `halfSpread=${formatNumber(event.halfSpread)}`,
+        `fillPrice=${formatNumber(event.fillPrice)}`,
+        `fee=${formatNumber(event.fee)}`,
+      ].join(' ')
+    case 'borrowFee':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=borrowFee',
+        `asset=${formatAsset(event.asset)}`,
+        `shares=${formatNumber(event.shares)}`,
+        `price=${formatNumber(event.price)}`,
+        `ratePpm=${formatNumber(event.ratePpm)}`,
+        `assessed=${formatNumber(event.assessed)}`,
+        `paid=${formatNumber(event.paid)}`,
+        `unpaid=${formatNumber(event.unpaid)}`,
+      ].join(' ')
+    case 'realized':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=realized',
+        `asset=${formatAsset(event.asset)}`,
+        `amount=${formatNumber(event.amount)}`,
+      ].join(' ')
     default: {
       const unknown: never = event
       throw new Error(`formatEvent cannot format ${describeValue(unknown)}`)

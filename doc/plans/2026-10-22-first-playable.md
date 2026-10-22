@@ -287,7 +287,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 8: News feed, rumours, source reliability, and the day summary
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 7
 - Files to create or change: `src/sim/feed.ts`, `src/sim/feed.test.ts`, `src/sim/summary.ts`, `src/sim/summary.test.ts`, `src/content/sources.ts`, `src/sim/market.ts`, `src/sim/types.ts`, `src/sim/log.ts`, `src/harness/cli.ts`
 - What changes:
@@ -309,7 +309,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`, `npm run sim -- --seed demo --days 20 --feed`.
   - User: find a rumour in the feed, then find the event it claims a few days later, or check that none came because it was false.
-- Progress:
+- Progress: 2026-10-22: Added the day-ahead feed, six sources, and daySummary. Provisional rumour rate: 1 attempt per source per day (6). Sources: cityDesk and floorWire (high 85%), sectorNote and marketBrief (medium 60%), streetTalk and openChatter (low 35%). The feed is generated after the day+3 pre-roll. Lead is 1 to 3 days after the generation day. A truth roll with nothing scheduled in that window is not emitted and is not counted. Feed lines are in the day log, so the default log shows them; --feed adds the day summary and does not hide event lines. The golden log gained headline and rumour lines. noiseRoll and eventRoll lines were checked against the Step 7 log and did not change. Summary lines were not added to the golden log. Checks: npm test passed (8 files, 40 tests, architecture violations=0; tier rates high 84.74%, medium 59.96%, low 34.99%); npm run typecheck passed; npm run lint passed; `npm run sim -- --seed demo --days 20 --feed` passed, stateHash=0b5063108dcec5a1.
 
 ### Step 9: Accounts and transfers
 

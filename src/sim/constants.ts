@@ -24,3 +24,14 @@ export const EVENT_LOOKAHEAD_DAYS = 3
  */
 export const FAIR_VALUE_CHANGE_LIMIT_NUMERATOR = 12
 export const FAIR_VALUE_CHANGE_LIMIT_DENOMINATOR = 100
+
+/**
+ * Section 5. Rumour attempts per source at the end of each day, including day 0.
+ * Provisional. One attempt per source is 6 rumours a day. Over 20 seeds × 120 days
+ * that is 4800 attempts per tier, enough to check a hit rate within ±5 points.
+ */
+export const RUMOURS_PER_SOURCE_PER_DAY = 1
+
+/** Section 5. A rumour claims an event this many days after the generation day. Provisional. */
+export const RUMOUR_LEAD_MIN_DAYS = 1
+export const RUMOUR_LEAD_MAX_DAYS = 3

@@ -8,6 +8,7 @@ import { CALENDAR_DEFINITIONS } from './calendar.ts'
 import { ENVIRONMENT_DEFINITIONS } from './environment.ts'
 import { EVENT_DEFINITIONS } from './events.ts'
 import { MARKET_DEFINITIONS } from './index.ts'
+import { SOURCE_DEFINITIONS } from './sources.ts'
 
 const io = (await import(['node', 'fs'].join(':'))) as {
   readFileSync: (path: string, encoding: 'utf8') => string
@@ -28,6 +29,7 @@ function debugContent(message: string): void {
 const FIXTURE_DIR = pathMod.join(pathMod.dirname(urlMod.fileURLToPath(import.meta.url)), '..', '..', 'tests', 'fixtures')
 const PRICE_LOG = pathMod.join(FIXTURE_DIR, 'demo-30-price-log.txt')
 const NOISE_LOG = pathMod.join(FIXTURE_DIR, 'demo-30-noise-roll.txt')
+const STEP7_ROLLS = pathMod.join(FIXTURE_DIR, 'demo-30-step7-rolls.txt')
 
 const STOCKS = ['NOVA', 'BLSW', 'HRBU', 'KSR']
 const RATE_DAYS = 10000
@@ -114,6 +116,21 @@ describe('provisional content', () => {
     expect(hike('B')).toBe(-4)
     expect(hike('B')).toBeLessThan(hike('A'))
     debugContent(`hike percent A=${hike('A')} B=${hike('B')}`)
+
+    expect(SOURCE_DEFINITIONS.map((source) => `${source.id}:${source.tier}:${source.hitRate}`)).toEqual([
+      'cityDesk:high:0.85',
+      'floorWire:high:0.85',
+      'sectorNote:medium:0.6',
+      'marketBrief:medium:0.6',
+      'streetTalk:low:0.35',
+      'openChatter:low:0.35',
+    ])
+    for (const source of SOURCE_DEFINITIONS) {
+      if (source.tier === 'low') expect(source.visibility.includes('base')).toBe(true)
+      debugContent(`source=${source.id} tier=${source.tier} hitRate=${source.hitRate} visibility=${source.visibility.join(',')}`)
+    }
+    const locked = SOURCE_DEFINITIONS.filter((source) => !source.visibility.includes('base'))
+    expect(locked.map((source) => source.id)).toEqual(['cityDesk', 'floorWire', 'sectorNote'])
   })
 
   it('fires each event type within 10 percent of the chance it rolled', { timeout: 20000 }, () => {
@@ -160,7 +177,7 @@ describe('provisional content', () => {
     }
   })
 
-  it('matches the demo 30-day log and the Step 4 noiseRoll lines', () => {
+  it('matches the demo 30-day log and keeps Step 7 noiseRoll and eventRoll lines', () => {
     const state = createMarket(MARKET_DEFINITIONS, 'demo')
     const events: LogEvent[] = [...state.log]
     for (let day = 0; day < 30; day += 1) {
@@ -171,12 +188,30 @@ describe('provisional content', () => {
     const output = lines.map((line) => `[DEBUG market] ${line}`).join('\n') + '\n'
     expect(output).toBe(readFixture(PRICE_LOG))
     const noise = lines.filter((line) => line.includes('kind=noiseRoll'))
+    const eventRolls = lines.filter((line) => line.includes('kind=eventRoll'))
+    const step7 = readFixture(STEP7_ROLLS)
+      .split('\n')
+      .filter((line) => line.length > 0)
+    expect(noise).toEqual(step7.filter((line) => line.includes('kind=noiseRoll')))
+    expect(eventRolls).toEqual(step7.filter((line) => line.includes('kind=eventRoll')))
     const step4 = readFixture(NOISE_LOG)
       .split('\n')
       .map(noiseBody)
       .filter((line) => line.length > 0)
     expect(noise).toEqual(step4)
-    debugContent(`golden lines=${lines.length} noiseRoll=${noise.length}`)
+    const headlines = events.filter((event) => event.kind === 'headline')
+    expect(events.some((event) => event.kind === 'headline' && event.day === 0)).toBe(false)
+    expect(events.some((event) => event.kind === 'rumourGenerated' && event.day === 0)).toBe(true)
+    for (const event of events) {
+      if (event.kind !== 'calendarItem') continue
+      const id = `calendar:${event.item}:${event.day}`
+      expect(headlines.some((headline) => headline.kind === 'headline' && headline.eventId === id && headline.day === event.day)).toBe(
+        true,
+      )
+    }
+    debugContent(
+      `golden lines=${lines.length} noiseRoll=${noise.length} eventRoll=${eventRolls.length} headlines=${headlines.length}`,
+    )
 
     let traced = false
     for (const fired of events) {

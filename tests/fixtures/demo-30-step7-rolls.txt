@@ -1,0 +1,879 @@
+day=0 kind=eventRoll eventDay=1 type=earningsBeat target=NOVA roll=0.73031203 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=1 type=earningsBeat target=BLSW roll=0.00312088 chance=0.08 fired=true
+day=0 kind=eventRoll eventDay=1 type=earningsBeat target=HRBU roll=0.09708152 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=1 type=earningsBeat target=KSR roll=0.97196956 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=1 type=productLaunch target=NOVA roll=0.37116535 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=productLaunch target=BLSW roll=0.50598656 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=productLaunch target=HRBU roll=0.2820695 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=productLaunch target=KSR roll=0.67195905 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=scandal target=NOVA roll=0.75700718 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=1 type=scandal target=BLSW roll=0.25292278 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=1 type=scandal target=HRBU roll=0.41023985 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=1 type=scandal target=KSR roll=0.49056377 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=1 type=managementChange target=NOVA roll=0.90158504 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=managementChange target=BLSW roll=0.90936502 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=managementChange target=HRBU roll=0.16713199 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=managementChange target=KSR roll=0.20922705 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=regulation target=A roll=0.60333928 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=1 type=regulation target=B roll=0.4922375 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=1 type=supplyShock target=A roll=0.02618752 chance=0.05 fired=true
+day=0 kind=eventRoll eventDay=1 type=supplyShock target=B roll=0.70188064 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=1 type=demandShift target=A roll=0.1371887 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=1 type=demandShift target=B roll=0.7095041 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=1 type=sentimentSwing target=market roll=0.17589428 chance=0.1 fired=false
+day=0 kind=eventRoll eventDay=2 type=earningsBeat target=NOVA roll=0.48679704 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=2 type=earningsBeat target=BLSW roll=0.81605026 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=2 type=earningsBeat target=HRBU roll=0.22916445 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=2 type=earningsBeat target=KSR roll=0.29186692 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=2 type=productLaunch target=NOVA roll=0.79476452 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=2 type=productLaunch target=BLSW roll=0.65385426 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=2 type=productLaunch target=HRBU roll=0.09179347 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=2 type=productLaunch target=KSR roll=0.03658816 chance=0.05 fired=true
+day=0 kind=eventRoll eventDay=2 type=scandal target=NOVA roll=0.07139561 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=2 type=scandal target=BLSW roll=0.14486727 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=2 type=scandal target=HRBU roll=0.19303621 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=2 type=scandal target=KSR roll=0.62605379 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=2 type=managementChange target=NOVA roll=0.30848931 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=2 type=managementChange target=BLSW roll=0.83953435 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=2 type=managementChange target=HRBU roll=0.03055129 chance=0.05 fired=true
+day=0 kind=eventRoll eventDay=2 type=managementChange target=KSR roll=0.70525146 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=2 type=regulation target=A roll=0.254178 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=2 type=regulation target=B roll=0.42823521 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=2 type=supplyShock target=A roll=0.19419793 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=2 type=supplyShock target=B roll=0.89926047 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=2 type=demandShift target=A roll=0.73187086 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=2 type=demandShift target=B roll=0.93706692 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=2 type=sentimentSwing target=market roll=0.98311895 chance=0.1 fired=false
+day=0 kind=eventRoll eventDay=3 type=earningsBeat target=NOVA roll=0.44828807 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=3 type=earningsBeat target=BLSW roll=0.73188254 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=3 type=earningsBeat target=HRBU roll=0.61645206 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=3 type=earningsBeat target=KSR roll=0.71220345 chance=0.08 fired=false
+day=0 kind=eventRoll eventDay=3 type=productLaunch target=NOVA roll=0.33348033 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=productLaunch target=BLSW roll=0.77327357 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=productLaunch target=HRBU roll=0.76463012 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=productLaunch target=KSR roll=0.21877324 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=scandal target=NOVA roll=0.80172953 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=3 type=scandal target=BLSW roll=0.94033727 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=3 type=scandal target=HRBU roll=0.27905058 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=3 type=scandal target=KSR roll=0.13621218 chance=0.04 fired=false
+day=0 kind=eventRoll eventDay=3 type=managementChange target=NOVA roll=0.41677205 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=managementChange target=BLSW roll=0.98993663 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=managementChange target=HRBU roll=0.19159615 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=managementChange target=KSR roll=0.40567784 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=regulation target=A roll=0.43230111 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=3 type=regulation target=B roll=0.81026806 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=3 type=supplyShock target=A roll=0.9833704 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=supplyShock target=B roll=0.61607142 chance=0.05 fired=false
+day=0 kind=eventRoll eventDay=3 type=demandShift target=A roll=0.84270731 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=3 type=demandShift target=B roll=0.58280581 chance=0.06 fired=false
+day=0 kind=eventRoll eventDay=3 type=sentimentSwing target=market roll=0.79005718 chance=0.1 fired=false
+day=1 kind=noiseRoll asset=NOVA z=-0.06658864
+day=1 kind=noiseRoll asset=BLSW z=1.38721788
+day=1 kind=noiseRoll asset=HRBU z=-0.69862926
+day=1 kind=noiseRoll asset=KSR z=-1.69930469
+day=1 kind=eventRoll eventDay=4 type=earningsBeat target=NOVA roll=0.23712871 chance=0.08001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=earningsBeat target=BLSW roll=0.89282023 chance=0.08001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=earningsBeat target=HRBU roll=0.34346515 chance=0.08001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=earningsBeat target=KSR roll=0.97414691 chance=0.08001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=productLaunch target=NOVA roll=0.90740154 chance=0.05001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=productLaunch target=BLSW roll=0.49459199 chance=0.05001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=productLaunch target=HRBU roll=0.06348306 chance=0.05001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=productLaunch target=KSR roll=0.06261887 chance=0.05001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=scandal target=NOVA roll=0.59490165 chance=0.04000824 fired=false
+day=1 kind=eventRoll eventDay=4 type=scandal target=BLSW roll=0.96661375 chance=0.04000824 fired=false
+day=1 kind=eventRoll eventDay=4 type=scandal target=HRBU roll=0.46373334 chance=0.04000824 fired=false
+day=1 kind=eventRoll eventDay=4 type=scandal target=KSR roll=0.81644368 chance=0.04000824 fired=false
+day=1 kind=eventRoll eventDay=4 type=managementChange target=NOVA roll=0.91694678 chance=0.05 fired=false
+day=1 kind=eventRoll eventDay=4 type=managementChange target=BLSW roll=0.62554633 chance=0.05 fired=false
+day=1 kind=eventRoll eventDay=4 type=managementChange target=HRBU roll=0.95598466 chance=0.05 fired=false
+day=1 kind=eventRoll eventDay=4 type=managementChange target=KSR roll=0.67489629 chance=0.05 fired=false
+day=1 kind=eventRoll eventDay=4 type=regulation target=A roll=0.85609334 chance=0.06 fired=false
+day=1 kind=eventRoll eventDay=4 type=regulation target=B roll=0.3830772 chance=0.06 fired=false
+day=1 kind=eventRoll eventDay=4 type=supplyShock target=A roll=0.82762665 chance=0.05000824 fired=false
+day=1 kind=eventRoll eventDay=4 type=supplyShock target=B roll=0.59107992 chance=0.05000824 fired=false
+day=1 kind=eventRoll eventDay=4 type=demandShift target=A roll=0.56023115 chance=0.06001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=demandShift target=B roll=0.89476151 chance=0.06001317 fired=false
+day=1 kind=eventRoll eventDay=4 type=sentimentSwing target=market roll=0.57792452 chance=0.10001317 fired=false
+day=2 kind=noiseRoll asset=NOVA z=-1.16679666
+day=2 kind=noiseRoll asset=BLSW z=0.12367028
+day=2 kind=noiseRoll asset=HRBU z=0.83275169
+day=2 kind=noiseRoll asset=KSR z=1.64411828
+day=2 kind=eventRoll eventDay=5 type=earningsBeat target=NOVA roll=0.13271725 chance=0.08001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=earningsBeat target=BLSW roll=0.47629234 chance=0.08001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=earningsBeat target=HRBU roll=0.18199175 chance=0.08001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=earningsBeat target=KSR roll=0.48636434 chance=0.08001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=productLaunch target=NOVA roll=0.22220945 chance=0.05001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=productLaunch target=BLSW roll=0.53171734 chance=0.05001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=productLaunch target=HRBU roll=0.74233296 chance=0.05001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=productLaunch target=KSR roll=0.6347333 chance=0.05001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=scandal target=NOVA roll=0.28574031 chance=0.04002331 fired=false
+day=2 kind=eventRoll eventDay=5 type=scandal target=BLSW roll=0.85492589 chance=0.04002331 fired=false
+day=2 kind=eventRoll eventDay=5 type=scandal target=HRBU roll=0.30723714 chance=0.04002331 fired=false
+day=2 kind=eventRoll eventDay=5 type=scandal target=KSR roll=0.73310479 chance=0.04002331 fired=false
+day=2 kind=eventRoll eventDay=5 type=managementChange target=NOVA roll=0.26904696 chance=0.05 fired=false
+day=2 kind=eventRoll eventDay=5 type=managementChange target=BLSW roll=0.21622506 chance=0.05 fired=false
+day=2 kind=eventRoll eventDay=5 type=managementChange target=HRBU roll=0.93088013 chance=0.05 fired=false
+day=2 kind=eventRoll eventDay=5 type=managementChange target=KSR roll=0.82534724 chance=0.05 fired=false
+day=2 kind=eventRoll eventDay=5 type=regulation target=A roll=0.0627434 chance=0.06 fired=false
+day=2 kind=eventRoll eventDay=5 type=regulation target=B roll=0.24773439 chance=0.06 fired=false
+day=2 kind=eventRoll eventDay=5 type=supplyShock target=A roll=0.91428924 chance=0.05002331 fired=false
+day=2 kind=eventRoll eventDay=5 type=supplyShock target=B roll=0.33541021 chance=0.05002331 fired=false
+day=2 kind=eventRoll eventDay=5 type=demandShift target=A roll=0.49283143 chance=0.06001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=demandShift target=B roll=0.95636294 chance=0.06001093 fired=false
+day=2 kind=eventRoll eventDay=5 type=sentimentSwing target=market roll=0.26555529 chance=0.10001093 fired=false
+day=3 kind=noiseRoll asset=NOVA z=0.37602213
+day=3 kind=noiseRoll asset=BLSW z=-0.5340053
+day=3 kind=noiseRoll asset=HRBU z=0.44367057
+day=3 kind=noiseRoll asset=KSR z=0.35499644
+day=3 kind=eventRoll eventDay=6 type=earningsBeat target=NOVA roll=0.67188398 chance=0.08000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=earningsBeat target=BLSW roll=0.30686751 chance=0.08000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=earningsBeat target=HRBU roll=0.66174965 chance=0.08000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=earningsBeat target=KSR roll=0.18335738 chance=0.08000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=productLaunch target=NOVA roll=0.12991641 chance=0.05000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=productLaunch target=BLSW roll=0.60588661 chance=0.05000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=productLaunch target=HRBU roll=0.95094516 chance=0.05000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=productLaunch target=KSR roll=0.63775079 chance=0.05000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=scandal target=NOVA roll=0.48299167 chance=0.04001839 fired=false
+day=3 kind=eventRoll eventDay=6 type=scandal target=BLSW roll=0.72681789 chance=0.04001839 fired=false
+day=3 kind=eventRoll eventDay=6 type=scandal target=HRBU roll=0.70651567 chance=0.04001839 fired=false
+day=3 kind=eventRoll eventDay=6 type=scandal target=KSR roll=0.78417262 chance=0.04001839 fired=false
+day=3 kind=eventRoll eventDay=6 type=managementChange target=NOVA roll=0.06379932 chance=0.05 fired=false
+day=3 kind=eventRoll eventDay=6 type=managementChange target=BLSW roll=0.04863087 chance=0.05 fired=true
+day=3 kind=eventRoll eventDay=6 type=managementChange target=HRBU roll=0.00547645 chance=0.05 fired=true
+day=3 kind=eventRoll eventDay=6 type=managementChange target=KSR roll=0.14248393 chance=0.05 fired=false
+day=3 kind=eventRoll eventDay=6 type=regulation target=A roll=0.47712759 chance=0.06 fired=false
+day=3 kind=eventRoll eventDay=6 type=regulation target=B roll=0.35823973 chance=0.06 fired=false
+day=3 kind=eventRoll eventDay=6 type=supplyShock target=A roll=0.46688642 chance=0.05001839 fired=false
+day=3 kind=eventRoll eventDay=6 type=supplyShock target=B roll=0.97893931 chance=0.05001839 fired=false
+day=3 kind=eventRoll eventDay=6 type=demandShift target=A roll=0.38125512 chance=0.06000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=demandShift target=B roll=0.37543349 chance=0.06000205 fired=false
+day=3 kind=eventRoll eventDay=6 type=sentimentSwing target=market roll=0.32593377 chance=0.10000205 fired=false
+day=4 kind=noiseRoll asset=NOVA z=1.5406501
+day=4 kind=noiseRoll asset=BLSW z=-1.16999858
+day=4 kind=noiseRoll asset=HRBU z=-0.248073
+day=4 kind=noiseRoll asset=KSR z=-0.65818641
+day=4 kind=eventRoll eventDay=7 type=earningsBeat target=NOVA roll=0.70722536 chance=0.08000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=earningsBeat target=BLSW roll=0.92477883 chance=0.08000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=earningsBeat target=HRBU roll=0.55765111 chance=0.08000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=earningsBeat target=KSR roll=0.13453011 chance=0.08000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=productLaunch target=NOVA roll=0.70106405 chance=0.05000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=productLaunch target=BLSW roll=0.94535599 chance=0.05000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=productLaunch target=HRBU roll=0.94461507 chance=0.05000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=productLaunch target=KSR roll=0.68156728 chance=0.05000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=scandal target=NOVA roll=0.55835665 chance=0.04002349 fired=false
+day=4 kind=eventRoll eventDay=7 type=scandal target=BLSW roll=0.46333054 chance=0.04002349 fired=false
+day=4 kind=eventRoll eventDay=7 type=scandal target=HRBU roll=0.33668263 chance=0.04002349 fired=false
+day=4 kind=eventRoll eventDay=7 type=scandal target=KSR roll=0.08258382 chance=0.04002349 fired=false
+day=4 kind=eventRoll eventDay=7 type=managementChange target=NOVA roll=0.79935843 chance=0.05 fired=false
+day=4 kind=eventRoll eventDay=7 type=managementChange target=BLSW roll=0.98569986 chance=0.05 fired=false
+day=4 kind=eventRoll eventDay=7 type=managementChange target=HRBU roll=0.20294571 chance=0.05 fired=false
+day=4 kind=eventRoll eventDay=7 type=managementChange target=KSR roll=0.55750006 chance=0.05 fired=false
+day=4 kind=eventRoll eventDay=7 type=regulation target=A roll=0.37631282 chance=0.06 fired=false
+day=4 kind=eventRoll eventDay=7 type=regulation target=B roll=0.05176588 chance=0.06 fired=true
+day=4 kind=eventRoll eventDay=7 type=supplyShock target=A roll=0.05829783 chance=0.05002349 fired=false
+day=4 kind=eventRoll eventDay=7 type=supplyShock target=B roll=0.24101115 chance=0.05002349 fired=false
+day=4 kind=eventRoll eventDay=7 type=demandShift target=A roll=0.50615612 chance=0.06000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=demandShift target=B roll=0.47243285 chance=0.06000678 fired=false
+day=4 kind=eventRoll eventDay=7 type=sentimentSwing target=market roll=0.068368 chance=0.10000678 fired=true
+day=5 kind=noiseRoll asset=NOVA z=-1.84542677
+day=5 kind=noiseRoll asset=BLSW z=-0.55348668
+day=5 kind=noiseRoll asset=HRBU z=-1.16332514
+day=5 kind=noiseRoll asset=KSR z=0.15192245
+day=5 kind=eventRoll eventDay=8 type=earningsBeat target=NOVA roll=0.91808485 chance=0.08000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=earningsBeat target=BLSW roll=0.155144 chance=0.08000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=earningsBeat target=HRBU roll=0.05536071 chance=0.08000716 fired=true
+day=5 kind=eventRoll eventDay=8 type=earningsBeat target=KSR roll=0.82673835 chance=0.08000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=productLaunch target=NOVA roll=0.08345616 chance=0.05000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=productLaunch target=BLSW roll=0.36432355 chance=0.05000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=productLaunch target=HRBU roll=0.79722388 chance=0.05000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=productLaunch target=KSR roll=0.05968437 chance=0.05000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=scandal target=NOVA roll=0.06703699 chance=0.04002989 fired=false
+day=5 kind=eventRoll eventDay=8 type=scandal target=BLSW roll=0.62099058 chance=0.04002989 fired=false
+day=5 kind=eventRoll eventDay=8 type=scandal target=HRBU roll=0.85937561 chance=0.04002989 fired=false
+day=5 kind=eventRoll eventDay=8 type=scandal target=KSR roll=0.27316372 chance=0.04002989 fired=false
+day=5 kind=eventRoll eventDay=8 type=managementChange target=NOVA roll=0.22617542 chance=0.05 fired=false
+day=5 kind=eventRoll eventDay=8 type=managementChange target=BLSW roll=0.96735609 chance=0.05 fired=false
+day=5 kind=eventRoll eventDay=8 type=managementChange target=HRBU roll=0.60988729 chance=0.05 fired=false
+day=5 kind=eventRoll eventDay=8 type=managementChange target=KSR roll=0.80199452 chance=0.05 fired=false
+day=5 kind=eventRoll eventDay=8 type=regulation target=A roll=0.14138338 chance=0.06 fired=false
+day=5 kind=eventRoll eventDay=8 type=regulation target=B roll=0.13085928 chance=0.06 fired=false
+day=5 kind=eventRoll eventDay=8 type=supplyShock target=A roll=0.34698483 chance=0.05002989 fired=false
+day=5 kind=eventRoll eventDay=8 type=supplyShock target=B roll=0.31406973 chance=0.05002989 fired=false
+day=5 kind=eventRoll eventDay=8 type=demandShift target=A roll=0.28338041 chance=0.06000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=demandShift target=B roll=0.31036623 chance=0.06000716 fired=false
+day=5 kind=eventRoll eventDay=8 type=sentimentSwing target=market roll=0.52619239 chance=0.10000716 fired=false
+day=6 kind=noiseRoll asset=NOVA z=-0.56779274
+day=6 kind=noiseRoll asset=BLSW z=0.15052976
+day=6 kind=noiseRoll asset=HRBU z=-1.74247045
+day=6 kind=noiseRoll asset=KSR z=0.64771495
+day=6 kind=eventRoll eventDay=9 type=earningsBeat target=NOVA roll=0.08418152 chance=0.08002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=earningsBeat target=BLSW roll=0.88440896 chance=0.08002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=earningsBeat target=HRBU roll=0.62400648 chance=0.08002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=earningsBeat target=KSR roll=0.55266346 chance=0.08002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=productLaunch target=NOVA roll=0.23552678 chance=0.05002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=productLaunch target=BLSW roll=0.103694 chance=0.05002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=productLaunch target=HRBU roll=0.47132929 chance=0.05002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=productLaunch target=KSR roll=0.08218943 chance=0.05002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=scandal target=NOVA roll=0.61051909 chance=0.04002792 fired=false
+day=6 kind=eventRoll eventDay=9 type=scandal target=BLSW roll=0.17899188 chance=0.04002792 fired=false
+day=6 kind=eventRoll eventDay=9 type=scandal target=HRBU roll=0.22652414 chance=0.04002792 fired=false
+day=6 kind=eventRoll eventDay=9 type=scandal target=KSR roll=0.79152581 chance=0.04002792 fired=false
+day=6 kind=eventRoll eventDay=9 type=managementChange target=NOVA roll=0.09090547 chance=0.05 fired=false
+day=6 kind=eventRoll eventDay=9 type=managementChange target=BLSW roll=0.80963836 chance=0.05 fired=false
+day=6 kind=eventRoll eventDay=9 type=managementChange target=HRBU roll=0.14150982 chance=0.05 fired=false
+day=6 kind=eventRoll eventDay=9 type=managementChange target=KSR roll=0.80025755 chance=0.05 fired=false
+day=6 kind=eventRoll eventDay=9 type=regulation target=A roll=0.75287801 chance=0.06 fired=false
+day=6 kind=eventRoll eventDay=9 type=regulation target=B roll=0.82314403 chance=0.06 fired=false
+day=6 kind=eventRoll eventDay=9 type=supplyShock target=A roll=0.58247399 chance=0.05002792 fired=false
+day=6 kind=eventRoll eventDay=9 type=supplyShock target=B roll=0.67263663 chance=0.05002792 fired=false
+day=6 kind=eventRoll eventDay=9 type=demandShift target=A roll=0.01752609 chance=0.06002498 fired=true
+day=6 kind=eventRoll eventDay=9 type=demandShift target=B roll=0.38317522 chance=0.06002498 fired=false
+day=6 kind=eventRoll eventDay=9 type=sentimentSwing target=market roll=0.02610487 chance=0.10002498 fired=true
+day=7 kind=noiseRoll asset=NOVA z=-2.05347207
+day=7 kind=noiseRoll asset=BLSW z=0.26594655
+day=7 kind=noiseRoll asset=HRBU z=-0.45491139
+day=7 kind=noiseRoll asset=KSR z=0.8956012
+day=7 kind=eventRoll eventDay=10 type=earningsBeat target=NOVA roll=0.39021228 chance=0.0800223 fired=false
+day=7 kind=eventRoll eventDay=10 type=earningsBeat target=BLSW roll=0.75920322 chance=0.0800223 fired=false
+day=7 kind=eventRoll eventDay=10 type=earningsBeat target=HRBU roll=0.32721289 chance=0.0800223 fired=false
+day=7 kind=eventRoll eventDay=10 type=earningsBeat target=KSR roll=0.36887512 chance=0.0800223 fired=false
+day=7 kind=eventRoll eventDay=10 type=productLaunch target=NOVA roll=0.35565255 chance=0.0500223 fired=false
+day=7 kind=eventRoll eventDay=10 type=productLaunch target=BLSW roll=0.0954791 chance=0.0500223 fired=false
+day=7 kind=eventRoll eventDay=10 type=productLaunch target=HRBU roll=0.4153654 chance=0.0500223 fired=false
+day=7 kind=eventRoll eventDay=10 type=productLaunch target=KSR roll=0.26365458 chance=0.0500223 fired=false
+day=7 kind=eventRoll eventDay=10 type=scandal target=NOVA roll=0.16756652 chance=0.04002034 fired=false
+day=7 kind=eventRoll eventDay=10 type=scandal target=BLSW roll=0.05068531 chance=0.04002034 fired=false
+day=7 kind=eventRoll eventDay=10 type=scandal target=HRBU roll=0.56121109 chance=0.04002034 fired=false
+day=7 kind=eventRoll eventDay=10 type=scandal target=KSR roll=0.80155175 chance=0.04002034 fired=false
+day=7 kind=eventRoll eventDay=10 type=managementChange target=NOVA roll=0.6089756 chance=0.05 fired=false
+day=7 kind=eventRoll eventDay=10 type=managementChange target=BLSW roll=0.46400098 chance=0.05 fired=false
+day=7 kind=eventRoll eventDay=10 type=managementChange target=HRBU roll=0.4663282 chance=0.05 fired=false
+day=7 kind=eventRoll eventDay=10 type=managementChange target=KSR roll=0.24842524 chance=0.05 fired=false
+day=7 kind=eventRoll eventDay=10 type=regulation target=A roll=0.66622322 chance=0.06 fired=false
+day=7 kind=eventRoll eventDay=10 type=regulation target=B roll=0.68154872 chance=0.06 fired=false
+day=7 kind=eventRoll eventDay=10 type=supplyShock target=A roll=0.22120105 chance=0.05002034 fired=false
+day=7 kind=eventRoll eventDay=10 type=supplyShock target=B roll=0.32775045 chance=0.05002034 fired=false
+day=7 kind=eventRoll eventDay=10 type=demandShift target=A roll=0.68948703 chance=0.0600223 fired=false
+day=7 kind=eventRoll eventDay=10 type=demandShift target=B roll=0.77021325 chance=0.0600223 fired=false
+day=7 kind=eventRoll eventDay=10 type=sentimentSwing target=market roll=0.39300235 chance=0.1000223 fired=false
+day=8 kind=noiseRoll asset=NOVA z=-0.32139405
+day=8 kind=noiseRoll asset=BLSW z=0.11954474
+day=8 kind=noiseRoll asset=HRBU z=1.34324058
+day=8 kind=noiseRoll asset=KSR z=2.38916056
+day=8 kind=eventRoll eventDay=11 type=earningsBeat target=NOVA roll=0.16354427 chance=0.08004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=earningsBeat target=BLSW roll=0.73539003 chance=0.08004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=earningsBeat target=HRBU roll=0.23484782 chance=0.08004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=earningsBeat target=KSR roll=0.49479757 chance=0.08004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=productLaunch target=NOVA roll=0.69185738 chance=0.05004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=productLaunch target=BLSW roll=0.25905379 chance=0.05004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=productLaunch target=HRBU roll=0.50230972 chance=0.05004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=productLaunch target=KSR roll=0.71722318 chance=0.05004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=scandal target=NOVA roll=0.63480463 chance=0.04002977 fired=false
+day=8 kind=eventRoll eventDay=11 type=scandal target=BLSW roll=0.11132651 chance=0.04002977 fired=false
+day=8 kind=eventRoll eventDay=11 type=scandal target=HRBU roll=0.73029509 chance=0.04002977 fired=false
+day=8 kind=eventRoll eventDay=11 type=scandal target=KSR roll=0.25867372 chance=0.04002977 fired=false
+day=8 kind=eventRoll eventDay=11 type=managementChange target=NOVA roll=0.79828481 chance=0.05 fired=false
+day=8 kind=eventRoll eventDay=11 type=managementChange target=BLSW roll=0.07397723 chance=0.05 fired=false
+day=8 kind=eventRoll eventDay=11 type=managementChange target=HRBU roll=0.37198483 chance=0.05 fired=false
+day=8 kind=eventRoll eventDay=11 type=managementChange target=KSR roll=0.92692241 chance=0.05 fired=false
+day=8 kind=eventRoll eventDay=11 type=regulation target=A roll=0.86993228 chance=0.06 fired=false
+day=8 kind=eventRoll eventDay=11 type=regulation target=B roll=0.36744879 chance=0.06 fired=false
+day=8 kind=eventRoll eventDay=11 type=supplyShock target=A roll=0.44664221 chance=0.05002977 fired=false
+day=8 kind=eventRoll eventDay=11 type=supplyShock target=B roll=0.14473592 chance=0.05002977 fired=false
+day=8 kind=eventRoll eventDay=11 type=demandShift target=A roll=0.69666844 chance=0.06004191 fired=false
+day=8 kind=eventRoll eventDay=11 type=demandShift target=B roll=0.04688266 chance=0.06004191 fired=true
+day=8 kind=eventRoll eventDay=11 type=sentimentSwing target=market roll=0.63484426 chance=0.10004191 fired=false
+day=9 kind=noiseRoll asset=NOVA z=-0.47539406
+day=9 kind=noiseRoll asset=BLSW z=-0.06404653
+day=9 kind=noiseRoll asset=HRBU z=0.32177701
+day=9 kind=noiseRoll asset=KSR z=-0.40932779
+day=9 kind=eventRoll eventDay=12 type=earningsBeat target=NOVA roll=0.28992066 chance=0.08004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=earningsBeat target=BLSW roll=0.72204871 chance=0.08004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=earningsBeat target=HRBU roll=0.09599075 chance=0.08004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=earningsBeat target=KSR roll=0.23533523 chance=0.08004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=productLaunch target=NOVA roll=0.54876504 chance=0.05004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=productLaunch target=BLSW roll=0.83924235 chance=0.05004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=productLaunch target=HRBU roll=0.85651058 chance=0.05004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=productLaunch target=KSR roll=0.43097631 chance=0.05004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=scandal target=NOVA roll=0.29238179 chance=0.0400246 fired=false
+day=9 kind=eventRoll eventDay=12 type=scandal target=BLSW roll=0.84860974 chance=0.0400246 fired=false
+day=9 kind=eventRoll eventDay=12 type=scandal target=HRBU roll=0.40001986 chance=0.0400246 fired=false
+day=9 kind=eventRoll eventDay=12 type=scandal target=KSR roll=0.65897893 chance=0.0400246 fired=false
+day=9 kind=eventRoll eventDay=12 type=managementChange target=NOVA roll=0.83207905 chance=0.05 fired=false
+day=9 kind=eventRoll eventDay=12 type=managementChange target=BLSW roll=0.32417642 chance=0.05 fired=false
+day=9 kind=eventRoll eventDay=12 type=managementChange target=HRBU roll=0.28927972 chance=0.05 fired=false
+day=9 kind=eventRoll eventDay=12 type=managementChange target=KSR roll=0.40350046 chance=0.05 fired=false
+day=9 kind=eventRoll eventDay=12 type=regulation target=A roll=0.7267788 chance=0.06 fired=false
+day=9 kind=eventRoll eventDay=12 type=regulation target=B roll=0.58240766 chance=0.06 fired=false
+day=9 kind=eventRoll eventDay=12 type=supplyShock target=A roll=0.24424528 chance=0.0500246 fired=false
+day=9 kind=eventRoll eventDay=12 type=supplyShock target=B roll=0.21926747 chance=0.0500246 fired=false
+day=9 kind=eventRoll eventDay=12 type=demandShift target=A roll=0.75051784 chance=0.06004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=demandShift target=B roll=0.80084488 chance=0.06004751 fired=false
+day=9 kind=eventRoll eventDay=12 type=sentimentSwing target=market roll=0.71403661 chance=0.10004751 fired=false
+day=10 kind=noiseRoll asset=NOVA z=-0.95473821
+day=10 kind=noiseRoll asset=BLSW z=-1.57470987
+day=10 kind=noiseRoll asset=HRBU z=0.60065814
+day=10 kind=noiseRoll asset=KSR z=-0.19655292
+day=10 kind=eventRoll eventDay=13 type=earningsBeat target=NOVA roll=0.79787622 chance=0.08006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=earningsBeat target=BLSW roll=0.24802227 chance=0.08006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=earningsBeat target=HRBU roll=0.81925043 chance=0.08006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=earningsBeat target=KSR roll=0.10455219 chance=0.08006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=productLaunch target=NOVA roll=0.79143548 chance=0.05006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=productLaunch target=BLSW roll=0.09979481 chance=0.05006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=productLaunch target=HRBU roll=0.79835292 chance=0.05006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=productLaunch target=KSR roll=0.23623343 chance=0.05006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=scandal target=NOVA roll=0.59140355 chance=0.04003039 fired=false
+day=10 kind=eventRoll eventDay=13 type=scandal target=BLSW roll=0.77062162 chance=0.04003039 fired=false
+day=10 kind=eventRoll eventDay=13 type=scandal target=HRBU roll=0.09343411 chance=0.04003039 fired=false
+day=10 kind=eventRoll eventDay=13 type=scandal target=KSR roll=0.87598447 chance=0.04003039 fired=false
+day=10 kind=eventRoll eventDay=13 type=managementChange target=NOVA roll=0.70697882 chance=0.05 fired=false
+day=10 kind=eventRoll eventDay=13 type=managementChange target=BLSW roll=0.30389525 chance=0.05 fired=false
+day=10 kind=eventRoll eventDay=13 type=managementChange target=HRBU roll=0.54714465 chance=0.05 fired=false
+day=10 kind=eventRoll eventDay=13 type=managementChange target=KSR roll=0.87515727 chance=0.05 fired=false
+day=10 kind=eventRoll eventDay=13 type=regulation target=A roll=0.12965826 chance=0.06 fired=false
+day=10 kind=eventRoll eventDay=13 type=regulation target=B roll=0.58388215 chance=0.06 fired=false
+day=10 kind=eventRoll eventDay=13 type=supplyShock target=A roll=0.72376916 chance=0.05003039 fired=false
+day=10 kind=eventRoll eventDay=13 type=supplyShock target=B roll=0.26470487 chance=0.05003039 fired=false
+day=10 kind=eventRoll eventDay=13 type=demandShift target=A roll=0.94612203 chance=0.06006834 fired=false
+day=10 kind=eventRoll eventDay=13 type=demandShift target=B roll=0.04763206 chance=0.06006834 fired=true
+day=10 kind=eventRoll eventDay=13 type=sentimentSwing target=market roll=0.57170664 chance=0.10006834 fired=false
+day=11 kind=noiseRoll asset=NOVA z=-1.61586223
+day=11 kind=noiseRoll asset=BLSW z=1.73979401
+day=11 kind=noiseRoll asset=HRBU z=-0.63047002
+day=11 kind=noiseRoll asset=KSR z=-1.28513673
+day=11 kind=eventRoll eventDay=14 type=earningsBeat target=NOVA roll=0.41105511 chance=0.08005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=earningsBeat target=BLSW roll=0.61893463 chance=0.08005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=earningsBeat target=HRBU roll=0.15556195 chance=0.08005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=earningsBeat target=KSR roll=0.02630521 chance=0.08005708 fired=true
+day=11 kind=eventRoll eventDay=14 type=productLaunch target=NOVA roll=0.50720508 chance=0.05005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=productLaunch target=BLSW roll=0.14780306 chance=0.05005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=productLaunch target=HRBU roll=0.43833378 chance=0.05005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=productLaunch target=KSR roll=0.87378806 chance=0.05005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=scandal target=NOVA roll=0.08628707 chance=0.04003172 fired=false
+day=11 kind=eventRoll eventDay=14 type=scandal target=BLSW roll=0.6839499 chance=0.04003172 fired=false
+day=11 kind=eventRoll eventDay=14 type=scandal target=HRBU roll=0.09872262 chance=0.04003172 fired=false
+day=11 kind=eventRoll eventDay=14 type=scandal target=KSR roll=0.04179249 chance=0.04003172 fired=false
+day=11 kind=eventRoll eventDay=14 type=managementChange target=NOVA roll=0.75170667 chance=0.05 fired=false
+day=11 kind=eventRoll eventDay=14 type=managementChange target=BLSW roll=0.6934467 chance=0.05 fired=false
+day=11 kind=eventRoll eventDay=14 type=managementChange target=HRBU roll=0.23777478 chance=0.05 fired=false
+day=11 kind=eventRoll eventDay=14 type=managementChange target=KSR roll=0.08152968 chance=0.05 fired=false
+day=11 kind=eventRoll eventDay=14 type=regulation target=A roll=0.87730734 chance=0.06 fired=false
+day=11 kind=eventRoll eventDay=14 type=regulation target=B roll=0.25855804 chance=0.06 fired=false
+day=11 kind=eventRoll eventDay=14 type=supplyShock target=A roll=0.37030046 chance=0.05003172 fired=false
+day=11 kind=eventRoll eventDay=14 type=supplyShock target=B roll=0.2128688 chance=0.05003172 fired=false
+day=11 kind=eventRoll eventDay=14 type=demandShift target=A roll=0.68668996 chance=0.06005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=demandShift target=B roll=0.9291621 chance=0.06005708 fired=false
+day=11 kind=eventRoll eventDay=14 type=sentimentSwing target=market roll=0.68739951 chance=0.10005708 fired=false
+day=12 kind=noiseRoll asset=NOVA z=-0.80978096
+day=12 kind=noiseRoll asset=BLSW z=-0.2143119
+day=12 kind=noiseRoll asset=HRBU z=0.96164199
+day=12 kind=noiseRoll asset=KSR z=-0.81124544
+day=12 kind=eventRoll eventDay=15 type=earningsBeat target=NOVA roll=0.00990941 chance=0.08006565 fired=true
+day=12 kind=eventRoll eventDay=15 type=earningsBeat target=BLSW roll=0.59748841 chance=0.08006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=earningsBeat target=HRBU roll=0.94928388 chance=0.08006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=earningsBeat target=KSR roll=0.41902729 chance=0.08006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=productLaunch target=NOVA roll=0.15416955 chance=0.05006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=productLaunch target=BLSW roll=0.49222611 chance=0.05006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=productLaunch target=HRBU roll=0.62983587 chance=0.05006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=productLaunch target=KSR roll=0.40257384 chance=0.05006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=scandal target=NOVA roll=0.6815961 chance=0.04002607 fired=false
+day=12 kind=eventRoll eventDay=15 type=scandal target=BLSW roll=0.75850583 chance=0.04002607 fired=false
+day=12 kind=eventRoll eventDay=15 type=scandal target=HRBU roll=0.84943726 chance=0.04002607 fired=false
+day=12 kind=eventRoll eventDay=15 type=scandal target=KSR roll=0.19433652 chance=0.04002607 fired=false
+day=12 kind=eventRoll eventDay=15 type=managementChange target=NOVA roll=0.55695813 chance=0.05 fired=false
+day=12 kind=eventRoll eventDay=15 type=managementChange target=BLSW roll=0.94046978 chance=0.05 fired=false
+day=12 kind=eventRoll eventDay=15 type=managementChange target=HRBU roll=0.63165266 chance=0.05 fired=false
+day=12 kind=eventRoll eventDay=15 type=managementChange target=KSR roll=0.01567238 chance=0.05 fired=true
+day=12 kind=eventRoll eventDay=15 type=regulation target=A roll=0.160248 chance=0.06 fired=false
+day=12 kind=eventRoll eventDay=15 type=regulation target=B roll=0.21952722 chance=0.06 fired=false
+day=12 kind=eventRoll eventDay=15 type=supplyShock target=A roll=0.64246487 chance=0.05002607 fired=false
+day=12 kind=eventRoll eventDay=15 type=supplyShock target=B roll=0.19294511 chance=0.05002607 fired=false
+day=12 kind=eventRoll eventDay=15 type=demandShift target=A roll=0.5654053 chance=0.06006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=demandShift target=B roll=0.43053439 chance=0.06006565 fired=false
+day=12 kind=eventRoll eventDay=15 type=sentimentSwing target=market roll=0.10965518 chance=0.10006565 fired=false
+day=13 kind=noiseRoll asset=NOVA z=0.39920622
+day=13 kind=noiseRoll asset=BLSW z=-0.36650477
+day=13 kind=noiseRoll asset=HRBU z=-1.02456204
+day=13 kind=noiseRoll asset=KSR z=-1.47820502
+day=13 kind=eventRoll eventDay=16 type=earningsBeat target=NOVA roll=0.39329893 chance=0.0800502 fired=false
+day=13 kind=eventRoll eventDay=16 type=earningsBeat target=BLSW roll=0.26337113 chance=0.0800502 fired=false
+day=13 kind=eventRoll eventDay=16 type=earningsBeat target=HRBU roll=0.9068652 chance=0.0800502 fired=false
+day=13 kind=eventRoll eventDay=16 type=earningsBeat target=KSR roll=0.31410082 chance=0.0800502 fired=false
+day=13 kind=eventRoll eventDay=16 type=productLaunch target=NOVA roll=0.92825369 chance=0.0500502 fired=false
+day=13 kind=eventRoll eventDay=16 type=productLaunch target=BLSW roll=0.73581114 chance=0.0500502 fired=false
+day=13 kind=eventRoll eventDay=16 type=productLaunch target=HRBU roll=0.91932767 chance=0.0500502 fired=false
+day=13 kind=eventRoll eventDay=16 type=productLaunch target=KSR roll=0.2870421 chance=0.0500502 fired=false
+day=13 kind=eventRoll eventDay=16 type=scandal target=NOVA roll=0.96115521 chance=0.04002458 fired=false
+day=13 kind=eventRoll eventDay=16 type=scandal target=BLSW roll=0.95837316 chance=0.04002458 fired=false
+day=13 kind=eventRoll eventDay=16 type=scandal target=HRBU roll=0.36047233 chance=0.04002458 fired=false
+day=13 kind=eventRoll eventDay=16 type=scandal target=KSR roll=0.77914667 chance=0.04002458 fired=false
+day=13 kind=eventRoll eventDay=16 type=managementChange target=NOVA roll=0.7297884 chance=0.05 fired=false
+day=13 kind=eventRoll eventDay=16 type=managementChange target=BLSW roll=0.16724553 chance=0.05 fired=false
+day=13 kind=eventRoll eventDay=16 type=managementChange target=HRBU roll=0.02664983 chance=0.05 fired=true
+day=13 kind=eventRoll eventDay=16 type=managementChange target=KSR roll=0.77332415 chance=0.05 fired=false
+day=13 kind=eventRoll eventDay=16 type=regulation target=A roll=0.06325251 chance=0.06 fired=false
+day=13 kind=eventRoll eventDay=16 type=regulation target=B roll=0.8541983 chance=0.06 fired=false
+day=13 kind=eventRoll eventDay=16 type=supplyShock target=A roll=0.118725 chance=0.05002458 fired=false
+day=13 kind=eventRoll eventDay=16 type=supplyShock target=B roll=0.67347302 chance=0.05002458 fired=false
+day=13 kind=eventRoll eventDay=16 type=demandShift target=A roll=0.54008015 chance=0.0600502 fired=false
+day=13 kind=eventRoll eventDay=16 type=demandShift target=B roll=0.48709074 chance=0.0600502 fired=false
+day=13 kind=eventRoll eventDay=16 type=sentimentSwing target=market roll=0.9162475 chance=0.1000502 fired=false
+day=14 kind=noiseRoll asset=NOVA z=0.26478624
+day=14 kind=noiseRoll asset=BLSW z=-0.32585899
+day=14 kind=noiseRoll asset=HRBU z=-1.87924891
+day=14 kind=noiseRoll asset=KSR z=-0.09134334
+day=14 kind=eventRoll eventDay=17 type=earningsBeat target=NOVA roll=0.76887006 chance=0.08006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=earningsBeat target=BLSW roll=0.36419603 chance=0.08006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=earningsBeat target=HRBU roll=0.85380156 chance=0.08006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=earningsBeat target=KSR roll=0.1625434 chance=0.08006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=productLaunch target=NOVA roll=0.20673179 chance=0.05006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=productLaunch target=BLSW roll=0.88684295 chance=0.05006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=productLaunch target=HRBU roll=0.3187252 chance=0.05006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=productLaunch target=KSR roll=0.91761856 chance=0.05006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=scandal target=NOVA roll=0.66255455 chance=0.04002385 fired=false
+day=14 kind=eventRoll eventDay=17 type=scandal target=BLSW roll=0.68210296 chance=0.04002385 fired=false
+day=14 kind=eventRoll eventDay=17 type=scandal target=HRBU roll=0.36929543 chance=0.04002385 fired=false
+day=14 kind=eventRoll eventDay=17 type=scandal target=KSR roll=0.89932989 chance=0.04002385 fired=false
+day=14 kind=eventRoll eventDay=17 type=managementChange target=NOVA roll=0.97682623 chance=0.05 fired=false
+day=14 kind=eventRoll eventDay=17 type=managementChange target=BLSW roll=0.26393067 chance=0.05 fired=false
+day=14 kind=eventRoll eventDay=17 type=managementChange target=HRBU roll=0.83783191 chance=0.05 fired=false
+day=14 kind=eventRoll eventDay=17 type=managementChange target=KSR roll=0.08351978 chance=0.05 fired=false
+day=14 kind=eventRoll eventDay=17 type=regulation target=A roll=0.32777291 chance=0.06 fired=false
+day=14 kind=eventRoll eventDay=17 type=regulation target=B roll=0.64670177 chance=0.06 fired=false
+day=14 kind=eventRoll eventDay=17 type=supplyShock target=A roll=0.58207123 chance=0.05002385 fired=false
+day=14 kind=eventRoll eventDay=17 type=supplyShock target=B roll=0.24818735 chance=0.05002385 fired=false
+day=14 kind=eventRoll eventDay=17 type=demandShift target=A roll=0.07261973 chance=0.06006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=demandShift target=B roll=0.98829295 chance=0.06006586 fired=false
+day=14 kind=eventRoll eventDay=17 type=sentimentSwing target=market roll=0.06551445 chance=0.10006586 fired=true
+day=15 kind=noiseRoll asset=NOVA z=-0.95030279
+day=15 kind=noiseRoll asset=BLSW z=-0.55210226
+day=15 kind=noiseRoll asset=HRBU z=1.75979409
+day=15 kind=noiseRoll asset=KSR z=-0.76028057
+day=15 kind=eventRoll eventDay=18 type=earningsBeat target=NOVA roll=0.39834681 chance=0.08006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=earningsBeat target=BLSW roll=0.49804634 chance=0.08006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=earningsBeat target=HRBU roll=0.70939051 chance=0.08006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=earningsBeat target=KSR roll=0.44409978 chance=0.08006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=productLaunch target=NOVA roll=0.10629527 chance=0.05006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=productLaunch target=BLSW roll=0.57404375 chance=0.05006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=productLaunch target=HRBU roll=0.69724668 chance=0.05006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=productLaunch target=KSR roll=0.6157754 chance=0.05006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=scandal target=NOVA roll=0.36640104 chance=0.04001491 fired=false
+day=15 kind=eventRoll eventDay=18 type=scandal target=BLSW roll=0.1024283 chance=0.04001491 fired=false
+day=15 kind=eventRoll eventDay=18 type=scandal target=HRBU roll=0.40176842 chance=0.04001491 fired=false
+day=15 kind=eventRoll eventDay=18 type=scandal target=KSR roll=0.47116036 chance=0.04001491 fired=false
+day=15 kind=eventRoll eventDay=18 type=managementChange target=NOVA roll=0.47481129 chance=0.05 fired=false
+day=15 kind=eventRoll eventDay=18 type=managementChange target=BLSW roll=0.44795776 chance=0.05 fired=false
+day=15 kind=eventRoll eventDay=18 type=managementChange target=HRBU roll=0.10329445 chance=0.05 fired=false
+day=15 kind=eventRoll eventDay=18 type=managementChange target=KSR roll=0.64896395 chance=0.05 fired=false
+day=15 kind=eventRoll eventDay=18 type=regulation target=A roll=0.15575512 chance=0.06 fired=false
+day=15 kind=eventRoll eventDay=18 type=regulation target=B roll=0.31210296 chance=0.06 fired=false
+day=15 kind=eventRoll eventDay=18 type=supplyShock target=A roll=0.99813093 chance=0.05001491 fired=false
+day=15 kind=eventRoll eventDay=18 type=supplyShock target=B roll=0.76830011 chance=0.05001491 fired=false
+day=15 kind=eventRoll eventDay=18 type=demandShift target=A roll=0.09563473 chance=0.06006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=demandShift target=B roll=0.53481746 chance=0.06006944 fired=false
+day=15 kind=eventRoll eventDay=18 type=sentimentSwing target=market roll=0.97345943 chance=0.10006944 fired=false
+day=16 kind=noiseRoll asset=NOVA z=0.0069945
+day=16 kind=noiseRoll asset=BLSW z=0.63264079
+day=16 kind=noiseRoll asset=HRBU z=0.24353519
+day=16 kind=noiseRoll asset=KSR z=-0.10996204
+day=16 kind=eventRoll eventDay=19 type=earningsBeat target=NOVA roll=0.06691215 chance=0.08005573 fired=true
+day=16 kind=eventRoll eventDay=19 type=earningsBeat target=BLSW roll=0.98457446 chance=0.08005573 fired=false
+day=16 kind=eventRoll eventDay=19 type=earningsBeat target=HRBU roll=0.07558409 chance=0.08005573 fired=true
+day=16 kind=eventRoll eventDay=19 type=earningsBeat target=KSR roll=0.469556 chance=0.08005573 fired=false
+day=16 kind=eventRoll eventDay=19 type=productLaunch target=NOVA roll=0.2379879 chance=0.05005573 fired=false
+day=16 kind=eventRoll eventDay=19 type=productLaunch target=BLSW roll=0.0948579 chance=0.05005573 fired=false
+day=16 kind=eventRoll eventDay=19 type=productLaunch target=HRBU roll=0.76561331 chance=0.05005573 fired=false
+day=16 kind=eventRoll eventDay=19 type=productLaunch target=KSR roll=0.46930808 chance=0.05005573 fired=false
+day=16 kind=eventRoll eventDay=19 type=scandal target=NOVA roll=0.87678975 chance=0.04001189 fired=false
+day=16 kind=eventRoll eventDay=19 type=scandal target=BLSW roll=0.99713299 chance=0.04001189 fired=false
+day=16 kind=eventRoll eventDay=19 type=scandal target=HRBU roll=0.41538833 chance=0.04001189 fired=false
+day=16 kind=eventRoll eventDay=19 type=scandal target=KSR roll=0.34094184 chance=0.04001189 fired=false
+day=16 kind=eventRoll eventDay=19 type=managementChange target=NOVA roll=0.85729493 chance=0.05 fired=false
+day=16 kind=eventRoll eventDay=19 type=managementChange target=BLSW roll=0.47319038 chance=0.05 fired=false
+day=16 kind=eventRoll eventDay=19 type=managementChange target=HRBU roll=0.91464327 chance=0.05 fired=false
+day=16 kind=eventRoll eventDay=19 type=managementChange target=KSR roll=0.66945833 chance=0.05 fired=false
+day=16 kind=eventRoll eventDay=19 type=regulation target=A roll=0.79002937 chance=0.06 fired=false
+day=16 kind=eventRoll eventDay=19 type=regulation target=B roll=0.76831016 chance=0.06 fired=false
+day=16 kind=eventRoll eventDay=19 type=supplyShock target=A roll=0.51793715 chance=0.05001189 fired=false
+day=16 kind=eventRoll eventDay=19 type=supplyShock target=B roll=0.07671783 chance=0.05001189 fired=false
+day=16 kind=eventRoll eventDay=19 type=demandShift target=A roll=0.52396097 chance=0.06005573 fired=false
+day=16 kind=eventRoll eventDay=19 type=demandShift target=B roll=0.98953488 chance=0.06005573 fired=false
+day=16 kind=eventRoll eventDay=19 type=sentimentSwing target=market roll=0.49923859 chance=0.10005573 fired=false
+day=17 kind=noiseRoll asset=NOVA z=-0.06067868
+day=17 kind=noiseRoll asset=BLSW z=0.73154215
+day=17 kind=noiseRoll asset=HRBU z=-0.55096232
+day=17 kind=noiseRoll asset=KSR z=1.79374922
+day=17 kind=eventRoll eventDay=20 type=earningsBeat target=NOVA roll=0.10190984 chance=0.0800636 fired=false
+day=17 kind=eventRoll eventDay=20 type=earningsBeat target=BLSW roll=0.30434798 chance=0.0800636 fired=false
+day=17 kind=eventRoll eventDay=20 type=earningsBeat target=HRBU roll=0.74152696 chance=0.0800636 fired=false
+day=17 kind=eventRoll eventDay=20 type=earningsBeat target=KSR roll=0.22278247 chance=0.0800636 fired=false
+day=17 kind=eventRoll eventDay=20 type=productLaunch target=NOVA roll=0.53812901 chance=0.0500636 fired=false
+day=17 kind=eventRoll eventDay=20 type=productLaunch target=BLSW roll=0.29662518 chance=0.0500636 fired=false
+day=17 kind=eventRoll eventDay=20 type=productLaunch target=HRBU roll=0.40488656 chance=0.0500636 fired=false
+day=17 kind=eventRoll eventDay=20 type=productLaunch target=KSR roll=0.78239852 chance=0.0500636 fired=false
+day=17 kind=eventRoll eventDay=20 type=scandal target=NOVA roll=0.44139704 chance=0.04001951 fired=false
+day=17 kind=eventRoll eventDay=20 type=scandal target=BLSW roll=0.87040187 chance=0.04001951 fired=false
+day=17 kind=eventRoll eventDay=20 type=scandal target=HRBU roll=0.2104616 chance=0.04001951 fired=false
+day=17 kind=eventRoll eventDay=20 type=scandal target=KSR roll=0.90745599 chance=0.04001951 fired=false
+day=17 kind=eventRoll eventDay=20 type=managementChange target=NOVA roll=0.68073044 chance=0.05 fired=false
+day=17 kind=eventRoll eventDay=20 type=managementChange target=BLSW roll=0.22594181 chance=0.05 fired=false
+day=17 kind=eventRoll eventDay=20 type=managementChange target=HRBU roll=0.99450077 chance=0.05 fired=false
+day=17 kind=eventRoll eventDay=20 type=managementChange target=KSR roll=0.02211495 chance=0.05 fired=true
+day=17 kind=eventRoll eventDay=20 type=regulation target=A roll=0.51038 chance=0.06 fired=false
+day=17 kind=eventRoll eventDay=20 type=regulation target=B roll=0.57561313 chance=0.06 fired=false
+day=17 kind=eventRoll eventDay=20 type=supplyShock target=A roll=0.79717817 chance=0.05001951 fired=false
+day=17 kind=eventRoll eventDay=20 type=supplyShock target=B roll=0.85503694 chance=0.05001951 fired=false
+day=17 kind=eventRoll eventDay=20 type=demandShift target=A roll=0.42794964 chance=0.0600636 fired=false
+day=17 kind=eventRoll eventDay=20 type=demandShift target=B roll=0.14612992 chance=0.0600636 fired=false
+day=17 kind=eventRoll eventDay=20 type=sentimentSwing target=market roll=0.41903964 chance=0.1000636 fired=false
+day=18 kind=noiseRoll asset=NOVA z=-0.8752496
+day=18 kind=noiseRoll asset=BLSW z=-0.05455217
+day=18 kind=noiseRoll asset=HRBU z=-1.95064548
+day=18 kind=noiseRoll asset=KSR z=0.6688915
+day=18 kind=eventRoll eventDay=21 type=earningsBeat target=NOVA roll=0.72636743 chance=0.08006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=earningsBeat target=BLSW roll=0.87900218 chance=0.08006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=earningsBeat target=HRBU roll=0.3474908 chance=0.08006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=earningsBeat target=KSR roll=0.85952685 chance=0.08006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=productLaunch target=NOVA roll=0.5621507 chance=0.05006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=productLaunch target=BLSW roll=0.5518281 chance=0.05006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=productLaunch target=HRBU roll=0.47873196 chance=0.05006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=productLaunch target=KSR roll=0.54993448 chance=0.05006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=scandal target=NOVA roll=0.11485195 chance=0.0400277 fired=false
+day=18 kind=eventRoll eventDay=21 type=scandal target=BLSW roll=0.82112494 chance=0.0400277 fired=false
+day=18 kind=eventRoll eventDay=21 type=scandal target=HRBU roll=0.38418873 chance=0.0400277 fired=false
+day=18 kind=eventRoll eventDay=21 type=scandal target=KSR roll=0.47042024 chance=0.0400277 fired=false
+day=18 kind=eventRoll eventDay=21 type=managementChange target=NOVA roll=0.81097461 chance=0.05 fired=false
+day=18 kind=eventRoll eventDay=21 type=managementChange target=BLSW roll=0.28144526 chance=0.05 fired=false
+day=18 kind=eventRoll eventDay=21 type=managementChange target=HRBU roll=0.26092772 chance=0.05 fired=false
+day=18 kind=eventRoll eventDay=21 type=managementChange target=KSR roll=0.94803098 chance=0.05 fired=false
+day=18 kind=eventRoll eventDay=21 type=regulation target=A roll=0.22529207 chance=0.06 fired=false
+day=18 kind=eventRoll eventDay=21 type=regulation target=B roll=0.65427805 chance=0.06 fired=false
+day=18 kind=eventRoll eventDay=21 type=supplyShock target=A roll=0.72956798 chance=0.0500277 fired=false
+day=18 kind=eventRoll eventDay=21 type=supplyShock target=B roll=0.47370295 chance=0.0500277 fired=false
+day=18 kind=eventRoll eventDay=21 type=demandShift target=A roll=0.32315894 chance=0.06006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=demandShift target=B roll=0.10671487 chance=0.06006355 fired=false
+day=18 kind=eventRoll eventDay=21 type=sentimentSwing target=market roll=0.3902881 chance=0.10006355 fired=false
+day=19 kind=noiseRoll asset=NOVA z=-0.64910716
+day=19 kind=noiseRoll asset=BLSW z=-0.58381396
+day=19 kind=noiseRoll asset=HRBU z=0.70707272
+day=19 kind=noiseRoll asset=KSR z=-0.2740357
+day=19 kind=eventRoll eventDay=22 type=earningsBeat target=NOVA roll=0.22100049 chance=0.08004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=earningsBeat target=BLSW roll=0.72154124 chance=0.08004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=earningsBeat target=HRBU roll=0.65342853 chance=0.08004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=earningsBeat target=KSR roll=0.22109114 chance=0.08004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=productLaunch target=NOVA roll=0.96014028 chance=0.05004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=productLaunch target=BLSW roll=0.26219765 chance=0.05004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=productLaunch target=HRBU roll=0.687251 chance=0.05004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=productLaunch target=KSR roll=0.75509085 chance=0.05004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=scandal target=NOVA roll=0.35206975 chance=0.04001623 fired=false
+day=19 kind=eventRoll eventDay=22 type=scandal target=BLSW roll=0.16503876 chance=0.04001623 fired=false
+day=19 kind=eventRoll eventDay=22 type=scandal target=HRBU roll=0.5147268 chance=0.04001623 fired=false
+day=19 kind=eventRoll eventDay=22 type=scandal target=KSR roll=0.33601762 chance=0.04001623 fired=false
+day=19 kind=eventRoll eventDay=22 type=managementChange target=NOVA roll=0.74084383 chance=0.05 fired=false
+day=19 kind=eventRoll eventDay=22 type=managementChange target=BLSW roll=0.91642125 chance=0.05 fired=false
+day=19 kind=eventRoll eventDay=22 type=managementChange target=HRBU roll=0.41378644 chance=0.05 fired=false
+day=19 kind=eventRoll eventDay=22 type=managementChange target=KSR roll=0.27405846 chance=0.05 fired=false
+day=19 kind=eventRoll eventDay=22 type=regulation target=A roll=0.58790419 chance=0.06 fired=false
+day=19 kind=eventRoll eventDay=22 type=regulation target=B roll=0.9510976 chance=0.06 fired=false
+day=19 kind=eventRoll eventDay=22 type=supplyShock target=A roll=0.61559795 chance=0.05001623 fired=false
+day=19 kind=eventRoll eventDay=22 type=supplyShock target=B roll=0.88250027 chance=0.05001623 fired=false
+day=19 kind=eventRoll eventDay=22 type=demandShift target=A roll=0.69530693 chance=0.06004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=demandShift target=B roll=0.6747162 chance=0.06004955 fired=false
+day=19 kind=eventRoll eventDay=22 type=sentimentSwing target=market roll=0.64203129 chance=0.10004955 fired=false
+day=20 kind=noiseRoll asset=NOVA z=0.07515227
+day=20 kind=noiseRoll asset=BLSW z=1.83874365
+day=20 kind=noiseRoll asset=HRBU z=-0.72160853
+day=20 kind=noiseRoll asset=KSR z=-0.18016726
+day=20 kind=eventRoll eventDay=23 type=earningsBeat target=NOVA roll=0.93810023 chance=0.080027 fired=false
+day=20 kind=eventRoll eventDay=23 type=earningsBeat target=BLSW roll=0.02359513 chance=0.080027 fired=true
+day=20 kind=eventRoll eventDay=23 type=earningsBeat target=HRBU roll=0.12698173 chance=0.080027 fired=false
+day=20 kind=eventRoll eventDay=23 type=earningsBeat target=KSR roll=0.97116273 chance=0.080027 fired=false
+day=20 kind=eventRoll eventDay=23 type=productLaunch target=NOVA roll=0.44267006 chance=0.050027 fired=false
+day=20 kind=eventRoll eventDay=23 type=productLaunch target=BLSW roll=0.235572 chance=0.050027 fired=false
+day=20 kind=eventRoll eventDay=23 type=productLaunch target=HRBU roll=0.69769412 chance=0.050027 fired=false
+day=20 kind=eventRoll eventDay=23 type=productLaunch target=KSR roll=0.94951595 chance=0.050027 fired=false
+day=20 kind=eventRoll eventDay=23 type=scandal target=NOVA roll=0.95736024 chance=0.04000551 fired=false
+day=20 kind=eventRoll eventDay=23 type=scandal target=BLSW roll=0.77217822 chance=0.04000551 fired=false
+day=20 kind=eventRoll eventDay=23 type=scandal target=HRBU roll=0.71481167 chance=0.04000551 fired=false
+day=20 kind=eventRoll eventDay=23 type=scandal target=KSR roll=0.67841458 chance=0.04000551 fired=false
+day=20 kind=eventRoll eventDay=23 type=managementChange target=NOVA roll=0.49580928 chance=0.05 fired=false
+day=20 kind=eventRoll eventDay=23 type=managementChange target=BLSW roll=0.86108266 chance=0.05 fired=false
+day=20 kind=eventRoll eventDay=23 type=managementChange target=HRBU roll=0.17880972 chance=0.05 fired=false
+day=20 kind=eventRoll eventDay=23 type=managementChange target=KSR roll=0.41541582 chance=0.05 fired=false
+day=20 kind=eventRoll eventDay=23 type=regulation target=A roll=0.47506861 chance=0.06 fired=false
+day=20 kind=eventRoll eventDay=23 type=regulation target=B roll=0.80560494 chance=0.06 fired=false
+day=20 kind=eventRoll eventDay=23 type=supplyShock target=A roll=0.1269916 chance=0.05000551 fired=false
+day=20 kind=eventRoll eventDay=23 type=supplyShock target=B roll=0.09127079 chance=0.05000551 fired=false
+day=20 kind=eventRoll eventDay=23 type=demandShift target=A roll=0.99835674 chance=0.060027 fired=false
+day=20 kind=eventRoll eventDay=23 type=demandShift target=B roll=0.20523083 chance=0.060027 fired=false
+day=20 kind=eventRoll eventDay=23 type=sentimentSwing target=market roll=0.00694701 chance=0.100027 fired=true
+day=21 kind=noiseRoll asset=NOVA z=0.35463129
+day=21 kind=noiseRoll asset=BLSW z=-1.3508646
+day=21 kind=noiseRoll asset=HRBU z=-0.78178866
+day=21 kind=noiseRoll asset=KSR z=-0.0883618
+day=21 kind=eventRoll eventDay=24 type=earningsBeat target=NOVA roll=0.59036855 chance=0.08002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=earningsBeat target=BLSW roll=0.39881614 chance=0.08002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=earningsBeat target=HRBU roll=0.41398356 chance=0.08002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=earningsBeat target=KSR roll=0.44206053 chance=0.08002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=productLaunch target=NOVA roll=0.4125265 chance=0.05002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=productLaunch target=BLSW roll=0.59689166 chance=0.05002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=productLaunch target=HRBU roll=0.49969383 chance=0.05002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=productLaunch target=KSR roll=0.93676866 chance=0.05002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=scandal target=NOVA roll=0.06492989 chance=0.04000679 fired=false
+day=21 kind=eventRoll eventDay=24 type=scandal target=BLSW roll=0.7585836 chance=0.04000679 fired=false
+day=21 kind=eventRoll eventDay=24 type=scandal target=HRBU roll=0.51886237 chance=0.04000679 fired=false
+day=21 kind=eventRoll eventDay=24 type=scandal target=KSR roll=0.60201727 chance=0.04000679 fired=false
+day=21 kind=eventRoll eventDay=24 type=managementChange target=NOVA roll=0.35429593 chance=0.05 fired=false
+day=21 kind=eventRoll eventDay=24 type=managementChange target=BLSW roll=0.82513593 chance=0.05 fired=false
+day=21 kind=eventRoll eventDay=24 type=managementChange target=HRBU roll=0.27544759 chance=0.05 fired=false
+day=21 kind=eventRoll eventDay=24 type=managementChange target=KSR roll=0.28362742 chance=0.05 fired=false
+day=21 kind=eventRoll eventDay=24 type=regulation target=A roll=0.79924408 chance=0.06 fired=false
+day=21 kind=eventRoll eventDay=24 type=regulation target=B roll=0.22486906 chance=0.06 fired=false
+day=21 kind=eventRoll eventDay=24 type=supplyShock target=A roll=0.36922247 chance=0.05000679 fired=false
+day=21 kind=eventRoll eventDay=24 type=supplyShock target=B roll=0.75539885 chance=0.05000679 fired=false
+day=21 kind=eventRoll eventDay=24 type=demandShift target=A roll=0.62273677 chance=0.06002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=demandShift target=B roll=0.94183105 chance=0.06002329 fired=false
+day=21 kind=eventRoll eventDay=24 type=sentimentSwing target=market roll=0.84244995 chance=0.10002329 fired=false
+day=22 kind=noiseRoll asset=NOVA z=-0.63131038
+day=22 kind=noiseRoll asset=BLSW z=0.6664619
+day=22 kind=noiseRoll asset=HRBU z=-2.43033057
+day=22 kind=noiseRoll asset=KSR z=-0.04497343
+day=22 kind=eventRoll eventDay=25 type=earningsBeat target=NOVA roll=0.72145018 chance=0.08002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=earningsBeat target=BLSW roll=0.88269657 chance=0.08002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=earningsBeat target=HRBU roll=0.73304946 chance=0.08002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=earningsBeat target=KSR roll=0.81077171 chance=0.08002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=productLaunch target=NOVA roll=0.69309878 chance=0.05002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=productLaunch target=BLSW roll=0.9262542 chance=0.05002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=productLaunch target=HRBU roll=0.75347759 chance=0.05002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=productLaunch target=KSR roll=0.05131821 chance=0.05002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=scandal target=NOVA roll=0.42472655 chance=0.04000271 fired=false
+day=22 kind=eventRoll eventDay=25 type=scandal target=BLSW roll=0.03230734 chance=0.04000271 fired=true
+day=22 kind=eventRoll eventDay=25 type=scandal target=HRBU roll=0.47486229 chance=0.04000271 fired=false
+day=22 kind=eventRoll eventDay=25 type=scandal target=KSR roll=0.27689549 chance=0.04000271 fired=false
+day=22 kind=eventRoll eventDay=25 type=managementChange target=NOVA roll=0.7323061 chance=0.05 fired=false
+day=22 kind=eventRoll eventDay=25 type=managementChange target=BLSW roll=0.43380427 chance=0.05 fired=false
+day=22 kind=eventRoll eventDay=25 type=managementChange target=HRBU roll=0.33917388 chance=0.05 fired=false
+day=22 kind=eventRoll eventDay=25 type=managementChange target=KSR roll=0.02828954 chance=0.05 fired=true
+day=22 kind=eventRoll eventDay=25 type=regulation target=A roll=0.68519027 chance=0.06 fired=false
+day=22 kind=eventRoll eventDay=25 type=regulation target=B roll=0.85819776 chance=0.06 fired=false
+day=22 kind=eventRoll eventDay=25 type=supplyShock target=A roll=0.52807598 chance=0.05000271 fired=false
+day=22 kind=eventRoll eventDay=25 type=supplyShock target=B roll=0.86346924 chance=0.05000271 fired=false
+day=22 kind=eventRoll eventDay=25 type=demandShift target=A roll=0.75917606 chance=0.06002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=demandShift target=B roll=0.47721151 chance=0.06002385 fired=false
+day=22 kind=eventRoll eventDay=25 type=sentimentSwing target=market roll=0.13047155 chance=0.10002385 fired=false
+day=23 kind=noiseRoll asset=NOVA z=-0.03530548
+day=23 kind=noiseRoll asset=BLSW z=0.42704049
+day=23 kind=noiseRoll asset=HRBU z=-0.99099247
+day=23 kind=noiseRoll asset=KSR z=-1.94873536
+day=23 kind=eventRoll eventDay=26 type=earningsBeat target=NOVA roll=0.54162846 chance=0.08003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=earningsBeat target=BLSW roll=0.92284518 chance=0.08003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=earningsBeat target=HRBU roll=0.20521604 chance=0.08003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=earningsBeat target=KSR roll=0.38293037 chance=0.08003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=productLaunch target=NOVA roll=0.17607384 chance=0.05003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=productLaunch target=BLSW roll=0.65915307 chance=0.05003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=productLaunch target=HRBU roll=0.90992387 chance=0.05003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=productLaunch target=KSR roll=0.77745797 chance=0.05003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=scandal target=NOVA roll=0.91789352 chance=0.03999226 fired=false
+day=23 kind=eventRoll eventDay=26 type=scandal target=BLSW roll=0.84975924 chance=0.03999226 fired=false
+day=23 kind=eventRoll eventDay=26 type=scandal target=HRBU roll=0.28390133 chance=0.03999226 fired=false
+day=23 kind=eventRoll eventDay=26 type=scandal target=KSR roll=0.41820845 chance=0.03999226 fired=false
+day=23 kind=eventRoll eventDay=26 type=managementChange target=NOVA roll=0.2798502 chance=0.05 fired=false
+day=23 kind=eventRoll eventDay=26 type=managementChange target=BLSW roll=0.49481474 chance=0.05 fired=false
+day=23 kind=eventRoll eventDay=26 type=managementChange target=HRBU roll=0.18620166 chance=0.05 fired=false
+day=23 kind=eventRoll eventDay=26 type=managementChange target=KSR roll=0.25528325 chance=0.05 fired=false
+day=23 kind=eventRoll eventDay=26 type=regulation target=A roll=0.10825055 chance=0.06 fired=false
+day=23 kind=eventRoll eventDay=26 type=regulation target=B roll=0.68616035 chance=0.06 fired=false
+day=23 kind=eventRoll eventDay=26 type=supplyShock target=A roll=0.88865983 chance=0.04999226 fired=false
+day=23 kind=eventRoll eventDay=26 type=supplyShock target=B roll=0.22961507 chance=0.04999226 fired=false
+day=23 kind=eventRoll eventDay=26 type=demandShift target=A roll=0.56545599 chance=0.06003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=demandShift target=B roll=0.94368767 chance=0.06003902 fired=false
+day=23 kind=eventRoll eventDay=26 type=sentimentSwing target=market roll=0.83330686 chance=0.10003902 fired=false
+day=24 kind=noiseRoll asset=NOVA z=1.84908361
+day=24 kind=noiseRoll asset=BLSW z=0.71982316
+day=24 kind=noiseRoll asset=HRBU z=-0.02001032
+day=24 kind=noiseRoll asset=KSR z=1.6546004
+day=24 kind=eventRoll eventDay=27 type=earningsBeat target=NOVA roll=0.80273246 chance=0.08003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=earningsBeat target=BLSW roll=0.20715962 chance=0.08003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=earningsBeat target=HRBU roll=0.26518884 chance=0.08003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=earningsBeat target=KSR roll=0.78965455 chance=0.08003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=productLaunch target=NOVA roll=0.78807034 chance=0.05003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=productLaunch target=BLSW roll=0.7066541 chance=0.05003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=productLaunch target=HRBU roll=0.23072397 chance=0.05003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=productLaunch target=KSR roll=0.06863472 chance=0.05003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=scandal target=NOVA roll=0.43368926 chance=0.03997579 fired=false
+day=24 kind=eventRoll eventDay=27 type=scandal target=BLSW roll=0.50651492 chance=0.03997579 fired=false
+day=24 kind=eventRoll eventDay=27 type=scandal target=HRBU roll=0.18695139 chance=0.03997579 fired=false
+day=24 kind=eventRoll eventDay=27 type=scandal target=KSR roll=0.91693199 chance=0.03997579 fired=false
+day=24 kind=eventRoll eventDay=27 type=managementChange target=NOVA roll=0.72029328 chance=0.05 fired=false
+day=24 kind=eventRoll eventDay=27 type=managementChange target=BLSW roll=0.89238422 chance=0.05 fired=false
+day=24 kind=eventRoll eventDay=27 type=managementChange target=HRBU roll=0.49973916 chance=0.05 fired=false
+day=24 kind=eventRoll eventDay=27 type=managementChange target=KSR roll=0.62586732 chance=0.05 fired=false
+day=24 kind=eventRoll eventDay=27 type=regulation target=A roll=0.89584711 chance=0.06 fired=false
+day=24 kind=eventRoll eventDay=27 type=regulation target=B roll=0.03839663 chance=0.06 fired=true
+day=24 kind=eventRoll eventDay=27 type=supplyShock target=A roll=0.89761787 chance=0.04997579 fired=false
+day=24 kind=eventRoll eventDay=27 type=supplyShock target=B roll=0.48470069 chance=0.04997579 fired=false
+day=24 kind=eventRoll eventDay=27 type=demandShift target=A roll=0.95558095 chance=0.06003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=demandShift target=B roll=0.3643866 chance=0.06003199 fired=false
+day=24 kind=eventRoll eventDay=27 type=sentimentSwing target=market roll=0.88065623 chance=0.10003199 fired=false
+day=25 kind=noiseRoll asset=NOVA z=1.62812636
+day=25 kind=noiseRoll asset=BLSW z=-2.0775157
+day=25 kind=noiseRoll asset=HRBU z=-0.21908849
+day=25 kind=noiseRoll asset=KSR z=-0.14198092
+day=25 kind=eventRoll eventDay=28 type=earningsBeat target=NOVA roll=0.28645771 chance=0.08005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=earningsBeat target=BLSW roll=0.5691351 chance=0.08005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=earningsBeat target=HRBU roll=0.87271838 chance=0.08005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=earningsBeat target=KSR roll=0.35139965 chance=0.08005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=productLaunch target=NOVA roll=0.09973762 chance=0.05005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=productLaunch target=BLSW roll=0.06625129 chance=0.05005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=productLaunch target=HRBU roll=0.31620711 chance=0.05005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=productLaunch target=KSR roll=0.16930214 chance=0.05005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=scandal target=NOVA roll=0.09989553 chance=0.03997386 fired=false
+day=25 kind=eventRoll eventDay=28 type=scandal target=BLSW roll=0.87594227 chance=0.03997386 fired=false
+day=25 kind=eventRoll eventDay=28 type=scandal target=HRBU roll=0.99846246 chance=0.03997386 fired=false
+day=25 kind=eventRoll eventDay=28 type=scandal target=KSR roll=0.24858371 chance=0.03997386 fired=false
+day=25 kind=eventRoll eventDay=28 type=managementChange target=NOVA roll=0.12721291 chance=0.05025 fired=false
+day=25 kind=eventRoll eventDay=28 type=managementChange target=BLSW roll=0.37496066 chance=0.05025 fired=false
+day=25 kind=eventRoll eventDay=28 type=managementChange target=HRBU roll=0.46560306 chance=0.05025 fired=false
+day=25 kind=eventRoll eventDay=28 type=managementChange target=KSR roll=0.1675525 chance=0.05025 fired=false
+day=25 kind=eventRoll eventDay=28 type=regulation target=A roll=0.96083652 chance=0.06025 fired=false
+day=25 kind=eventRoll eventDay=28 type=regulation target=B roll=0.1352726 chance=0.06025 fired=false
+day=25 kind=eventRoll eventDay=28 type=supplyShock target=A roll=0.5897946 chance=0.04997386 fired=false
+day=25 kind=eventRoll eventDay=28 type=supplyShock target=B roll=0.20003958 chance=0.04997386 fired=false
+day=25 kind=eventRoll eventDay=28 type=demandShift target=A roll=0.82987012 chance=0.06005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=demandShift target=B roll=0.45272038 chance=0.06005692 fired=false
+day=25 kind=eventRoll eventDay=28 type=sentimentSwing target=market roll=0.75205454 chance=0.10005692 fired=false
+day=26 kind=noiseRoll asset=NOVA z=0.19859783
+day=26 kind=noiseRoll asset=BLSW z=-0.04540716
+day=26 kind=noiseRoll asset=HRBU z=0.11717291
+day=26 kind=noiseRoll asset=KSR z=-0.3409333
+day=26 kind=eventRoll eventDay=29 type=earningsBeat target=NOVA roll=0.29280652 chance=0.08006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=earningsBeat target=BLSW roll=0.4372937 chance=0.08006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=earningsBeat target=HRBU roll=0.14712627 chance=0.08006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=earningsBeat target=KSR roll=0.10212152 chance=0.08006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=productLaunch target=NOVA roll=0.70587614 chance=0.05006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=productLaunch target=BLSW roll=0.22090712 chance=0.05006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=productLaunch target=HRBU roll=0.99978727 chance=0.05006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=productLaunch target=KSR roll=0.57440947 chance=0.05006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=scandal target=NOVA roll=0.58273599 chance=0.03996917 fired=false
+day=26 kind=eventRoll eventDay=29 type=scandal target=BLSW roll=0.68281507 chance=0.03996917 fired=false
+day=26 kind=eventRoll eventDay=29 type=scandal target=HRBU roll=0.72952212 chance=0.03996917 fired=false
+day=26 kind=eventRoll eventDay=29 type=scandal target=KSR roll=0.33271963 chance=0.03996917 fired=false
+day=26 kind=eventRoll eventDay=29 type=managementChange target=NOVA roll=0.90648731 chance=0.05025 fired=false
+day=26 kind=eventRoll eventDay=29 type=managementChange target=BLSW roll=0.82400715 chance=0.05025 fired=false
+day=26 kind=eventRoll eventDay=29 type=managementChange target=HRBU roll=0.731679 chance=0.05025 fired=false
+day=26 kind=eventRoll eventDay=29 type=managementChange target=KSR roll=0.03383441 chance=0.05025 fired=true
+day=26 kind=eventRoll eventDay=29 type=regulation target=A roll=0.63655632 chance=0.06025 fired=false
+day=26 kind=eventRoll eventDay=29 type=regulation target=B roll=0.79585952 chance=0.06025 fired=false
+day=26 kind=eventRoll eventDay=29 type=supplyShock target=A roll=0.19621348 chance=0.04996917 fired=false
+day=26 kind=eventRoll eventDay=29 type=supplyShock target=B roll=0.62683755 chance=0.04996917 fired=false
+day=26 kind=eventRoll eventDay=29 type=demandShift target=A roll=0.44643743 chance=0.06006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=demandShift target=B roll=0.23119048 chance=0.06006062 fired=false
+day=26 kind=eventRoll eventDay=29 type=sentimentSwing target=market roll=0.67687234 chance=0.10006062 fired=false
+day=27 kind=noiseRoll asset=NOVA z=-1.45543575
+day=27 kind=noiseRoll asset=BLSW z=1.19406564
+day=27 kind=noiseRoll asset=HRBU z=0.78308027
+day=27 kind=noiseRoll asset=KSR z=-0.56800685
+day=27 kind=eventRoll eventDay=30 type=earningsBeat target=NOVA roll=0.72649306 chance=0.08005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=earningsBeat target=BLSW roll=0.45119042 chance=0.08005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=earningsBeat target=HRBU roll=0.23722919 chance=0.08005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=earningsBeat target=KSR roll=0.04803272 chance=0.08005845 fired=true
+day=27 kind=eventRoll eventDay=30 type=productLaunch target=NOVA roll=0.16782359 chance=0.05005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=productLaunch target=BLSW roll=0.17925192 chance=0.05005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=productLaunch target=HRBU roll=0.68469653 chance=0.05005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=productLaunch target=KSR roll=0.06241618 chance=0.05005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=scandal target=NOVA roll=0.48438349 chance=0.03997627 fired=false
+day=27 kind=eventRoll eventDay=30 type=scandal target=BLSW roll=0.44172906 chance=0.03997627 fired=false
+day=27 kind=eventRoll eventDay=30 type=scandal target=HRBU roll=0.09937135 chance=0.03997627 fired=false
+day=27 kind=eventRoll eventDay=30 type=scandal target=KSR roll=0.94417382 chance=0.03997627 fired=false
+day=27 kind=eventRoll eventDay=30 type=managementChange target=NOVA roll=0.74234205 chance=0.05025 fired=false
+day=27 kind=eventRoll eventDay=30 type=managementChange target=BLSW roll=0.95789201 chance=0.05025 fired=false
+day=27 kind=eventRoll eventDay=30 type=managementChange target=HRBU roll=0.14282867 chance=0.05025 fired=false
+day=27 kind=eventRoll eventDay=30 type=managementChange target=KSR roll=0.21362826 chance=0.05025 fired=false
+day=27 kind=eventRoll eventDay=30 type=regulation target=A roll=0.23410866 chance=0.06025 fired=false
+day=27 kind=eventRoll eventDay=30 type=regulation target=B roll=0.53805487 chance=0.06025 fired=false
+day=27 kind=eventRoll eventDay=30 type=supplyShock target=A roll=0.943449 chance=0.04997627 fired=false
+day=27 kind=eventRoll eventDay=30 type=supplyShock target=B roll=0.79945272 chance=0.04997627 fired=false
+day=27 kind=eventRoll eventDay=30 type=demandShift target=A roll=0.66377478 chance=0.06005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=demandShift target=B roll=0.79556733 chance=0.06005845 fired=false
+day=27 kind=eventRoll eventDay=30 type=sentimentSwing target=market roll=0.70608476 chance=0.10005845 fired=false
+day=28 kind=noiseRoll asset=NOVA z=-1.06055315
+day=28 kind=noiseRoll asset=BLSW z=-0.02692788
+day=28 kind=noiseRoll asset=HRBU z=-0.59197943
+day=28 kind=noiseRoll asset=KSR z=-0.94357889
+day=28 kind=eventRoll eventDay=31 type=earningsBeat target=NOVA roll=0.22958396 chance=0.0800561 fired=false
+day=28 kind=eventRoll eventDay=31 type=earningsBeat target=BLSW roll=0.37819426 chance=0.0800561 fired=false
+day=28 kind=eventRoll eventDay=31 type=earningsBeat target=HRBU roll=0.86616039 chance=0.0800561 fired=false
+day=28 kind=eventRoll eventDay=31 type=earningsBeat target=KSR roll=0.57673278 chance=0.0800561 fired=false
+day=28 kind=eventRoll eventDay=31 type=productLaunch target=NOVA roll=0.35256467 chance=0.0500561 fired=false
+day=28 kind=eventRoll eventDay=31 type=productLaunch target=BLSW roll=0.48691318 chance=0.0500561 fired=false
+day=28 kind=eventRoll eventDay=31 type=productLaunch target=HRBU roll=0.02214507 chance=0.0500561 fired=true
+day=28 kind=eventRoll eventDay=31 type=productLaunch target=KSR roll=0.88620702 chance=0.0500561 fired=false
+day=28 kind=eventRoll eventDay=31 type=scandal target=NOVA roll=0.26842529 chance=0.03997367 fired=false
+day=28 kind=eventRoll eventDay=31 type=scandal target=BLSW roll=0.17298306 chance=0.03997367 fired=false
+day=28 kind=eventRoll eventDay=31 type=scandal target=HRBU roll=0.83614884 chance=0.03997367 fired=false
+day=28 kind=eventRoll eventDay=31 type=scandal target=KSR roll=0.7578168 chance=0.03997367 fired=false
+day=28 kind=eventRoll eventDay=31 type=managementChange target=NOVA roll=0.18499157 chance=0.05025 fired=false
+day=28 kind=eventRoll eventDay=31 type=managementChange target=BLSW roll=0.322581 chance=0.05025 fired=false
+day=28 kind=eventRoll eventDay=31 type=managementChange target=HRBU roll=0.13550165 chance=0.05025 fired=false
+day=28 kind=eventRoll eventDay=31 type=managementChange target=KSR roll=0.88304284 chance=0.05025 fired=false
+day=28 kind=eventRoll eventDay=31 type=regulation target=A roll=0.88001198 chance=0.06025 fired=false
+day=28 kind=eventRoll eventDay=31 type=regulation target=B roll=0.32186521 chance=0.06025 fired=false
+day=28 kind=eventRoll eventDay=31 type=supplyShock target=A roll=0.23391146 chance=0.04997367 fired=false
+day=28 kind=eventRoll eventDay=31 type=supplyShock target=B roll=0.25628297 chance=0.04997367 fired=false
+day=28 kind=eventRoll eventDay=31 type=demandShift target=A roll=0.93629351 chance=0.0600561 fired=false
+day=28 kind=eventRoll eventDay=31 type=demandShift target=B roll=0.56715067 chance=0.0600561 fired=false
+day=28 kind=eventRoll eventDay=31 type=sentimentSwing target=market roll=0.68095 chance=0.1000561 fired=false
+day=29 kind=noiseRoll asset=NOVA z=0.05368619
+day=29 kind=noiseRoll asset=BLSW z=2.49601041
+day=29 kind=noiseRoll asset=HRBU z=-0.66930752
+day=29 kind=noiseRoll asset=KSR z=0.25733993
+day=29 kind=eventRoll eventDay=32 type=earningsBeat target=NOVA roll=0.34977016 chance=0.08005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=earningsBeat target=BLSW roll=0.6261243 chance=0.08005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=earningsBeat target=HRBU roll=0.71420706 chance=0.08005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=earningsBeat target=KSR roll=0.93967349 chance=0.08005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=productLaunch target=NOVA roll=0.00190654 chance=0.05005068 fired=true
+day=29 kind=eventRoll eventDay=32 type=productLaunch target=BLSW roll=0.2974329 chance=0.05005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=productLaunch target=HRBU roll=0.29201783 chance=0.05005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=productLaunch target=KSR roll=0.75555815 chance=0.05005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=scandal target=NOVA roll=0.02916553 chance=0.03996426 fired=true
+day=29 kind=eventRoll eventDay=32 type=scandal target=BLSW roll=0.0046841 chance=0.03996426 fired=true
+day=29 kind=eventRoll eventDay=32 type=scandal target=HRBU roll=0.85237172 chance=0.03996426 fired=false
+day=29 kind=eventRoll eventDay=32 type=scandal target=KSR roll=0.65275482 chance=0.03996426 fired=false
+day=29 kind=eventRoll eventDay=32 type=managementChange target=NOVA roll=0.89746799 chance=0.05025 fired=false
+day=29 kind=eventRoll eventDay=32 type=managementChange target=BLSW roll=0.48864152 chance=0.05025 fired=false
+day=29 kind=eventRoll eventDay=32 type=managementChange target=HRBU roll=0.40677948 chance=0.05025 fired=false
+day=29 kind=eventRoll eventDay=32 type=managementChange target=KSR roll=0.6803705 chance=0.05025 fired=false
+day=29 kind=eventRoll eventDay=32 type=regulation target=A roll=0.3618168 chance=0.06025 fired=false
+day=29 kind=eventRoll eventDay=32 type=regulation target=B roll=0.96674244 chance=0.06025 fired=false
+day=29 kind=eventRoll eventDay=32 type=supplyShock target=A roll=0.72729351 chance=0.04996426 fired=false
+day=29 kind=eventRoll eventDay=32 type=supplyShock target=B roll=0.09552059 chance=0.04996426 fired=false
+day=29 kind=eventRoll eventDay=32 type=demandShift target=A roll=0.35642516 chance=0.06005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=demandShift target=B roll=0.91879966 chance=0.06005068 fired=false
+day=29 kind=eventRoll eventDay=32 type=sentimentSwing target=market roll=0.62949566 chance=0.10005068 fired=false
+day=30 kind=noiseRoll asset=NOVA z=-0.68311489
+day=30 kind=noiseRoll asset=BLSW z=0.20140891
+day=30 kind=noiseRoll asset=HRBU z=-1.21614198
+day=30 kind=noiseRoll asset=KSR z=-0.56833581
+day=30 kind=eventRoll eventDay=33 type=earningsBeat target=NOVA roll=0.00726 chance=0.0800508 fired=true
+day=30 kind=eventRoll eventDay=33 type=earningsBeat target=BLSW roll=0.20912372 chance=0.0800508 fired=false
+day=30 kind=eventRoll eventDay=33 type=earningsBeat target=HRBU roll=0.22299808 chance=0.0800508 fired=false
+day=30 kind=eventRoll eventDay=33 type=earningsBeat target=KSR roll=0.02257673 chance=0.0800508 fired=true
+day=30 kind=eventRoll eventDay=33 type=productLaunch target=NOVA roll=0.76190079 chance=0.0500508 fired=false
+day=30 kind=eventRoll eventDay=33 type=productLaunch target=BLSW roll=0.10872028 chance=0.0500508 fired=false
+day=30 kind=eventRoll eventDay=33 type=productLaunch target=HRBU roll=0.74810307 chance=0.0500508 fired=false
+day=30 kind=eventRoll eventDay=33 type=productLaunch target=KSR roll=0.27657001 chance=0.0500508 fired=false
+day=30 kind=eventRoll eventDay=33 type=scandal target=NOVA roll=0.97593345 chance=0.03997096 fired=false
+day=30 kind=eventRoll eventDay=33 type=scandal target=BLSW roll=0.13000167 chance=0.03997096 fired=false
+day=30 kind=eventRoll eventDay=33 type=scandal target=HRBU roll=0.37075476 chance=0.03997096 fired=false
+day=30 kind=eventRoll eventDay=33 type=scandal target=KSR roll=0.18673436 chance=0.03997096 fired=false
+day=30 kind=eventRoll eventDay=33 type=managementChange target=NOVA roll=0.64769146 chance=0.05025 fired=false
+day=30 kind=eventRoll eventDay=33 type=managementChange target=BLSW roll=0.85508974 chance=0.05025 fired=false
+day=30 kind=eventRoll eventDay=33 type=managementChange target=HRBU roll=0.62287953 chance=0.05025 fired=false
+day=30 kind=eventRoll eventDay=33 type=managementChange target=KSR roll=0.91773082 chance=0.05025 fired=false
+day=30 kind=eventRoll eventDay=33 type=regulation target=A roll=0.95101782 chance=0.06025 fired=false
+day=30 kind=eventRoll eventDay=33 type=regulation target=B roll=0.41598091 chance=0.06025 fired=false
+day=30 kind=eventRoll eventDay=33 type=supplyShock target=A roll=0.16203025 chance=0.04997096 fired=false
+day=30 kind=eventRoll eventDay=33 type=supplyShock target=B roll=0.75253203 chance=0.04997096 fired=false
+day=30 kind=eventRoll eventDay=33 type=demandShift target=A roll=0.95822899 chance=0.0600508 fired=false
+day=30 kind=eventRoll eventDay=33 type=demandShift target=B roll=0.42599011 chance=0.0600508 fired=false
+day=30 kind=eventRoll eventDay=33 type=sentimentSwing target=market roll=0.29396838 chance=0.1000508 fired=false

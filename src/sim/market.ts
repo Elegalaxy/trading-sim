@@ -1,4 +1,6 @@
-// Daily price step. Definitions are passed in. Only the market stream is drawn.
+// Daily price step. Definitions are passed in.
+// Price noise draws the market stream. Drift, event rolls, and the calendar draw the events stream.
+// The day-ahead feed draws the info stream, and only for rumours. Distortion is not drawn.
 // Mutates `state` and returns it: the streams inside the state advance in place.
 
 import { assertCalendarDefinitions, beginCalendarDay, calendarRulesFrom, rollCalendarForDay } from './calendar.ts'
@@ -13,10 +15,12 @@ import {
 } from './constants.ts'
 import { assertEnvironmentDefinitions, driftEnvironment, initialEnvironment } from './environment.ts'
 import { applyDueEffects, assertEventDefinitions, rollEventsForDay } from './events.ts'
+import { assertFeedDefinitions, assertFeedState, publishFeed, type FiredHeadline } from './feed.ts'
 import { createRng, nextNormal } from './rng.ts'
 import {
   RNG_STREAM_NAMES,
   type AssetState,
+  type CalendarItemEvent,
   type EffectAppliedEvent,
   type FairValueChangeEvent,
   type IndexStepEvent,
@@ -95,6 +99,7 @@ function assertDefinitions(defs: MarketDefinitions): void {
   assertEnvironmentDefinitions(defs.environment)
   assertEventDefinitions(defs.events, defs.assets, defs.environment)
   if (defs.calendar !== undefined) assertCalendarDefinitions(defs.calendar, defs.environment, defs.assets)
+  assertFeedDefinitions(defs)
 }
 
 function assertState(state: MarketState, defs: MarketDefinitions): void {
@@ -173,6 +178,7 @@ function assertState(state: MarketState, defs: MarketDefinitions): void {
   if (!Array.isArray(state.active)) {
     throw new Error(`market active effects must be an array, received ${describeValue(state.active)}`)
   }
+  assertFeedState(state)
 }
 
 /**
@@ -284,6 +290,7 @@ export function createMarket(defs: MarketDefinitions, seed: string): MarketState
     scheduled: [],
     active: [],
     log: [],
+    feed: { day: 1, items: [] },
   }
   // Days 1–3 are rolled now, at the starting environment, before any drift.
   // The standard calendar starts on day 10, so this loop draws no calendar float.
@@ -293,6 +300,8 @@ export function createMarket(defs: MarketDefinitions, seed: string): MarketState
     for (const event of rolled.log) state.log.push(event)
     rollCalendarForDay(state, defs, eventDay)
   }
+  // Nothing has fired yet, so the day-1 feed is rumours only.
+  publishFeed(state, defs, [])
   return state
 }
 
@@ -321,8 +330,10 @@ function tagCalendarEffects(events: Array<EffectAppliedEvent | FairValueChangeEv
 }
 
 /**
- * Advance one day, in the plan's end-of-day order for this step:
- * apply calendar outcome and event effects to fair value, step prices, drift the environment, pre-roll day+3.
+ * Advance one day, in this step's end-of-day order:
+ * apply calendar outcome and event effects to fair value, step prices, drift the environment,
+ * pre-roll day+3, then generate the next day's feed on the info stream.
+ * The feed is generated after the pre-roll so a rumour can name a scheduled event 1 to 3 days ahead.
  * Each stock, in definition order:
  * pull = 35% of (fair value − price), noise = z × daily volatility × price,
  * raw move = pull + noise, then the 8% cent cap above.
@@ -330,6 +341,7 @@ function tagCalendarEffects(events: Array<EffectAppliedEvent | FairValueChangeEv
  * The market stream is one `nextNormal` per stock, in definition order, and nothing else.
  * Drift, ordinary event rolls, and calendar outcomes read only the events stream.
  * A calendar float, when day+3 is a calendar date, is drawn after that day's ordinary event rolls.
+ * Rumours read only the info stream, after that pre-roll. Headlines do not draw.
  */
 export function stepMarketDay(state: MarketState, defs: MarketDefinitions): MarketState {
   assertDefinitions(defs)
@@ -340,7 +352,9 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   state.day += 1
   state.log = []
   const day = state.day
-  for (const event of beginCalendarDay(state, defs)) state.log.push(event)
+  const calendarEvents = beginCalendarDay(state, defs)
+  for (const event of calendarEvents) state.log.push(event)
+  const fired = firedHeadlines(state, defs, calendarEvents)
   const effects = applyDueEffects(state, defs)
   tagCalendarEffects(effects)
   for (const event of effects) state.log.push(event)
@@ -411,5 +425,51 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   for (const event of rolled.scheduled) state.scheduled.push(event)
   for (const event of rolled.log) state.log.push(event)
   rollCalendarForDay(state, defs, day + EVENT_LOOKAHEAD_DAYS)
+  publishFeed(state, defs, fired)
   return state
+}
+
+function calendarHeadline(item: CalendarItemEvent): string {
+  if (item.item === 'growthRelease') return `Growth release ${item.outcome}`
+  if (item.item === 'inflationRelease') return `Inflation release ${item.outcome}`
+  return `Policy rate ${item.outcome}`
+}
+
+/** Largest absolute sector effect for this outcome, in percent of fair value. The summary does not see this number's source. */
+function calendarMagnitude(defs: MarketDefinitions, item: CalendarItemEvent): number {
+  const effects = defs.calendar?.effects ?? []
+  let magnitude = 0
+  for (const cell of effects) {
+    if (cell.kind !== item.item || cell.outcome !== item.outcome) continue
+    if (typeof cell.percent !== 'number' || !Number.isFinite(cell.percent)) {
+      throw new Error(`calendar effect percent must be a finite number, received ${describeValue(cell.percent)}`)
+    }
+    const size = Math.abs(cell.percent)
+    if (size > magnitude) magnitude = size
+  }
+  return magnitude
+}
+
+/**
+ * Ordinary events due today, then today's calendar outcomes.
+ * Direction `none` is not scheduled, so it does not get a headline.
+ */
+function firedHeadlines(
+  state: MarketState,
+  defs: MarketDefinitions,
+  calendarEvents: readonly CalendarItemEvent[],
+): FiredHeadline[] {
+  const fired: FiredHeadline[] = []
+  for (const event of state.scheduled) {
+    if (event.eventDay !== state.day) continue
+    fired.push({ eventId: event.id, text: event.headline, magnitude: event.magnitudePercent })
+  }
+  for (const item of calendarEvents) {
+    fired.push({
+      eventId: `calendar:${item.item}:${item.day}`,
+      text: calendarHeadline(item),
+      magnitude: calendarMagnitude(defs, item),
+    })
+  }
+  return fired
 }

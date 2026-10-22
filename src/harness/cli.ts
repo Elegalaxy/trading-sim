@@ -6,9 +6,11 @@ import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { stateHash } from '../sim/hash.ts'
 import { formatEvent } from '../sim/log.ts'
 import { createMarket, stepMarketDay } from '../sim/market.ts'
+import { daySummary, formatSummary } from '../sim/summary.ts'
 import type { LogEvent } from '../sim/types.ts'
 
-const USAGE = 'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>] [--events-only]'
+const USAGE =
+  'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>] [--events-only] [--feed]'
 const SEED_PATTERN = /^[A-Za-z0-9-]{1,32}$/
 const DAYS_MIN = 1
 const DAYS_MAX = 1000
@@ -18,6 +20,7 @@ type CliOptions = {
   days: number
   quiet: boolean
   eventsOnly: boolean
+  feed: boolean
   asset: string | undefined
 }
 
@@ -84,6 +87,7 @@ function parseArgs(argv: readonly string[]): CliOptions {
   let days: number | undefined
   let quiet = false
   let eventsOnly = false
+  let feed = false
   let asset: string | undefined
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -100,6 +104,11 @@ function parseArgs(argv: readonly string[]): CliOptions {
     if (name === '--events-only') {
       if (inline !== undefined) fail('--events-only does not take a value')
       eventsOnly = true
+      continue
+    }
+    if (name === '--feed') {
+      if (inline !== undefined) fail('--feed does not take a value')
+      feed = true
       continue
     }
     if (name === '--seed') {
@@ -134,11 +143,20 @@ function parseArgs(argv: readonly string[]): CliOptions {
     fail(`missing ${missing.join(' and ')}`, true)
   }
 
-  return { seed, days, quiet, eventsOnly, asset }
+  return { seed, days, quiet, eventsOnly, feed, asset }
 }
 
 function isPriceKind(kind: LogEvent['kind']): boolean {
   return kind === 'noiseRoll' || kind === 'priceStep' || kind === 'indexStep'
+}
+
+function isFeedKind(kind: LogEvent['kind']): boolean {
+  return kind === 'headline' || kind === 'rumourGenerated'
+}
+
+function eventTarget(eventId: string): string {
+  const parts = eventId.split(':')
+  return parts[1] ?? ''
 }
 
 function matchesAsset(event: LogEvent, asset: string): boolean {
@@ -156,6 +174,10 @@ function matchesAsset(event: LogEvent, asset: string): boolean {
     case 'envDrift':
     case 'calendarItem':
       return false
+    case 'headline':
+      return eventTarget(event.eventId) === asset
+    case 'rumourGenerated':
+      return eventTarget(event.targetEventId) === asset
     default: {
       const unknown: never = event
       throw new Error(`cannot filter log event ${JSON.stringify(unknown)}`)
@@ -164,12 +186,19 @@ function matchesAsset(event: LogEvent, asset: string): boolean {
 }
 
 function printDayLog(log: readonly LogEvent[], options: CliOptions): void {
-  if (options.quiet && !options.eventsOnly) return
-  for (const event of log) {
-    if (options.eventsOnly && isPriceKind(event.kind)) continue
-    if (options.asset !== undefined && !matchesAsset(event, options.asset)) continue
-    console.log(`[sim] ${formatEvent(event)}`)
+  // Feed lines live in the day log, so the default log shows them.
+  // --feed adds the day summary and does not hide event lines.
+  // --events-only still hides price lines. --quiet hides the log, except feed lines when --feed is set.
+  const showLog = !options.quiet || options.eventsOnly || options.feed
+  if (showLog) {
+    for (const event of log) {
+      if (options.quiet && !options.eventsOnly && !isFeedKind(event.kind)) continue
+      if (options.eventsOnly && isPriceKind(event.kind)) continue
+      if (options.asset !== undefined && !matchesAsset(event, options.asset)) continue
+      console.log(`[sim] ${formatEvent(event)}`)
+    }
   }
+  if (options.feed) console.log(`[sim] summary ${formatSummary(daySummary(log))}`)
 }
 
 function priceAt(row: CloseRow, index: number, id: string): number {

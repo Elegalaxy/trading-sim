@@ -27,6 +27,13 @@ function formatAsset(asset: string): string {
   return asset
 }
 
+function formatText(value: string, label: string): string {
+  if (typeof value !== 'string' || value.length === 0 || /[\r\n]/.test(value)) {
+    throw new Error(`formatEvent ${label} must be one non-empty line, received ${describeValue(value)}`)
+  }
+  return JSON.stringify(value)
+}
+
 function formatFlag(value: boolean, label: string): string {
   if (value === true) return 'true'
   if (value === false) return 'false'
@@ -196,6 +203,30 @@ export function formatEvent(event: LogEvent): string {
         `roll=${formatNumber(event.roll)}`,
         `outcome=${formatToken(event.outcome, 'outcome')}`,
         formatEnvironmentChange(event.before, event.after),
+      ].join(' ')
+    case 'headline':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=headline',
+        `feedDay=${formatNumber(event.feedDay)}`,
+        `event=${formatEffectId(event.eventId)}`,
+        `magnitude=${formatNumber(event.magnitude)}`,
+        `top=${formatFlag(event.top, 'top flag')}`,
+        `text=${formatText(event.text, 'text')}`,
+      ].join(' ')
+    case 'rumourGenerated':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=rumourGenerated',
+        `feedDay=${formatNumber(event.feedDay)}`,
+        `source=${formatToken(event.source, 'source')}`,
+        `tier=${formatToken(event.tier, 'tier')}`,
+        `truthRoll=${formatNumber(event.truthRoll)}`,
+        `truth=${formatFlag(event.truth, 'truth flag')}`,
+        `claim=${formatText(event.claim, 'claim')}`,
+        `leadDays=${formatNumber(event.leadDays)}`,
+        `target=${formatEffectId(event.targetEventId)}`,
+        `noise=${formatFlag(event.noise, 'noise flag')}`,
       ].join(' ')
     default: {
       const unknown: never = event

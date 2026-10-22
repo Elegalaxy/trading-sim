@@ -151,6 +151,28 @@ export type UpcomingCalendarItem = {
   outcome?: CalendarOutcome
 }
 
+/** Who can see a rumour source. The feed is generated for every source, then filtered. */
+export const VISIBILITY_REQUIREMENTS = ['base', 'infoFeed1', 'infoFeed2', 'jobContacts'] as const
+
+export type VisibilityRequirement = (typeof VISIBILITY_REQUIREMENTS)[number]
+
+/** Honest label. The hit rate is hidden and lives on the source, not on the label. */
+export const SOURCE_TIERS = ['high', 'medium', 'low'] as const
+
+export type SourceTier = (typeof SOURCE_TIERS)[number]
+
+/**
+ * One rumour source. Passed in with the other definitions.
+ * `hitRate` is the hidden probability that an attempt is true (section 2.4).
+ * `visibility` is shown when the player's list shares one of these names.
+ */
+export type SourceDefinition = {
+  id: string
+  tier: SourceTier
+  hitRate: number
+  visibility: readonly VisibilityRequirement[]
+}
+
 export type MarketDefinitions = {
   assets: readonly AssetDefinition[]
   /** Growth, inflation, policy rate, and any later entries. Order is the drift order. */
@@ -162,6 +184,11 @@ export type MarketDefinitions = {
    * events-stream draws. Dates are known before the outcome is rolled.
    */
   calendar?: CalendarDefinitions
+  /**
+   * Rumour sources. Omitted or empty means no rumours and no info-stream draws.
+   * Headlines for events that already fired are still generated.
+   */
+  sources?: readonly SourceDefinition[]
 }
 
 /** Price in integer cents. Fair value is cents as a float. */
@@ -397,6 +424,70 @@ export type CalendarItemEvent = {
   after: EnvironmentView[]
 }
 
+/** Confirmed news for one event or calendar outcome that fired on the generation day. */
+export type HeadlineItem = {
+  kind: 'headline'
+  eventId: string
+  text: string
+  magnitude: number
+  top: boolean
+}
+
+/**
+ * One emitted rumour. A skipped truth roll is not stored.
+ * `visibility` is copied from the source so a later filter does not need definitions.
+ */
+export type RumourItem = {
+  kind: 'rumour'
+  sourceId: string
+  tier: SourceTier
+  truthRoll: number
+  truth: boolean
+  claim: string
+  /** Event day minus the generation day. */
+  leadDays: number
+  targetEventId: string
+  /** Low-tier false rumours only. */
+  noise: boolean
+  visibility: VisibilityRequirement[]
+}
+
+export type FeedItem = HeadlineItem | RumourItem
+
+/** Full feed for `day`, before any player filter. */
+export type DayFeed = {
+  day: number
+  items: FeedItem[]
+}
+
+export type HeadlineEvent = {
+  kind: 'headline'
+  /** Day the headline was generated. The event fired on this day. */
+  day: number
+  /** Day the feed is shown. */
+  feedDay: number
+  eventId: string
+  text: string
+  magnitude: number
+  top: boolean
+}
+
+export type RumourGeneratedEvent = {
+  kind: 'rumourGenerated'
+  /** Day the rumour was generated. */
+  day: number
+  /** Day the feed is shown. */
+  feedDay: number
+  source: string
+  tier: SourceTier
+  truthRoll: number
+  truth: boolean
+  claim: string
+  leadDays: number
+  targetEventId: string
+  noise: boolean
+}
+
 export type LogEvent =
   | NoiseRollEvent
   | PriceStepEvent
@@ -408,6 +499,8 @@ export type LogEvent =
   | EffectAppliedEvent
   | FairValueChangeEvent
   | CalendarItemEvent
+  | HeadlineEvent
+  | RumourGeneratedEvent
 
 /**
  * Seeded market. `day` is 0 before the first step.
@@ -415,6 +508,7 @@ export type LogEvent =
  * Stock `fairValue` is hidden. Event effects move it before the price step.
  * The index `fairValue` is the uncapped index quote in cents (float).
  * `calendarRolls` is not part of `scheduled`. A later distortion step must not filter it.
+ * `feed` is the full day-ahead feed. Filtering it must not change this object or any stream.
  */
 export type MarketState = {
   day: number
@@ -428,4 +522,6 @@ export type MarketState = {
   scheduled: ScheduledEvent[]
   active: ActiveEffect[]
   log: LogEvent[]
+  /** Feed for `day + 1`. Day 0 can hold rumours only, because nothing has fired yet. */
+  feed: DayFeed
 }

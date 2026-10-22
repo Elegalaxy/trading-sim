@@ -317,7 +317,8 @@ The loan was going to wait for a later version. On 2026-10-22 it became one of t
 
 - `[PROVISIONAL]` Plain dashboard presentation: charts, a news feed, account balances, the two stat meters, the margin meter, and a day summary.
 - `[PROVISIONAL]` A short "this is a simulation, not financial advice" note.
-- `[OPEN]` Tech stack, platform and save format are deferred to the planner. No stack is chosen here.
+- `[CONFIRMED]` Stack: TypeScript, React, and Vite (2026-10-22). The simulation is plain TypeScript, shared by the game and a Node harness. Tests use Vitest. Saves are versioned JSON in browser localStorage. The project stays in `trading-sim/` and does not import `rpg/`.
+- `[PROVISIONAL]` Platform is a local browser app. Desktop wrapping is later.
 - `[CONFIRMED]` Developer rule: new functionality exposes its data flow with debug output (the admin log in sections 9 and 11).
 
 ## 14. First Playable Scope
@@ -359,7 +360,7 @@ The loan was going to wait for a later version. On 2026-10-22 it became one of t
 - Currency pair or other new assets
 - Limit and stop orders
 - Endless or sandbox mode
-- Final tech stack, platform and save format
+- Desktop wrapping. The browser stack and localStorage saves are confirmed in section 13.
 
 ## 15. First Playable Success Criteria
 
@@ -449,19 +450,21 @@ These are provisional defaults that shape other systems. The user should confirm
 - How the player learns rumour source hit rates.
 - Concrete event type list and per-day chances.
 - Art and UI details, and the final title.
-- Tech stack, platform and save format (Q 21 and 22), deferred to the planner.
+- Platform details beyond the local browser app, and the save-file schema (Q 22). The stack is confirmed in section 13.
 - The later systems in section 12.
 
 ## 18. Next Design Step
 
 1. The user reviews the provisional defaults in section 17, in the order listed, and confirms or changes them. Confirmed items change their tag here and are logged in the brainstorm doc's Decisions.
-2. Hand off to the planner for a tech-stack comparison and an ordered plan for the first playable, using the scope in section 14. The planner decides the stack, and the plan should put a deterministic price-model sandbox with the admin log first.
+2. Execute the first-playable plan, [plans/2026-10-22-first-playable.md](plans/2026-10-22-first-playable.md), one step at a time, starting with Step 1. The stack is confirmed in section 13.
 3. Return to this document to resolve questions that the plan or a simulation run surfaces.
 
 Balance values are testable starting hypotheses. Provisional rules are not decisions.
 
 ## 19. Changelog
 
+- 2026-10-22: Confirmed the stack: TypeScript, React, and Vite. The simulation is plain TypeScript, tests use Vitest, and saves are versioned JSON in localStorage. The app stays in `trading-sim/` and does not import `rpg/`.
+- 2026-10-22: Wrote the first-playable plan, [plans/2026-10-22-first-playable.md](plans/2026-10-22-first-playable.md). It recommends a tech stack for the user to decide and uses placeholder values, labeled provisional in the plan only, for open items such as the clock, sleep, consumables and loan numbers. No rule in this document changed. Section 18 now points at the plan.
 - 2026-10-22: A played day is sleep, work, and trading while the market is open. Not enough sleep worsens energy and stress. Eating, drinking, and lifestyle changes are available while the day is playing and do not occupy a section. Skipping jumps from the end of work, when there is nothing to do, until the stock market opens.
 - 2026-10-22: A lifestyle downgrade only lowers later bills. It does not return the money spent on the upgrade.
 - 2026-10-22: Lifestyle can be downgraded as ordinary asset management. It cannot be used to shrink a bill that is already short, and a missed loan payment does not force a lifestyle downgrade.

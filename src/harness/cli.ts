@@ -1,13 +1,14 @@
 // Sandbox admin log for one seeded run.
-// Price steps stay in src/sim. This file only validates args and prints [sim] lines.
-// --asset filters the event log. The closes table still lists every asset.
+// Player time goes through createGame and endDay. The market log is unchanged.
+// One [sim] accounts line per day follows that day's market log and account events.
+// --asset filters the market log. The closes table still lists every asset.
 
 import { MARKET_DEFINITIONS } from '../content/index.ts'
+import { createGame, endDay } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { formatEvent } from '../sim/log.ts'
-import { createMarket, stepMarketDay } from '../sim/market.ts'
 import { daySummary, formatSummary } from '../sim/summary.ts'
-import type { LogEvent } from '../sim/types.ts'
+import type { GameState, LogEvent } from '../sim/types.ts'
 
 const USAGE =
   'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>] [--events-only] [--feed]'
@@ -185,12 +186,46 @@ function matchesAsset(event: LogEvent, asset: string): boolean {
   }
 }
 
-function printDayLog(log: readonly LogEvent[], options: CliOptions): void {
+function showDayLog(options: CliOptions): boolean {
   // Feed lines live in the day log, so the default log shows them.
   // --feed adds the day summary and does not hide event lines.
   // --events-only still hides price lines. --quiet hides the log, except feed lines when --feed is set.
-  const showLog = !options.quiet || options.eventsOnly || options.feed
-  if (showLog) {
+  return !options.quiet || options.eventsOnly || options.feed
+}
+
+function printAccountLog(game: GameState, options: CliOptions): void {
+  if (!showDayLog(options)) return
+  for (const event of game.log) {
+    console.log(`[sim] ${formatEvent(event)}`)
+  }
+}
+
+function requireCents(value: number, label: string): number {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${label} must be a safe integer >= 0, received ${String(value)}`)
+  }
+  return value
+}
+
+/** Cash, trading, savings, and today's accrual. Pay days also print the interest paid. */
+function accountsLine(game: GameState): string {
+  let accrual = 0
+  let paid: number | undefined
+  for (const event of game.log) {
+    if (event.kind === 'savingsAccrual') accrual = event.accrualCents
+    if (event.kind === 'savingsInterestPaid') paid = event.amountCents
+  }
+  const cash = requireCents(game.accounts.cashCents, 'cash')
+  const trading = requireCents(game.accounts.tradingCents, 'trading')
+  const savings = requireCents(game.accounts.savingsCents, 'savings')
+  const accruedToday = requireCents(accrual, 'accrual')
+  let line = `[sim] accounts day=${game.market.day} cash=${cash} trading=${trading} savings=${savings} accrual=${accruedToday}`
+  if (paid !== undefined) line = `${line} paid=${requireCents(paid, 'paid')}`
+  return line
+}
+
+function printDayLog(log: readonly LogEvent[], options: CliOptions): void {
+  if (showDayLog(options)) {
     for (const event of log) {
       if (options.quiet && !options.eventsOnly && !isFeedKind(event.kind)) continue
       if (options.eventsOnly && isPriceKind(event.kind)) continue
@@ -231,19 +266,23 @@ function closeTable(ids: readonly string[], rows: readonly CloseRow[]): string[]
 function run(options: CliOptions): void {
   const defs = MARKET_DEFINITIONS
   const ids = defs.assets.map((asset) => asset.id)
-  const state = createMarket(defs, options.seed)
+  const game = createGame(defs, options.seed)
   console.log(`[sim] seed=${options.seed} days=${options.days} assets=${ids.join(',')}`)
-  printDayLog(state.log, options)
+  printDayLog(game.market.log, options)
+  printAccountLog(game, options)
+  console.log(accountsLine(game))
 
   const closes: CloseRow[] = []
   for (let step = 0; step < options.days; step += 1) {
-    stepMarketDay(state, defs)
-    printDayLog(state.log, options)
+    endDay(game, defs)
+    printDayLog(game.market.log, options)
+    printAccountLog(game, options)
+    console.log(accountsLine(game))
     closes.push({
-      day: state.day,
+      day: game.market.day,
       prices: ids.map((id) => {
-        const asset = state.assets[id]
-        if (asset === undefined) throw new Error(`missing close for ${id} on day ${state.day}`)
+        const asset = game.market.assets[id]
+        if (asset === undefined) throw new Error(`missing close for ${id} on day ${game.market.day}`)
         return asset.priceCents
       }),
     })
@@ -255,7 +294,7 @@ function run(options: CliOptions): void {
     console.log('[sim] closes')
     for (const line of closeTable(ids, closes)) console.log(`[sim] ${line}`)
   }
-  console.log(`[sim] stateHash=${stateHash(state)}`)
+  console.log(`[sim] stateHash=${stateHash(game.market)}`)
 }
 
 run(parseArgs(process.argv.slice(2)))

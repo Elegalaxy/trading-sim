@@ -35,3 +35,37 @@ export const RUMOURS_PER_SOURCE_PER_DAY = 1
 /** Section 5. A rumour claims an event this many days after the generation day. Provisional. */
 export const RUMOUR_LEAD_MIN_DAYS = 1
 export const RUMOUR_LEAD_MAX_DAYS = 3
+
+/**
+ * Section 6. Provisional unit. 1E = 1000.00 currency = 100000 cents.
+ * `CENTS_PER_UNIT` is one currency unit (100 cents), and one E is 1000 of those.
+ */
+export const CENTS_PER_E = 1000 * CENTS_PER_UNIT
+
+/** Section 6. Provisional starting cash: 3E = 300000 cents. */
+export const STARTING_CASH_CENTS = 3 * CENTS_PER_E
+
+/** Section 6. Provisional starting trading account: 3E = 300000 cents. */
+export const STARTING_TRADING_CENTS = 3 * CENTS_PER_E
+
+/** Section 6. Provisional starting savings. */
+export const STARTING_SAVINGS_CENTS = 0
+
+/**
+ * Section 6. Provisional savings interest.
+ * The policy rate is that day's environment value in percent, read after the
+ * market step, so a rate decision on that day counts. No random stream is drawn.
+ * Annual rate = max(0, policyRate − SAVINGS_SPREAD_PERCENT) / 100.
+ * Daily accrual cents = round half away from zero of
+ * savingsCents × annualRate / SAVINGS_DAYS_PER_YEAR.
+ * The unpaid cents accumulate. On each multiple of SAVINGS_PAY_INTERVAL_DAYS
+ * (30, 60, 90, 120, and every later 30th day) they are paid into savings and
+ * the accumulator resets. A pay day still logs a payment of 0 when savings is 0.
+ * The environment entry is `policyRate` unless the calendar names another id.
+ */
+export const SAVINGS_SPREAD_PERCENT = 1.5
+export const SAVINGS_DAYS_PER_YEAR = 365
+export const SAVINGS_PAY_INTERVAL_DAYS = 30
+
+/** Section 6. Provisional policy-rate entry when the run has no calendar. */
+export const POLICY_RATE_ENTRY_ID = 'policyRate'

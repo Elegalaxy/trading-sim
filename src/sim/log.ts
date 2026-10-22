@@ -1,6 +1,6 @@
 // One text line per log event. The simulation does not print; tests and the harness do.
 
-import type { EnvironmentView, LogEvent } from './types.ts'
+import type { AccountLogEvent, EnvironmentView, LogEvent } from './types.ts'
 
 function describeValue(value: unknown): string {
   if (typeof value === 'number' && Number.isNaN(value)) return 'NaN'
@@ -30,6 +30,14 @@ function formatAsset(asset: string): string {
 function formatText(value: string, label: string): string {
   if (typeof value !== 'string' || value.length === 0 || /[\r\n]/.test(value)) {
     throw new Error(`formatEvent ${label} must be one non-empty line, received ${describeValue(value)}`)
+  }
+  return JSON.stringify(value)
+}
+
+/** One line, including an empty account name. */
+function formatJsonString(value: string, label: string): string {
+  if (typeof value !== 'string' || /[\r\n]/.test(value)) {
+    throw new Error(`formatEvent ${label} must be one line, received ${describeValue(value)}`)
   }
   return JSON.stringify(value)
 }
@@ -95,7 +103,7 @@ function formatEnvironmentChange(before: readonly EnvironmentView[], after: read
 }
 
 /** One line. Prices and gaps are cents. `gapAfter` is fair (or the index quote) minus the new price. */
-export function formatEvent(event: LogEvent): string {
+export function formatEvent(event: LogEvent | AccountLogEvent): string {
   switch (event.kind) {
     case 'noiseRoll':
       return `day=${formatNumber(event.day)} kind=noiseRoll asset=${formatAsset(event.asset)} z=${formatNumber(event.z)}`
@@ -227,6 +235,45 @@ export function formatEvent(event: LogEvent): string {
         `leadDays=${formatNumber(event.leadDays)}`,
         `target=${formatEffectId(event.targetEventId)}`,
         `noise=${formatFlag(event.noise, 'noise flag')}`,
+      ].join(' ')
+    case 'transfer':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=transfer',
+        `from=${formatToken(event.from, 'from')}`,
+        `to=${formatToken(event.to, 'to')}`,
+        `amount=${formatNumber(event.amountCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+        `trading=${formatNumber(event.tradingCents)}`,
+        `savings=${formatNumber(event.savingsCents)}`,
+      ].join(' ')
+    case 'commandRejected': {
+      const account =
+        event.account === undefined ? '' : ` account=${formatJsonString(event.account, 'account')}`
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=commandRejected',
+        `command=${formatText(event.command, 'command')}`,
+        `reason=${formatToken(event.reason, 'reason')}`,
+      ].join(' ') + account
+    }
+    case 'savingsAccrual':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=savingsAccrual',
+        `savings=${formatNumber(event.savingsCents)}`,
+        `policyRate=${formatNumber(event.policyRate)}`,
+        `annualRate=${formatNumber(event.annualRate)}`,
+        `accrual=${formatNumber(event.accrualCents)}`,
+        `accrued=${formatNumber(event.accruedCents)}`,
+      ].join(' ')
+    case 'savingsInterestPaid':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=savingsInterestPaid',
+        `amount=${formatNumber(event.amountCents)}`,
+        `savings=${formatNumber(event.savingsCents)}`,
+        `accrued=${formatNumber(event.accruedCents)}`,
       ].join(' ')
     default: {
       const unknown: never = event

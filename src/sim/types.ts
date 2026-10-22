@@ -488,6 +488,60 @@ export type RumourGeneratedEvent = {
   noise: boolean
 }
 
+/** Cash, the trading account, and savings. Transfers between these are instant and free. */
+export const ACCOUNT_NAMES = ['cash', 'trading', 'savings'] as const
+
+export type AccountName = (typeof ACCOUNT_NAMES)[number]
+
+/** Balances after a transfer, in cents. */
+export type TransferEvent = {
+  kind: 'transfer'
+  day: number
+  from: AccountName
+  to: AccountName
+  amountCents: number
+  cashCents: number
+  tradingCents: number
+  savingsCents: number
+}
+
+/**
+ * A player command that changed nothing.
+ * `command` is the submitted type, or `invalid` when there was no type.
+ * `account` is set only when `reason` is `unknownAccount`.
+ */
+export type CommandRejectedEvent = {
+  kind: 'commandRejected'
+  day: number
+  command: string
+  reason: string
+  account?: string
+}
+
+/** One day's savings accrual, before a pay day moves the accumulator. */
+export type SavingsAccrualEvent = {
+  kind: 'savingsAccrual'
+  day: number
+  savingsCents: number
+  /** Policy rate in percent after this day's market step. */
+  policyRate: number
+  annualRate: number
+  accrualCents: number
+  /** Accumulator after this day's accrual, before a payment. */
+  accruedCents: number
+}
+
+/** Interest added to savings. `amountCents` is 0 when nothing has accrued. */
+export type SavingsInterestPaidEvent = {
+  kind: 'savingsInterestPaid'
+  day: number
+  amountCents: number
+  savingsCents: number
+  accruedCents: number
+}
+
+export type AccountLogEvent = TransferEvent | CommandRejectedEvent | SavingsAccrualEvent | SavingsInterestPaidEvent
+
 export type LogEvent =
   | NoiseRollEvent
   | PriceStepEvent
@@ -524,4 +578,25 @@ export type MarketState = {
   log: LogEvent[]
   /** Feed for `day + 1`. Day 0 can hold rumours only, because nothing has fired yet. */
   feed: DayFeed
+}
+
+/** Player balances in integer cents. The accumulator is unpaid savings interest. */
+export type PlayerAccounts = {
+  cashCents: number
+  tradingCents: number
+  savingsCents: number
+  accruedSavingsCents: number
+}
+
+/**
+ * Market plus the player. Commands and interest live on `pending` and `log`.
+ * They are not written onto `market`, so a command cannot change the market hash.
+ * `pending` holds commands since the previous `endDay`. `log` is those commands
+ * until `endDay` replaces it with the commands plus that day's savings events.
+ */
+export type GameState = {
+  market: MarketState
+  accounts: PlayerAccounts
+  pending: Array<TransferEvent | CommandRejectedEvent>
+  log: AccountLogEvent[]
 }

@@ -313,7 +313,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 9: Accounts and transfers
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 8
 - Files to create or change: `src/sim/game.ts`, `src/sim/accounts.ts`, `src/sim/accounts.test.ts`, `src/sim/types.ts`, `src/sim/constants.ts`, `src/sim/log.ts`, `src/harness/cli.ts`
 - What changes:
@@ -332,7 +332,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`, `npm run sim -- --seed demo --days 31`.
   - User: check that the `accounts` line shows savings interest arriving on day 30.
-- Progress:
+- Progress: 2026-10-22: Added player accounts, instant free transfers, and provisional savings interest. Files: src/sim/game.ts, src/sim/accounts.ts, src/sim/accounts.test.ts, src/sim/types.ts, src/sim/constants.ts, src/sim/log.ts, src/harness/cli.ts. Cash and trading start at 3E (300000 cents); savings starts at 0. endDay steps the market once, then accrues. Interest uses the post-step policy rate and pays on each 30th day. Account events stay off MarketState, so the market hash is unchanged. The harness prints those events after the market log and one accounts line per day. The golden market log was not updated. Checks: npm test passed (9 files, 48 tests, architecture violations=0); npm run typecheck passed; npm run lint passed; `npm run sim -- --seed demo --days 31` passed, stateHash=1452738638ca5532. noiseRoll, eventRoll, calendarItem, headline, and rumourGenerated lines matched the previous demo run, including a real-content run that also transferred. Day 30 accounts line: cash=300000 trading=300000 savings=0 accrual=0 paid=0. Funded test payment=211 cents.
 
 ### Step 10: Orders: long and short, with fee and spread
 

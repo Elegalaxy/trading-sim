@@ -222,7 +222,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 5: Harness CLI: the sandbox admin log
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 4
 - Files to create or change: `src/harness/cli.ts`
 - What changes:
@@ -237,7 +237,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm run sim -- --seed demo --days 10` twice, then `npm run sim -- --seed other --days 10 --quiet`.
   - User: run the same commands. The first two outputs should match line for line. No `capped move` value should be above 8%.
-- Progress:
+- Progress: 2026-10-22: Replaced the src/harness/cli.ts stub with the sandbox admin log (createMarket, stepMarketDay, formatEvent, stateHash). Checks: `npm run sim -- --seed demo --days 10` twice, both exit 0, stdout matched line for line, stateHash=7bcf649214163c08; `npm run sim -- --seed other --days 10 --quiet` exit 0, stateHash=868c548da9f40aa6, day-1 NOVA 4705 versus demo 4793; `--days 0`, `--seed demo --days abc`, and `--seed demo --days 10 --asset XYZ` each exit 1 with a one-line stderr error and no stack trace; 50 cappedMove lines in the demo 10-day log, none capped=true, largest absolute move 246 cents on previous 4932 (under 8%); npm test passed (3 files, 14 tests); npm run typecheck passed; npm run lint passed.
 
 ### Step 6: Environment and per-day event rolls
 

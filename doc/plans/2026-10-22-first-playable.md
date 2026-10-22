@@ -175,7 +175,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 3: Seeded RNG with named streams
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 2
 - Files to create or change: `src/sim/rng.ts`, `src/sim/rng.test.ts`, `src/sim/types.ts`
 - What changes:
@@ -193,7 +193,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: check that the `[DEBUG rng]` lines show the same first values on two test runs.
-- Progress:
+- Progress: 2026-10-22: Added src/sim/types.ts (stream names, four-integer sfc32 state, optional Box–Muller spare), src/sim/rng.ts (FNV-1a string hash, splitmix32 into market/events/info/distortion, nextFloat, inclusive nextInt, nextNormal, pickWeighted), and src/sim/rng.test.ts. Checks: npm test passed twice (2 files, 8 tests, architecture violations=0, seed demo first floats matched); npm run typecheck passed; npm run lint passed.
 
 ### Step 4: Assets, hidden fair value, and the daily price step
 

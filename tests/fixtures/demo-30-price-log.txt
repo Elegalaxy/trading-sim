@@ -1,0 +1,270 @@
+[DEBUG market] day=1 kind=noiseRoll asset=NOVA z=-0.06658864
+[DEBUG market] day=1 kind=priceStep asset=NOVA previous=4800 fair=4800 pull=0 noise=-7.0317609 rawMove=-7.0317609 cappedMove=-7 capped=false newPrice=4793 gapAfter=7
+[DEBUG market] day=1 kind=noiseRoll asset=BLSW z=1.38721788
+[DEBUG market] day=1 kind=priceStep asset=BLSW previous=11200 fair=11200 pull=0 noise=279.66312531 rawMove=279.66312531 cappedMove=280 capped=false newPrice=11480 gapAfter=-280
+[DEBUG market] day=1 kind=noiseRoll asset=HRBU z=-0.69862926
+[DEBUG market] day=1 kind=priceStep asset=HRBU previous=3100 fair=3100 pull=0 noise=-21.65750714 rawMove=-21.65750714 cappedMove=-22 capped=false newPrice=3078 gapAfter=22
+[DEBUG market] day=1 kind=noiseRoll asset=KSR z=-1.69930469
+[DEBUG market] day=1 kind=priceStep asset=KSR previous=6400 fair=6400 pull=0 noise=-152.25770055 rawMove=-152.25770055 cappedMove=-152 capped=false newPrice=6248 gapAfter=152
+[DEBUG market] day=1 kind=indexStep asset=M4X previous=100000 quote=99817.37231183 rawMove=-182.62768817 cappedMove=-183 capped=false newPrice=99817 gapAfter=0.37231183
+[DEBUG market] day=2 kind=noiseRoll asset=NOVA z=-1.16679666
+[DEBUG market] day=2 kind=priceStep asset=NOVA previous=4793 fair=4800 pull=2.45 noise=-123.03404066 rawMove=-120.58404066 cappedMove=-121 capped=false newPrice=4672 gapAfter=128
+[DEBUG market] day=2 kind=noiseRoll asset=BLSW z=0.12367028
+[DEBUG market] day=2 kind=priceStep asset=BLSW previous=11480 fair=11200 pull=-98 noise=25.55522682 rawMove=-72.44477318 cappedMove=-72 capped=false newPrice=11408 gapAfter=-208
+[DEBUG market] day=2 kind=noiseRoll asset=HRBU z=0.83275169
+[DEBUG market] day=2 kind=priceStep asset=HRBU previous=3078 fair=3100 pull=7.7 noise=25.63209706 rawMove=33.33209706 cappedMove=33 capped=false newPrice=3111 gapAfter=-11
+[DEBUG market] day=2 kind=noiseRoll asset=KSR z=1.64411828
+[DEBUG market] day=2 kind=priceStep asset=KSR previous=6248 fair=6400 pull=53.2 noise=143.81431406 rawMove=197.01431406 cappedMove=197 capped=false newPrice=6445 gapAfter=-45
+[DEBUG market] day=2 kind=indexStep asset=M4X previous=99817 quote=100062.10997504 rawMove=245.10997504 cappedMove=245 capped=false newPrice=100062 gapAfter=0.10997504
+[DEBUG market] day=3 kind=noiseRoll asset=NOVA z=0.37602213
+[DEBUG market] day=3 kind=priceStep asset=NOVA previous=4672 fair=4800 pull=44.8 noise=38.64905854 rawMove=83.44905854 cappedMove=83 capped=false newPrice=4755 gapAfter=45
+[DEBUG market] day=3 kind=noiseRoll asset=BLSW z=-0.5340053
+[DEBUG market] day=3 kind=priceStep asset=BLSW previous=11408 fair=11200 pull=-72.8 noise=-109.65478512 rawMove=-182.45478512 cappedMove=-182 capped=false newPrice=11226 gapAfter=-26
+[DEBUG market] day=3 kind=noiseRoll asset=HRBU z=0.44367057
+[DEBUG market] day=3 kind=priceStep asset=HRBU previous=3111 fair=3100 pull=-3.85 noise=13.80259131 rawMove=9.95259131 cappedMove=10 capped=false newPrice=3121 gapAfter=-21
+[DEBUG market] day=3 kind=noiseRoll asset=KSR z=0.35499644
+[DEBUG market] day=3 kind=priceStep asset=KSR previous=6445 fair=6400 pull=-15.75 noise=32.03132844 rawMove=16.28132844 cappedMove=16 capped=false newPrice=6461 gapAfter=-61
+[DEBUG market] day=3 kind=indexStep asset=M4X previous=100062 quote=100231.296803 rawMove=169.296803 cappedMove=169 capped=false newPrice=100231 gapAfter=0.296803
+[DEBUG market] day=4 kind=noiseRoll asset=NOVA z=1.5406501
+[DEBUG market] day=4 kind=priceStep asset=NOVA previous=4755 fair=4800 pull=15.75 noise=161.16740737 rawMove=176.91740737 cappedMove=177 capped=false newPrice=4932 gapAfter=-132
+[DEBUG market] day=4 kind=noiseRoll asset=BLSW z=-1.16999858
+[DEBUG market] day=4 kind=priceStep asset=BLSW previous=11226 fair=11200 pull=-9.1 noise=-236.41927376 rawMove=-245.51927376 cappedMove=-246 capped=false newPrice=10980 gapAfter=220
+[DEBUG market] day=4 kind=noiseRoll asset=HRBU z=-0.248073
+[DEBUG market] day=4 kind=priceStep asset=HRBU previous=3121 fair=3100 pull=-7.35 noise=-7.74235822 rawMove=-15.09235822 cappedMove=-15 capped=false newPrice=3106 gapAfter=-6
+[DEBUG market] day=4 kind=noiseRoll asset=KSR z=-0.65818641
+[DEBUG market] day=4 kind=priceStep asset=KSR previous=6461 fair=6400 pull=-21.35 noise=-59.53559352 rawMove=-80.88559352 cappedMove=-81 capped=false newPrice=6380 gapAfter=20
+[DEBUG market] day=4 kind=indexStep asset=M4X previous=100231 quote=100166.6906682 rawMove=-64.3093318 cappedMove=-64 capped=false newPrice=100167 gapAfter=-0.3093318
+[DEBUG market] day=5 kind=noiseRoll asset=NOVA z=-1.84542677
+[DEBUG market] day=5 kind=priceStep asset=NOVA previous=4932 fair=4800 pull=-46.2 noise=-200.23618618 rawMove=-246.43618618 cappedMove=-246 capped=false newPrice=4686 gapAfter=114
+[DEBUG market] day=5 kind=noiseRoll asset=BLSW z=-0.55348668
+[DEBUG market] day=5 kind=priceStep asset=BLSW previous=10980 fair=11200 pull=77 noise=-109.39110782 rawMove=-32.39110782 cappedMove=-32 capped=false newPrice=10948 gapAfter=252
+[DEBUG market] day=5 kind=noiseRoll asset=HRBU z=-1.16332514
+[DEBUG market] day=5 kind=priceStep asset=HRBU previous=3106 fair=3100 pull=-2.1 noise=-36.13287881 rawMove=-38.23287881 cappedMove=-38 capped=false newPrice=3068 gapAfter=32
+[DEBUG market] day=5 kind=noiseRoll asset=KSR z=0.15192245
+[DEBUG market] day=5 kind=priceStep asset=KSR previous=6380 fair=6400 pull=7 noise=13.56971311 rawMove=20.56971311 cappedMove=21 capped=false newPrice=6401 gapAfter=-1
+[DEBUG market] day=5 kind=indexStep asset=M4X previous=100167 quote=98589.59173387 rawMove=-1577.40826613 cappedMove=-1577 capped=false newPrice=98590 gapAfter=-0.40826613
+[DEBUG market] day=6 kind=noiseRoll asset=NOVA z=-0.56779274
+[DEBUG market] day=6 kind=priceStep asset=NOVA previous=4686 fair=4800 pull=39.9 noise=-58.53488877 rawMove=-18.63488877 cappedMove=-19 capped=false newPrice=4667 gapAfter=133
+[DEBUG market] day=6 kind=noiseRoll asset=BLSW z=0.15052976
+[DEBUG market] day=6 kind=priceStep asset=BLSW previous=10948 fair=11200 pull=88.2 noise=29.66399569 rawMove=117.86399569 cappedMove=118 capped=false newPrice=11066 gapAfter=134
+[DEBUG market] day=6 kind=noiseRoll asset=HRBU z=-1.74247045
+[DEBUG market] day=6 kind=priceStep asset=HRBU previous=3068 fair=3100 pull=11.2 noise=-53.45899352 rawMove=-42.25899352 cappedMove=-42 capped=false newPrice=3026 gapAfter=74
+[DEBUG market] day=6 kind=noiseRoll asset=KSR z=0.64771495
+[DEBUG market] day=6 kind=priceStep asset=KSR previous=6401 fair=6400 pull=-0.35 noise=58.04432724 rawMove=57.69432724 cappedMove=58 capped=false newPrice=6459 gapAfter=-59
+[DEBUG market] day=6 kind=indexStep asset=M4X previous=98590 quote=98641.87908026 rawMove=51.87908026 cappedMove=52 capped=false newPrice=98642 gapAfter=-0.12091974
+[DEBUG market] day=7 kind=noiseRoll asset=NOVA z=-2.05347207
+[DEBUG market] day=7 kind=priceStep asset=NOVA previous=4667 fair=4800 pull=46.55 noise=-210.8381909 rawMove=-164.2881909 cappedMove=-164 capped=false newPrice=4503 gapAfter=297
+[DEBUG market] day=7 kind=noiseRoll asset=BLSW z=0.26594655
+[DEBUG market] day=7 kind=priceStep asset=BLSW previous=11066 fair=11200 pull=46.9 noise=52.97336177 rawMove=99.87336177 cappedMove=100 capped=false newPrice=11166 gapAfter=34
+[DEBUG market] day=7 kind=noiseRoll asset=HRBU z=-0.45491139
+[DEBUG market] day=7 kind=priceStep asset=HRBU previous=3026 fair=3100 pull=25.9 noise=-13.76561874 rawMove=12.13438126 cappedMove=12 capped=false newPrice=3038 gapAfter=62
+[DEBUG market] day=7 kind=noiseRoll asset=KSR z=0.8956012
+[DEBUG market] day=7 kind=priceStep asset=KSR previous=6459 fair=6400 pull=-20.65 noise=80.98563394 rawMove=60.33563394 cappedMove=60 capped=false newPrice=6519 gapAfter=-119
+[DEBUG market] day=7 kind=indexStep asset=M4X previous=98642 quote=98342.07589286 rawMove=-299.92410714 cappedMove=-300 capped=false newPrice=98342 gapAfter=0.07589286
+[DEBUG market] day=8 kind=noiseRoll asset=NOVA z=-0.32139405
+[DEBUG market] day=8 kind=priceStep asset=NOVA previous=4503 fair=4800 pull=103.95 noise=-31.83922267 rawMove=72.11077733 cappedMove=72 capped=false newPrice=4575 gapAfter=225
+[DEBUG market] day=8 kind=noiseRoll asset=BLSW z=0.11954474
+[DEBUG market] day=8 kind=priceStep asset=BLSW previous=11166 fair=11200 pull=11.9 noise=24.02705878 rawMove=35.92705878 cappedMove=36 capped=false newPrice=11202 gapAfter=-2
+[DEBUG market] day=8 kind=noiseRoll asset=HRBU z=1.34324058
+[DEBUG market] day=8 kind=priceStep asset=HRBU previous=3038 fair=3100 pull=21.7 noise=40.80764872 rawMove=62.50764872 cappedMove=63 capped=false newPrice=3101 gapAfter=-1
+[DEBUG market] day=8 kind=noiseRoll asset=KSR z=2.38916056
+[DEBUG market] day=8 kind=priceStep asset=KSR previous=6519 fair=6400 pull=-41.65 noise=218.04912773 rawMove=176.39912773 cappedMove=176 capped=false newPrice=6695 gapAfter=-295
+[DEBUG market] day=8 kind=indexStep asset=M4X previous=98342 quote=99992.99755184 rawMove=1650.99755184 cappedMove=1651 capped=false newPrice=99993 gapAfter=-0.00244816
+[DEBUG market] day=9 kind=noiseRoll asset=NOVA z=-0.47539406
+[DEBUG market] day=9 kind=priceStep asset=NOVA previous=4575 fair=4800 pull=78.75 noise=-47.84841234 rawMove=30.90158766 cappedMove=31 capped=false newPrice=4606 gapAfter=194
+[DEBUG market] day=9 kind=noiseRoll asset=BLSW z=-0.06404653
+[DEBUG market] day=9 kind=priceStep asset=BLSW previous=11202 fair=11200 pull=-0.7 noise=-12.91408644 rawMove=-13.61408644 cappedMove=-14 capped=false newPrice=11188 gapAfter=12
+[DEBUG market] day=9 kind=noiseRoll asset=HRBU z=0.32177701
+[DEBUG market] day=9 kind=priceStep asset=HRBU previous=3101 fair=3100 pull=-0.35 noise=9.97830509 rawMove=9.62830509 cappedMove=10 capped=false newPrice=3111 gapAfter=-11
+[DEBUG market] day=9 kind=noiseRoll asset=KSR z=-0.40932779
+[DEBUG market] day=9 kind=priceStep asset=KSR previous=6695 fair=6400 pull=-103.25 noise=-38.36629392 rawMove=-141.61629392 cappedMove=-142 capped=false newPrice=6553 gapAfter=-153
+[DEBUG market] day=9 kind=indexStep asset=M4X previous=99993 quote=99649.16354647 rawMove=-343.83645353 cappedMove=-344 capped=false newPrice=99649 gapAfter=0.16354647
+[DEBUG market] day=10 kind=noiseRoll asset=NOVA z=-0.95473821
+[DEBUG market] day=10 kind=priceStep asset=NOVA previous=4606 fair=4800 pull=67.9 noise=-96.74553278 rawMove=-28.84553278 cappedMove=-29 capped=false newPrice=4577 gapAfter=223
+[DEBUG market] day=10 kind=noiseRoll asset=BLSW z=-1.57470987
+[DEBUG market] day=10 kind=priceStep asset=BLSW previous=11188 fair=11200 pull=4.2 noise=-317.12137185 rawMove=-312.92137185 cappedMove=-313 capped=false newPrice=10875 gapAfter=325
+[DEBUG market] day=10 kind=noiseRoll asset=HRBU z=0.60065814
+[DEBUG market] day=10 kind=priceStep asset=HRBU previous=3111 fair=3100 pull=-3.85 noise=18.68647484 rawMove=14.83647484 cappedMove=15 capped=false newPrice=3126 gapAfter=-26
+[DEBUG market] day=10 kind=noiseRoll asset=KSR z=-0.19655292
+[DEBUG market] day=10 kind=priceStep asset=KSR previous=6553 fair=6400 pull=-53.55 noise=-18.03215773 rawMove=-71.58215773 cappedMove=-72 capped=false newPrice=6481 gapAfter=-81
+[DEBUG market] day=10 kind=indexStep asset=M4X previous=99649 quote=98639.17890745 rawMove=-1009.82109255 cappedMove=-1010 capped=false newPrice=98639 gapAfter=0.17890745
+[DEBUG market] day=11 kind=noiseRoll asset=NOVA z=-1.61586223
+[DEBUG market] day=11 kind=priceStep asset=NOVA previous=4577 fair=4800 pull=78.05 noise=-162.70763115 rawMove=-84.65763115 cappedMove=-85 capped=false newPrice=4492 gapAfter=308
+[DEBUG market] day=11 kind=noiseRoll asset=BLSW z=1.73979401
+[DEBUG market] day=11 kind=priceStep asset=BLSW previous=10875 fair=11200 pull=113.75 noise=340.56467774 rawMove=454.31467774 cappedMove=454 capped=false newPrice=11329 gapAfter=-129
+[DEBUG market] day=11 kind=noiseRoll asset=HRBU z=-0.63047002
+[DEBUG market] day=11 kind=priceStep asset=HRBU previous=3126 fair=3100 pull=-9.1 noise=-19.70849288 rawMove=-28.80849288 cappedMove=-29 capped=false newPrice=3097 gapAfter=3
+[DEBUG market] day=11 kind=noiseRoll asset=KSR z=-1.28513673
+[DEBUG market] day=11 kind=priceStep asset=KSR previous=6481 fair=6400 pull=-28.35 noise=-116.60559564 rawMove=-144.95559564 cappedMove=-145 capped=false newPrice=6336 gapAfter=64
+[DEBUG market] day=11 kind=indexStep asset=M4X previous=98639 quote=98409.58621352 rawMove=-229.41378648 cappedMove=-229 capped=false newPrice=98410 gapAfter=-0.41378648
+[DEBUG market] day=12 kind=noiseRoll asset=NOVA z=-0.80978096
+[DEBUG market] day=12 kind=priceStep asset=NOVA previous=4492 fair=4800 pull=107.8 noise=-80.02579394 rawMove=27.77420606 cappedMove=28 capped=false newPrice=4520 gapAfter=280
+[DEBUG market] day=12 kind=noiseRoll asset=BLSW z=-0.2143119
+[DEBUG market] day=12 kind=priceStep asset=BLSW previous=11329 fair=11200 pull=-45.15 noise=-43.70291059 rawMove=-88.85291059 cappedMove=-89 capped=false newPrice=11240 gapAfter=-40
+[DEBUG market] day=12 kind=noiseRoll asset=HRBU z=0.96164199
+[DEBUG market] day=12 kind=priceStep asset=HRBU previous=3097 fair=3100 pull=1.05 noise=29.78205237 rawMove=30.83205237 cappedMove=31 capped=false newPrice=3128 gapAfter=-28
+[DEBUG market] day=12 kind=noiseRoll asset=KSR z=-0.81124544
+[DEBUG market] day=12 kind=priceStep asset=KSR previous=6336 fair=6400 pull=22.4 noise=-71.96071532 rawMove=-49.56071532 cappedMove=-50 capped=false newPrice=6286 gapAfter=114
+[DEBUG market] day=12 kind=indexStep asset=M4X previous=98410 quote=98411.44633257 rawMove=1.44633257 cappedMove=1 capped=false newPrice=98411 gapAfter=0.44633257
+[DEBUG market] day=13 kind=noiseRoll asset=NOVA z=0.39920622
+[DEBUG market] day=13 kind=priceStep asset=NOVA previous=4520 fair=4800 pull=98 noise=39.69706604 rawMove=137.69706604 cappedMove=138 capped=false newPrice=4658 gapAfter=142
+[DEBUG market] day=13 kind=noiseRoll asset=BLSW z=-0.36650477
+[DEBUG market] day=13 kind=priceStep asset=BLSW previous=11240 fair=11200 pull=-14 noise=-74.15124591 rawMove=-88.15124591 cappedMove=-88 capped=false newPrice=11152 gapAfter=48
+[DEBUG market] day=13 kind=noiseRoll asset=HRBU z=-1.02456204
+[DEBUG market] day=13 kind=priceStep asset=HRBU previous=3128 fair=3100 pull=-9.8 noise=-32.04830065 rawMove=-41.84830065 cappedMove=-42 capped=false newPrice=3086 gapAfter=14
+[DEBUG market] day=13 kind=noiseRoll asset=KSR z=-1.47820502
+[DEBUG market] day=13 kind=priceStep asset=KSR previous=6286 fair=6400 pull=39.9 noise=-130.08795482 rawMove=-90.18795482 cappedMove=-90 capped=false newPrice=6196 gapAfter=204
+[DEBUG market] day=13 kind=indexStep asset=M4X previous=98411 quote=98243.49558372 rawMove=-167.50441628 cappedMove=-168 capped=false newPrice=98243 gapAfter=0.49558372
+[DEBUG market] day=14 kind=noiseRoll asset=NOVA z=0.26478624
+[DEBUG market] day=14 kind=priceStep asset=NOVA previous=4658 fair=4800 pull=49.7 noise=27.13423498 rawMove=76.83423498 cappedMove=77 capped=false newPrice=4735 gapAfter=65
+[DEBUG market] day=14 kind=noiseRoll asset=BLSW z=-0.32585899
+[DEBUG market] day=14 kind=priceStep asset=BLSW previous=11152 fair=11200 pull=16.8 noise=-65.41162971 rawMove=-48.61162971 cappedMove=-49 capped=false newPrice=11103 gapAfter=97
+[DEBUG market] day=14 kind=noiseRoll asset=HRBU z=-1.87924891
+[DEBUG market] day=14 kind=priceStep asset=HRBU previous=3086 fair=3100 pull=4.9 noise=-57.99362141 rawMove=-53.09362141 cappedMove=-53 capped=false newPrice=3033 gapAfter=67
+[DEBUG market] day=14 kind=noiseRoll asset=KSR z=-0.09134334
+[DEBUG market] day=14 kind=priceStep asset=KSR previous=6196 fair=6400 pull=71.4 noise=-7.92348638 rawMove=63.47651362 cappedMove=63 capped=false newPrice=6259 gapAfter=141
+[DEBUG market] day=14 kind=indexStep asset=M4X previous=98243 quote=98353.83664555 rawMove=110.83664555 cappedMove=111 capped=false newPrice=98354 gapAfter=-0.16335445
+[DEBUG market] day=15 kind=noiseRoll asset=NOVA z=-0.95030279
+[DEBUG market] day=15 kind=priceStep asset=NOVA previous=4735 fair=4800 pull=22.75 noise=-98.99304196 rawMove=-76.24304196 cappedMove=-76 capped=false newPrice=4659 gapAfter=141
+[DEBUG market] day=15 kind=noiseRoll asset=BLSW z=-0.55210226
+[DEBUG market] day=15 kind=priceStep asset=BLSW previous=11103 fair=11200 pull=33.95 noise=-110.33984593 rawMove=-76.38984593 cappedMove=-76 capped=false newPrice=11027 gapAfter=173
+[DEBUG market] day=15 kind=noiseRoll asset=HRBU z=1.75979409
+[DEBUG market] day=15 kind=priceStep asset=HRBU previous=3033 fair=3100 pull=23.45 noise=53.37455485 rawMove=76.82455485 cappedMove=77 capped=false newPrice=3110 gapAfter=-10
+[DEBUG market] day=15 kind=noiseRoll asset=KSR z=-0.76028057
+[DEBUG market] day=15 kind=priceStep asset=KSR previous=6259 fair=6400 pull=49.35 noise=-66.62034502 rawMove=-17.27034502 cappedMove=-17 capped=false newPrice=6242 gapAfter=158
+[DEBUG market] day=15 kind=indexStep asset=M4X previous=98354 quote=98342.921947 rawMove=-11.078053 cappedMove=-11 capped=false newPrice=98343 gapAfter=-0.078053
+[DEBUG market] day=16 kind=noiseRoll asset=NOVA z=0.0069945
+[DEBUG market] day=16 kind=priceStep asset=NOVA previous=4659 fair=4800 pull=49.35 noise=0.71692254 rawMove=50.06692254 cappedMove=50 capped=false newPrice=4709 gapAfter=91
+[DEBUG market] day=16 kind=noiseRoll asset=BLSW z=0.63264079
+[DEBUG market] day=16 kind=priceStep asset=BLSW previous=11027 fair=11200 pull=60.55 noise=125.5703406 rawMove=186.1203406 cappedMove=186 capped=false newPrice=11213 gapAfter=-13
+[DEBUG market] day=16 kind=noiseRoll asset=HRBU z=0.24353519
+[DEBUG market] day=16 kind=priceStep asset=HRBU previous=3110 fair=3100 pull=-3.5 noise=7.57394451 rawMove=4.07394451 cappedMove=4 capped=false newPrice=3114 gapAfter=-14
+[DEBUG market] day=16 kind=noiseRoll asset=KSR z=-0.10996204
+[DEBUG market] day=16 kind=priceStep asset=KSR previous=6242 fair=6400 pull=55.3 noise=-9.60936304 rawMove=45.69063696 cappedMove=46 capped=false newPrice=6288 gapAfter=112
+[DEBUG market] day=16 kind=indexStep asset=M4X previous=98343 quote=99230.46274962 rawMove=887.46274962 cappedMove=887 capped=false newPrice=99230 gapAfter=0.46274962
+[DEBUG market] day=17 kind=noiseRoll asset=NOVA z=-0.06067868
+[DEBUG market] day=17 kind=priceStep asset=NOVA previous=4709 fair=4800 pull=31.85 noise=-6.28618968 rawMove=25.56381032 cappedMove=26 capped=false newPrice=4735 gapAfter=65
+[DEBUG market] day=17 kind=noiseRoll asset=BLSW z=0.73154215
+[DEBUG market] day=17 kind=priceStep asset=BLSW previous=11213 fair=11200 pull=-4.55 noise=147.65007756 rawMove=143.10007756 cappedMove=143 capped=false newPrice=11356 gapAfter=-156
+[DEBUG market] day=17 kind=noiseRoll asset=HRBU z=-0.55096232
+[DEBUG market] day=17 kind=priceStep asset=HRBU previous=3114 fair=3100 pull=-4.9 noise=-17.15696656 rawMove=-22.05696656 cappedMove=-22 capped=false newPrice=3092 gapAfter=8
+[DEBUG market] day=17 kind=noiseRoll asset=KSR z=1.79374922
+[DEBUG market] day=17 kind=priceStep asset=KSR previous=6288 fair=6400 pull=39.2 noise=157.90733112 rawMove=197.10733112 cappedMove=197 capped=false newPrice=6485 gapAfter=-85
+[DEBUG market] day=17 kind=indexStep asset=M4X previous=99230 quote=100277.18774002 rawMove=1047.18774002 cappedMove=1047 capped=false newPrice=100277 gapAfter=0.18774002
+[DEBUG market] day=18 kind=noiseRoll asset=NOVA z=-0.8752496
+[DEBUG market] day=18 kind=priceStep asset=NOVA previous=4735 fair=4800 pull=22.75 noise=-91.17475072 rawMove=-68.42475072 cappedMove=-68 capped=false newPrice=4667 gapAfter=133
+[DEBUG market] day=18 kind=noiseRoll asset=BLSW z=-0.05455217
+[DEBUG market] day=18 kind=priceStep asset=BLSW previous=11356 fair=11200 pull=-54.6 noise=-11.15089971 rawMove=-65.75089971 cappedMove=-66 capped=false newPrice=11290 gapAfter=-90
+[DEBUG market] day=18 kind=noiseRoll asset=HRBU z=-1.95064548
+[DEBUG market] day=18 kind=priceStep asset=HRBU previous=3092 fair=3100 pull=2.8 noise=-60.31395822 rawMove=-57.51395822 cappedMove=-58 capped=false newPrice=3034 gapAfter=66
+[DEBUG market] day=18 kind=noiseRoll asset=KSR z=0.6688915
+[DEBUG market] day=18 kind=priceStep asset=KSR previous=6485 fair=6400 pull=-29.75 noise=60.72865888 rawMove=30.97865888 cappedMove=31 capped=false newPrice=6516 gapAfter=-116
+[DEBUG market] day=18 kind=indexStep asset=M4X previous=100277 quote=99429.05145929 rawMove=-847.94854071 cappedMove=-848 capped=false newPrice=99429 gapAfter=0.05145929
+[DEBUG market] day=19 kind=noiseRoll asset=NOVA z=-0.64910716
+[DEBUG market] day=19 kind=priceStep asset=NOVA previous=4667 fair=4800 pull=46.55 noise=-66.64642856 rawMove=-20.09642856 cappedMove=-20 capped=false newPrice=4647 gapAfter=153
+[DEBUG market] day=19 kind=noiseRoll asset=BLSW z=-0.58381396
+[DEBUG market] day=19 kind=priceStep asset=BLSW previous=11290 fair=11200 pull=-31.5 noise=-118.64267269 rawMove=-150.14267269 cappedMove=-150 capped=false newPrice=11140 gapAfter=60
+[DEBUG market] day=19 kind=noiseRoll asset=HRBU z=0.70707272
+[DEBUG market] day=19 kind=priceStep asset=HRBU previous=3034 fair=3100 pull=23.1 noise=21.45258647 rawMove=44.55258647 cappedMove=45 capped=false newPrice=3079 gapAfter=21
+[DEBUG market] day=19 kind=noiseRoll asset=KSR z=-0.2740357
+[DEBUG market] day=19 kind=priceStep asset=KSR previous=6516 fair=6400 pull=-40.6 noise=-24.99863298 rawMove=-65.59863298 cappedMove=-66 capped=false newPrice=6450 gapAfter=-50
+[DEBUG market] day=19 kind=indexStep asset=M4X previous=99429 quote=99095.15408986 rawMove=-333.84591014 cappedMove=-334 capped=false newPrice=99095 gapAfter=0.15408986
+[DEBUG market] day=20 kind=noiseRoll asset=NOVA z=0.07515227
+[DEBUG market] day=20 kind=priceStep asset=NOVA previous=4647 fair=4800 pull=53.55 noise=7.68311752 rawMove=61.23311752 cappedMove=61 capped=false newPrice=4708 gapAfter=92
+[DEBUG market] day=20 kind=noiseRoll asset=BLSW z=1.83874365
+[DEBUG market] day=20 kind=priceStep asset=BLSW previous=11140 fair=11200 pull=21 noise=368.70487737 rawMove=389.70487737 cappedMove=390 capped=false newPrice=11530 gapAfter=-330
+[DEBUG market] day=20 kind=noiseRoll asset=HRBU z=-0.72160853
+[DEBUG market] day=20 kind=priceStep asset=HRBU previous=3079 fair=3100 pull=7.35 noise=-22.21832674 rawMove=-14.86832674 cappedMove=-15 capped=false newPrice=3064 gapAfter=36
+[DEBUG market] day=20 kind=noiseRoll asset=KSR z=-0.18016726
+[DEBUG market] day=20 kind=priceStep asset=KSR previous=6450 fair=6400 pull=-17.5 noise=-16.26910325 rawMove=-33.76910325 cappedMove=-34 capped=false newPrice=6416 gapAfter=-16
+[DEBUG market] day=20 kind=indexStep asset=M4X previous=99095 quote=100029.61789555 rawMove=934.61789555 cappedMove=935 capped=false newPrice=100030 gapAfter=-0.38210445
+[DEBUG market] day=21 kind=noiseRoll asset=NOVA z=0.35463129
+[DEBUG market] day=21 kind=priceStep asset=NOVA previous=4708 fair=4800 pull=32.2 noise=36.73129043 rawMove=68.93129043 cappedMove=69 capped=false newPrice=4777 gapAfter=23
+[DEBUG market] day=21 kind=noiseRoll asset=BLSW z=-1.3508646
+[DEBUG market] day=21 kind=priceStep asset=BLSW previous=11530 fair=11200 pull=-115.5 noise=-280.3584396 rawMove=-395.8584396 cappedMove=-396 capped=false newPrice=11134 gapAfter=66
+[DEBUG market] day=21 kind=noiseRoll asset=HRBU z=-0.78178866
+[DEBUG market] day=21 kind=priceStep asset=HRBU previous=3064 fair=3100 pull=12.6 noise=-23.95400443 rawMove=-11.35400443 cappedMove=-11 capped=false newPrice=3053 gapAfter=47
+[DEBUG market] day=21 kind=noiseRoll asset=KSR z=-0.0883618
+[DEBUG market] day=21 kind=priceStep asset=KSR previous=6416 fair=6400 pull=-5.6 noise=-7.93701024 rawMove=-13.53701024 cappedMove=-14 capped=false newPrice=6402 gapAfter=-2
+[DEBUG market] day=21 kind=indexStep asset=M4X previous=100030 quote=99361.6671467 rawMove=-668.3328533 cappedMove=-668 capped=false newPrice=99362 gapAfter=-0.3328533
+[DEBUG market] day=22 kind=noiseRoll asset=NOVA z=-0.63131038
+[DEBUG market] day=22 kind=priceStep asset=NOVA previous=4777 fair=4800 pull=8.05 noise=-66.34693265 rawMove=-58.29693265 cappedMove=-58 capped=false newPrice=4719 gapAfter=81
+[DEBUG market] day=22 kind=noiseRoll asset=BLSW z=0.6664619
+[DEBUG market] day=22 kind=priceStep asset=BLSW previous=11134 fair=11200 pull=23.1 noise=133.56696192 rawMove=156.66696192 cappedMove=157 capped=false newPrice=11291 gapAfter=-91
+[DEBUG market] day=22 kind=noiseRoll asset=HRBU z=-2.43033057
+[DEBUG market] day=22 kind=priceStep asset=HRBU previous=3053 fair=3100 pull=16.45 noise=-74.19799219 rawMove=-57.74799219 cappedMove=-58 capped=false newPrice=2995 gapAfter=105
+[DEBUG market] day=22 kind=noiseRoll asset=KSR z=-0.04497343
+[DEBUG market] day=22 kind=priceStep asset=KSR previous=6402 fair=6400 pull=-0.7 noise=-4.03087901 rawMove=-4.73087901 cappedMove=-5 capped=false newPrice=6397 gapAfter=3
+[DEBUG market] day=22 kind=indexStep asset=M4X previous=99362 quote=98922.75705645 rawMove=-439.24294355 cappedMove=-439 capped=false newPrice=98923 gapAfter=-0.24294355
+[DEBUG market] day=23 kind=noiseRoll asset=NOVA z=-0.03530548
+[DEBUG market] day=23 kind=priceStep asset=NOVA previous=4719 fair=4800 pull=28.35 noise=-3.66534457 rawMove=24.68465543 cappedMove=25 capped=false newPrice=4744 gapAfter=56
+[DEBUG market] day=23 kind=noiseRoll asset=BLSW z=0.42704049
+[DEBUG market] day=23 kind=priceStep asset=BLSW previous=11291 fair=11200 pull=-31.85 noise=86.79085539 rawMove=54.94085539 cappedMove=55 capped=false newPrice=11346 gapAfter=-146
+[DEBUG market] day=23 kind=noiseRoll asset=HRBU z=-0.99099247
+[DEBUG market] day=23 kind=priceStep asset=HRBU previous=2995 fair=3100 pull=36.75 noise=-29.68022434 rawMove=7.06977566 cappedMove=7 capped=false newPrice=3002 gapAfter=98
+[DEBUG market] day=23 kind=noiseRoll asset=KSR z=-1.94873536
+[DEBUG market] day=23 kind=priceStep asset=KSR previous=6397 fair=6400 pull=1.05 noise=-174.52484163 rawMove=-173.47484163 cappedMove=-173 capped=false newPrice=6224 gapAfter=176
+[DEBUG market] day=23 kind=indexStep asset=M4X previous=98923 quote=98556.40360983 rawMove=-366.59639017 cappedMove=-367 capped=false newPrice=98556 gapAfter=0.40360983
+[DEBUG market] day=24 kind=noiseRoll asset=NOVA z=1.84908361
+[DEBUG market] day=24 kind=priceStep asset=NOVA previous=4744 fair=4800 pull=19.6 noise=192.98515864 rawMove=212.58515864 cappedMove=213 capped=false newPrice=4957 gapAfter=-157
+[DEBUG market] day=24 kind=noiseRoll asset=BLSW z=0.71982316
+[DEBUG market] day=24 kind=priceStep asset=BLSW previous=11346 fair=11200 pull=-51.1 noise=147.00804397 rawMove=95.90804397 cappedMove=96 capped=false newPrice=11442 gapAfter=-242
+[DEBUG market] day=24 kind=noiseRoll asset=HRBU z=-0.02001032
+[DEBUG market] day=24 kind=priceStep asset=HRBU previous=3002 fair=3100 pull=34.3 noise=-0.6007098 rawMove=33.6992902 cappedMove=34 capped=false newPrice=3036 gapAfter=64
+[DEBUG market] day=24 kind=noiseRoll asset=KSR z=1.6546004
+[DEBUG market] day=24 kind=priceStep asset=KSR previous=6224 fair=6400 pull=61.6 noise=144.17526024 rawMove=205.77526024 cappedMove=206 capped=false newPrice=6430 gapAfter=-30
+[DEBUG market] day=24 kind=indexStep asset=M4X previous=98556 quote=100958.9453725 rawMove=2402.9453725 cappedMove=2403 capped=false newPrice=100959 gapAfter=-0.0546275
+[DEBUG market] day=25 kind=noiseRoll asset=NOVA z=1.62812636
+[DEBUG market] day=25 kind=priceStep asset=NOVA previous=4957 fair=4800 pull=-54.95 noise=177.55369169 rawMove=122.60369169 cappedMove=123 capped=false newPrice=5080 gapAfter=-280
+[DEBUG market] day=25 kind=noiseRoll asset=BLSW z=-2.0775157
+[DEBUG market] day=25 kind=priceStep asset=BLSW previous=11442 fair=11200 pull=-84.7 noise=-427.87682395 rawMove=-512.57682395 cappedMove=-513 capped=false newPrice=10929 gapAfter=271
+[DEBUG market] day=25 kind=noiseRoll asset=HRBU z=-0.21908849
+[DEBUG market] day=25 kind=priceStep asset=HRBU previous=3036 fair=3100 pull=22.4 noise=-6.65152655 rawMove=15.74847345 cappedMove=16 capped=false newPrice=3052 gapAfter=48
+[DEBUG market] day=25 kind=noiseRoll asset=KSR z=-0.14198092
+[DEBUG market] day=25 kind=priceStep asset=KSR previous=6430 fair=6400 pull=-10.5 noise=-12.78112214 rawMove=-23.28112214 cappedMove=-23 capped=false newPrice=6407 gapAfter=-7
+[DEBUG market] day=25 kind=indexStep asset=M4X previous=100959 quote=100493.66959485 rawMove=-465.33040515 cappedMove=-465 capped=false newPrice=100494 gapAfter=-0.33040515
+[DEBUG market] day=26 kind=noiseRoll asset=NOVA z=0.19859783
+[DEBUG market] day=26 kind=priceStep asset=NOVA previous=5080 fair=4800 pull=-98 noise=22.195293 rawMove=-75.804707 cappedMove=-76 capped=false newPrice=5004 gapAfter=-204
+[DEBUG market] day=26 kind=noiseRoll asset=BLSW z=-0.04540716
+[DEBUG market] day=26 kind=priceStep asset=BLSW previous=10929 fair=11200 pull=94.85 noise=-8.93258701 rawMove=85.91741299 cappedMove=86 capped=false newPrice=11015 gapAfter=185
+[DEBUG market] day=26 kind=noiseRoll asset=HRBU z=0.11717291
+[DEBUG market] day=26 kind=priceStep asset=HRBU previous=3052 fair=3100 pull=16.8 noise=3.57611731 rawMove=20.37611731 cappedMove=20 capped=false newPrice=3072 gapAfter=28
+[DEBUG market] day=26 kind=noiseRoll asset=KSR z=-0.3409333
+[DEBUG market] day=26 kind=priceStep asset=KSR previous=6407 fair=6400 pull=-2.45 noise=-30.58103491 rawMove=-33.03103491 cappedMove=-33 capped=false newPrice=6374 gapAfter=26
+[DEBUG market] day=26 kind=indexStep asset=M4X previous=100494 quote=100322.18461982 rawMove=-171.81538018 cappedMove=-172 capped=false newPrice=100322 gapAfter=0.18461982
+[DEBUG market] day=27 kind=noiseRoll asset=NOVA z=-1.45543575
+[DEBUG market] day=27 kind=priceStep asset=NOVA previous=5004 fair=4800 pull=-71.4 noise=-160.22601059 rawMove=-231.62601059 cappedMove=-232 capped=false newPrice=4772 gapAfter=28
+[DEBUG market] day=27 kind=noiseRoll asset=BLSW z=1.19406564
+[DEBUG market] day=27 kind=priceStep asset=BLSW previous=11015 fair=11200 pull=64.75 noise=236.74739462 rawMove=301.49739462 cappedMove=301 capped=false newPrice=11316 gapAfter=-116
+[DEBUG market] day=27 kind=noiseRoll asset=HRBU z=0.78308027
+[DEBUG market] day=27 kind=priceStep asset=HRBU previous=3072 fair=3100 pull=9.8 noise=24.05622587 rawMove=33.85622587 cappedMove=34 capped=false newPrice=3106 gapAfter=-6
+[DEBUG market] day=27 kind=noiseRoll asset=KSR z=-0.56800685
+[DEBUG market] day=27 kind=priceStep asset=KSR previous=6374 fair=6400 pull=9.1 noise=-50.68665963 rawMove=-41.58665963 cappedMove=-42 capped=false newPrice=6332 gapAfter=68
+[DEBUG market] day=27 kind=indexStep asset=M4X previous=100322 quote=99895.85733487 rawMove=-426.14266513 cappedMove=-426 capped=false newPrice=99896 gapAfter=-0.14266513
+[DEBUG market] day=28 kind=noiseRoll asset=NOVA z=-1.06055315
+[DEBUG market] day=28 kind=priceStep asset=NOVA previous=4772 fair=4800 pull=9.8 noise=-111.34111152 rawMove=-101.54111152 cappedMove=-102 capped=false newPrice=4670 gapAfter=130
+[DEBUG market] day=28 kind=noiseRoll asset=BLSW z=-0.02692788
+[DEBUG market] day=28 kind=priceStep asset=BLSW previous=11316 fair=11200 pull=-40.6 noise=-5.48488637 rawMove=-46.08488637 cappedMove=-46 capped=false newPrice=11270 gapAfter=-70
+[DEBUG market] day=28 kind=noiseRoll asset=HRBU z=-0.59197943
+[DEBUG market] day=28 kind=priceStep asset=HRBU previous=3106 fair=3100 pull=-2.1 noise=-18.38688124 rawMove=-20.48688124 cappedMove=-20 capped=false newPrice=3086 gapAfter=14
+[DEBUG market] day=28 kind=noiseRoll asset=KSR z=-0.94357889
+[DEBUG market] day=28 kind=priceStep asset=KSR previous=6332 fair=6400 pull=23.8 noise=-83.64638115 rawMove=-59.84638115 cappedMove=-60 capped=false newPrice=6272 gapAfter=128
+[DEBUG market] day=28 kind=indexStep asset=M4X previous=99896 quote=98866.26344086 rawMove=-1029.73655914 cappedMove=-1030 capped=false newPrice=98866 gapAfter=0.26344086
+[DEBUG market] day=29 kind=noiseRoll asset=NOVA z=0.05368619
+[DEBUG market] day=29 kind=priceStep asset=NOVA previous=4670 fair=4800 pull=45.5 noise=5.51571935 rawMove=51.01571935 cappedMove=51 capped=false newPrice=4721 gapAfter=79
+[DEBUG market] day=29 kind=noiseRoll asset=BLSW z=2.49601041
+[DEBUG market] day=29 kind=priceStep asset=BLSW previous=11270 fair=11200 pull=-24.5 noise=506.34067146 rawMove=481.84067146 cappedMove=482 capped=false newPrice=11752 gapAfter=-552
+[DEBUG market] day=29 kind=noiseRoll asset=HRBU z=-0.66930752
+[DEBUG market] day=29 kind=priceStep asset=HRBU previous=3086 fair=3100 pull=4.9 noise=-20.65482993 rawMove=-15.75482993 cappedMove=-16 capped=false newPrice=3070 gapAfter=30
+[DEBUG market] day=29 kind=noiseRoll asset=KSR z=0.25733993
+[DEBUG market] day=29 kind=priceStep asset=KSR previous=6272 fair=6400 pull=44.8 noise=22.5965048 rawMove=67.3965048 cappedMove=67 capped=false newPrice=6339 gapAfter=61
+[DEBUG market] day=29 kind=indexStep asset=M4X previous=98866 quote=100340.46778994 rawMove=1474.46778994 cappedMove=1474 capped=false newPrice=100340 gapAfter=0.46778994
+[DEBUG market] day=30 kind=noiseRoll asset=NOVA z=-0.68311489
+[DEBUG market] day=30 kind=priceStep asset=NOVA previous=4721 fair=4800 pull=27.65 noise=-70.94967883 rawMove=-43.29967883 cappedMove=-43 capped=false newPrice=4678 gapAfter=122
+[DEBUG market] day=30 kind=noiseRoll asset=BLSW z=0.20140891
+[DEBUG market] day=30 kind=priceStep asset=BLSW previous=11752 fair=11200 pull=-193.2 noise=42.60523529 rawMove=-150.59476471 cappedMove=-151 capped=false newPrice=11601 gapAfter=-401
+[DEBUG market] day=30 kind=noiseRoll asset=HRBU z=-1.21614198
+[DEBUG market] day=30 kind=priceStep asset=HRBU previous=3070 fair=3100 pull=10.5 noise=-37.33555871 rawMove=-26.83555871 cappedMove=-27 capped=false newPrice=3043 gapAfter=57
+[DEBUG market] day=30 kind=noiseRoll asset=KSR z=-0.56833581
+[DEBUG market] day=30 kind=priceStep asset=KSR previous=6339 fair=6400 pull=21.35 noise=-50.43753014 rawMove=-29.08753014 cappedMove=-29 capped=false newPrice=6310 gapAfter=90
+[DEBUG market] day=30 kind=indexStep asset=M4X previous=100340 quote=99448.43269969 rawMove=-891.56730031 cappedMove=-892 capped=false newPrice=99448 gapAfter=0.43269969

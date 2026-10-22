@@ -197,7 +197,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 4: Assets, hidden fair value, and the daily price step
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 3
 - Files to create or change: `src/sim/types.ts`, `src/sim/constants.ts`, `src/sim/market.ts`, `src/sim/market.test.ts`, `src/sim/log.ts`, `src/sim/hash.ts`, `src/content/assets.ts`, `src/content/index.ts`
 - What changes:
@@ -218,7 +218,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: open the snapshot file and check that each `priceStep` line shows the fair value, the pull, the noise and the capped move.
-- Progress:
+- Progress: 2026-10-22: Added the daily price step. Files: src/sim/types.ts, src/sim/constants.ts, src/sim/hash.ts, src/sim/log.ts, src/sim/market.ts, src/sim/market.test.ts, src/content/assets.ts, src/content/index.ts, tests/fixtures/demo-30-price-log.txt. Rounding: half away from zero, then clamp to floor(price × 8 / 100) cents. Checks: npm test passed (3 files, 14 tests, architecture violations=0); npm run typecheck passed; npm run lint passed.
 
 ### Step 5: Harness CLI: the sandbox admin log
 

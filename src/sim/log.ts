@@ -381,7 +381,33 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
       return [
         `day=${formatNumber(event.day)}`,
         'kind=salaryPaid',
+        `job=${formatToken(event.job, 'job')}`,
+        `days=${formatNumber(event.days)}`,
         `amount=${formatNumber(event.amountCents)}`,
+      ].join(' ')
+    case 'jobChangeRequested':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=jobChangeRequested',
+        `from=${formatToken(event.from, 'from')}`,
+        `to=${formatToken(event.to, 'to')}`,
+        `effectiveDay=${formatNumber(event.effectiveDay)}`,
+      ].join(' ')
+    case 'jobChanged':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=jobChanged',
+        `from=${formatToken(event.from, 'from')}`,
+        `to=${formatToken(event.to, 'to')}`,
+        `slots=${formatNumber(event.slots)}`,
+        `sleepHours=${formatNumber(event.sleepHours)}`,
+      ].join(' ')
+    case 'perkApplied':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=perkApplied',
+        `job=${formatToken(event.job, 'job')}`,
+        `perk=${formatToken(event.perk, 'perk')}`,
       ].join(' ')
     case 'billDue':
       return [

@@ -68,8 +68,21 @@ export const SAVINGS_SPREAD_PERCENT = 1.5
 export const SAVINGS_DAYS_PER_YEAR = 365
 export const SAVINGS_PAY_INTERVAL_DAYS = 30
 
-/** Section 6. Provisional salary until jobs exist. Paid to cash on each monthly cycle. */
+/**
+ * Section 6. Jobless monthly pay: 0. A job's pay lives on its definition.
+ * The monthly cycle prorates that pay by days worked ÷ 30.
+ */
 export const MONTHLY_SALARY_CENTS = 0
+
+/** Section 6. Provisional days before a switch or quit takes effect. The starting job has no notice. */
+export const JOB_NOTICE_DAYS = 3
+
+/**
+ * Section 6. Staff discount off the bill that comes due while that perk is active.
+ * 5 / 100 of the bill. A bill that is already pending keeps its amount.
+ */
+export const STAFF_DISCOUNT_NUMERATOR = 5
+export const STAFF_DISCOUNT_DENOMINATOR = 100
 
 /**
  * Section 6. Provisional base monthly expenses: 1E.
@@ -176,8 +189,11 @@ export const WORK_FULL_TIME_END_MINUTE = 16 * 60
 export const MARKET_OPEN_MINUTE = 17 * 60
 export const MARKET_CLOSE_MINUTE = 21 * 60
 
-/** Section 4. Provisional hours asleep until a job sets them. Shown on the sleep block. */
+/** Section 4. Jobless sleep, and the sleep hours before a run chooses a job. A job may set another length. */
 export const SLEEP_HOURS = 8
 
-/** Section 4. Provisional: every player is jobless until jobs exist. */
+/**
+ * Section 4. Default when `createGame` is not given a job. The live job is on the player.
+ * Jobless skip still runs from the end of sleep. A job's skip runs from the end of work.
+ */
 export const PLAYER_IS_JOBLESS = true

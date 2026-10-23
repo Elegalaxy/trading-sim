@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { visibleFeed } from '../sim/feed.ts'
-import type { DayFeed, FeedItem, HeadlineItem } from '../sim/types.ts'
+import { jobVisibleFeed } from '../sim/jobs.ts'
+import type { DayFeed, FeedItem, HeadlineItem, JobDefinition } from '../sim/types.ts'
 
 function itemText(item: FeedItem): string {
   if (item.kind === 'headline') return item.text
   return `${item.claim} (${item.sourceId}, ${item.tier})`
 }
 
-export function NewsFeed({ feed }: { feed: DayFeed | null }) {
+export function NewsFeed({ feed, job }: { feed: DayFeed | null; job: JobDefinition | null }) {
   const [open, setOpen] = useState(false)
   if (feed === null) {
     return (
@@ -18,7 +19,7 @@ export function NewsFeed({ feed }: { feed: DayFeed | null }) {
     )
   }
 
-  const visible = visibleFeed(feed, ['base'])
+  const visible = job === null ? visibleFeed(feed, ['base']) : jobVisibleFeed(feed, job)
   const top = visible.items.find((item): item is HeadlineItem => item.kind === 'headline' && item.top)
 
   return (

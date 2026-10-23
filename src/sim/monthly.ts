@@ -1,18 +1,18 @@
 // Monthly cycle. `endDay` increments the market day, settles trading, and accrues
 // savings. When that new day is 30, 60, 90, 120, or a later 30th day, this cycle
-// runs before the player acts: salary (0 until jobs), the savings interest
-// payout, then the expenses bill. The amount is fixed then.
+// runs before the player acts: salary for the days worked that month, the
+// savings interest payout, then the expenses bill. The amount is fixed then.
+// Staff discount cuts the bill that comes due while that job is active.
 // Cash that covers the bill pays it. Otherwise the bill stays pending and the
 // next endDay is blocked. The check never sells a position or moves savings.
 
 import { assertPlayerAccounts, payAccruedSavings } from './accounts.ts'
 import { initialFi, netWorthCents } from './fi.ts'
 import {
-  BASE_MONTHLY_EXPENSES_CENTS,
-  MONTHLY_SALARY_CENTS,
   SAVINGS_PAY_INTERVAL_DAYS,
   UNUSED_LOAN_LIMIT_CENTS,
 } from './constants.ts'
+import { billDueForJob, paySalary } from './jobs.ts'
 import { closeWholePosition } from './trading.ts'
 import type {
   AccountLogEvent,
@@ -24,7 +24,6 @@ import type {
   GameState,
   MarketDefinitions,
   RunEndedEvent,
-  SalaryPaidEvent,
 } from './types.ts'
 
 function describeValue(value: unknown): string {
@@ -81,6 +80,7 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
     accounts: { ...state.accounts },
     section: state.section,
     sleepHours: state.sleepHours,
+    job: state.job,
     positions: {},
     realized: [],
     pending: [],
@@ -200,17 +200,12 @@ export function applyMonthlyCycle(state: GameState, defs: MarketDefinitions): Ac
   }
   if (state.bill !== null) throw new Error(`a bill is already pending on day ${state.bill.day}`)
   if (state.runEnd !== null) throw new Error(`the run already ended on day ${state.runEnd.day}`)
-  const salary = requireNonNegative(MONTHLY_SALARY_CENTS, 'salary')
-  const amount = requirePositive(BASE_MONTHLY_EXPENSES_CENTS, 'base expenses')
   const events: AccountLogEvent[] = []
-  const nextCash = state.accounts.cashCents + salary
-  if (!Number.isSafeInteger(nextCash)) {
-    throw new Error(`salary left cash outside a safe integer, received ${describeValue(nextCash)}`)
-  }
-  state.accounts.cashCents = nextCash
-  const salaryPaid: SalaryPaidEvent = { kind: 'salaryPaid', day, amountCents: salary }
-  events.push(salaryPaid)
+  for (const salaryPaid of paySalary(state, day)) events.push(salaryPaid)
   events.push(payAccruedSavings(state.accounts, day))
+  const priced = billDueForJob(state.job, day)
+  if (priced.perk !== null) events.push(priced.perk)
+  const amount = requirePositive(priced.amountCents, 'bill')
   const cashCents = state.accounts.cashCents
   const due: BillDueEvent = { kind: 'billDue', day, amountCents: amount, cashCents }
   events.push(due)

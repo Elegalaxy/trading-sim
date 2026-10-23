@@ -2,7 +2,7 @@
 // MarketState.log is replaced on every endDay.
 
 import { useSyncExternalStore } from 'react'
-import { MARKET_DEFINITIONS } from '../content/index.ts'
+import { JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../content/index.ts'
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
@@ -116,22 +116,45 @@ function readPrices(game: GameState): Record<string, number> {
   return prices
 }
 
-/** Reset to day 0. Does not advance the market. Returns a reason when the seed is rejected. */
-export function startGame(seed: string): string | null {
+/** Reset to day 0. Does not advance the market. Returns a reason when the seed or starting job is rejected. */
+export function startGame(seed: string, jobId = 'jobless'): string | null {
   if (typeof seed !== 'string' || !SEED_PATTERN.test(seed)) {
     const reason = 'Seed must be 1 to 32 characters from A-Z, a-z, 0-9, and hyphen.'
     console.error(`[ui] rejected seed ${JSON.stringify(seed)}: ${reason}`)
     return reason
   }
+  if (typeof jobId !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(jobId)) {
+    const reason = 'That job is not on the menu.'
+    console.error(`[store] job start rejected ${JSON.stringify(jobId)}: ${reason}`)
+    debugLog('[store]', 'job start invalid rejected unknownJob')
+    return reason
+  }
+  const chosen = JOB_DEFINITIONS.find((job) => job.id === jobId)
+  if (chosen === undefined) {
+    const reason = 'That job is not on the menu.'
+    console.error(`[store] job start ${jobId} rejected: ${reason}`)
+    debugLog('[store]', `job start ${jobId} rejected unknownJob`)
+    return reason
+  }
+  if (chosen.requirement !== 'none') {
+    const reason = 'That job needs a course.'
+    console.error(`[store] job start ${jobId} rejected: ${reason}`)
+    debugLog('[store]', `job start ${jobId} rejected jobLocked`)
+    return reason
+  }
   let game: GameState
   try {
-    game = createGame(definitions, seed)
+    game = createGame(definitions, seed, { jobs: JOB_DEFINITIONS, jobId })
   } catch (error) {
     console.error('[store] createGame failed', error)
     throw error
   }
   run = { seed, game, closes: [], summary: null, liquidations: [] }
   debugLog('[ui]', `seed=${seed}`)
+  debugLog(
+    '[store]',
+    `job start ${jobId} slots=${chosen.slots} sleepHours=${chosen.sleepHours} pay=${chosen.payCents}`,
+  )
   publish()
   return null
 }
@@ -191,6 +214,42 @@ function logRunEnd(game: GameState): void {
   )
 }
 
+function isSetJobCommand(cmd: unknown): boolean {
+  return typeof cmd === 'object' && cmd !== null && !Array.isArray(cmd) && (cmd as { type?: unknown }).type === 'setJob'
+}
+
+/** `[store] job setJob ... accepted|rejected`. */
+function logJobCommand(cmd: unknown, accepted: boolean, reason: string, effectiveDay: number | null): void {
+  if (!isSetJobCommand(cmd)) return
+  const record = cmd as { jobId?: unknown }
+  const id = commandToken(record.jobId)
+  if (accepted) {
+    const day = effectiveDay === null ? 'none' : String(effectiveDay)
+    debugLog('[store]', `job setJob ${id} accepted effectiveDay=${day}`)
+    return
+  }
+  debugLog('[store]', `job setJob ${id} rejected ${reason}`)
+}
+
+/** `[store] job changed|salary|perk` from the day log. */
+function logJobDay(game: GameState): void {
+  for (const event of game.log) {
+    if (event.kind === 'jobChanged') {
+      debugLog(
+        '[store]',
+        `job changed from=${event.from} to=${event.to} day=${event.day} slots=${event.slots} sleepHours=${event.sleepHours}`,
+      )
+    } else if (event.kind === 'salaryPaid') {
+      debugLog(
+        '[store]',
+        `job salary job=${event.job} days=${event.days} amount=${event.amountCents} day=${event.day}`,
+      )
+    } else if (event.kind === 'perkApplied') {
+      debugLog('[store]', `job perk perk=${event.perk} job=${event.job} day=${event.day}`)
+    }
+  }
+}
+
 /** `[store] bill pending|paid|runEnded ...` when a bill or a lost run is in view. */
 function logBill(game: GameState): void {
   if (game.runEnd !== null) {
@@ -221,6 +280,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     debugLog('[store]', `dispatch ${label} -> rejected notStarted`)
     logOrderOrTransfer(cmd, false, 'notStarted')
     if (isSkipCommand(cmd)) debugLog('[store]', 'skip rejected notStarted')
+    logJobCommand(cmd, false, 'notStarted', null)
     return { accepted: false, reason: 'notStarted' }
   }
   if (run.game.runEnd !== null) {
@@ -228,6 +288,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     debugLog('[store]', `dispatch ${label} -> rejected runEnded`)
     logOrderOrTransfer(cmd, false, 'runEnded')
     if (isSkipCommand(cmd)) debugLog('[store]', 'skip rejected runEnded')
+    logJobCommand(cmd, false, 'runEnded', null)
     return { accepted: false, reason: 'runEnded' }
   }
   const from = run.game.section
@@ -245,6 +306,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     debugLog('[store]', `dispatch ${label} -> rejected ${rejection.reason}`)
     logOrderOrTransfer(cmd, false, rejection.reason)
     logSkip(cmd, from, to, false, rejection.reason)
+    logJobCommand(cmd, false, rejection.reason, null)
     logBill(run.game)
     logRunEnd(run.game)
     publish()
@@ -253,6 +315,7 @@ export function dispatch(cmd: unknown): DispatchResult {
   debugLog('[store]', `dispatch ${label} -> accepted`)
   logOrderOrTransfer(cmd, true, '')
   logSkip(cmd, from, to, true, '')
+  logJobCommand(cmd, true, '', run.game.job.pending?.effectiveDay ?? null)
   logBill(run.game)
   logRunEnd(run.game)
   publish()
@@ -281,6 +344,7 @@ export function endDay(): void {
   }
   logBill(run.game)
   logRunEnd(run.game)
+  logJobDay(run.game)
   if (run.game.market.day === dayBefore) {
     const day = run.game.market.day
     const events = run.game.market.log.length

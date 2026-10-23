@@ -519,7 +519,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 18: Jobs
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 17, Q4, Q6
 - Files to create or change: `src/content/jobs.ts`, `src/sim/jobs.ts`, `src/sim/jobs.test.ts`, `src/sim/game.ts`, `src/sim/monthly.ts`, `src/sim/day.ts`, `src/ui/JobPanel.tsx`, `src/ui/store.ts`
 - What changes:
@@ -541,7 +541,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: start as Shop assistant, see the work section 08:00–12:00, switch to Night-shift warehouse, and see it take effect 3 days later with 6h sleep.
-- Progress:
+- Progress: 2026-10-23: Added the five placeholder jobs plus jobless. Files: src/content/jobs.ts, src/content/index.ts, src/sim/jobs.ts, src/sim/jobs.test.ts, src/sim/game.ts, src/sim/monthly.ts, src/sim/monthly.test.ts, src/sim/day.ts, src/sim/types.ts, src/sim/constants.ts, src/sim/log.ts, src/ui/JobPanel.tsx, src/ui/store.ts, src/ui/Dashboard.tsx, src/ui/DayTimeline.tsx, src/ui/NewsFeed.tsx, src/ui/styles.css. A starting job applies immediately. A later switch waits 3 days. Pay is monthly pay × days ÷ 30, rounded half away from zero, one salary line per job. Staff discount cuts the bill that comes due while that job is active. Industry contacts and analyst tools change only the visible feed. Locked course jobs are rejected. Energy and stress costs are stored and not applied. npm run typecheck passed; npm test passed (15 files, 79 tests); npm run lint passed. Browser, seed demo: Shop assistant showed work 08:00–12:00 and sleep 23:00–07:00 (8h). Night-shift warehouse, requested on day 0, was active on day 3 with sleep 01:00–07:00 (6h) and work 08:00–16:00.
 
 ### Step 19: Energy, stress, sleep, and consumables
 

@@ -108,7 +108,9 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
     expect(game.accounts.cashCents).toBe(STARTING_CASH_CENTS - 2 * BASE_MONTHLY_EXPENSES_CENTS)
     expect(game.accounts.tradingCents).toBe(STARTING_TRADING_CENTS)
     expect(game.accounts.savingsCents).toBe(0)
-    expect(formatEvent(eventKind(game, 'salaryPaid') as GameState['log'][number])).toBe('day=60 kind=salaryPaid amount=0')
+    expect(formatEvent(eventKind(game, 'salaryPaid') as GameState['log'][number])).toBe(
+      'day=60 kind=salaryPaid job=jobless days=30 amount=0',
+    )
     debugMonthly(`auto-pay cash=${game.accounts.cashCents} trading=${game.accounts.tradingCents} savings=0`)
   })
 

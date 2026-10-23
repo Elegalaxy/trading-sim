@@ -103,6 +103,10 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
+select option:disabled {
+  color: #8b93a7;
+}
+
 .chart {
   width: 100%;
   height: auto;

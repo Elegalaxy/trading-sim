@@ -4,9 +4,11 @@
 // 30th days it then runs the monthly cycle before the player acts. After those
 // effects it runs the FI check. It does not draw a random stream of its own,
 // and it does not write player lines onto the market. Orders never change prices.
-// A day starts at the end of sleep. `skip` opens the market. Orders before that
-// are rejected. End day is allowed in any section, except while a bill is
-// pending or the run has ended. The next day starts at sleep.
+// A jobless day starts at the end of sleep. A day with a job starts at work.
+// `skip` opens the market from the end of work, or from the end of sleep when
+// jobless. Orders before the market are rejected. End day is allowed in any
+// section, except while a bill is pending or the run has ended. The next day
+// starts at sleep or at work, following the job that is active that morning.
 // Day 120 does not step again. The bill from the start of that day still blocks
 // End day. After it is paid, End day seals the run at the day-120 prices.
 
@@ -18,15 +20,23 @@ import {
   settleSavings,
 } from './accounts.ts'
 import {
-  PLAYER_IS_JOBLESS,
   RUN_LENGTH_DAYS,
   SAVINGS_PAY_INTERVAL_DAYS,
-  SLEEP_HOURS,
   STARTING_CASH_CENTS,
   STARTING_SAVINGS_CENTS,
   STARTING_TRADING_CENTS,
 } from './constants.ts'
-import { DAY_START_SECTION, assertDayState, interpretSkip, isDaySection } from './day.ts'
+import { assertDayState, interpretSkip, isDaySection } from './day.ts'
+import {
+  activeJob,
+  applyDueJobChange,
+  assertPlayerJob,
+  initialPlayerJob,
+  interpretSetJob,
+  playerIsJobless,
+  recordJobDay,
+  sectionForJob,
+} from './jobs.ts'
 import { applyFiCheck, finishAtDayLimit, initialFi } from './fi.ts'
 import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
@@ -38,6 +48,7 @@ import {
   type CommandLogEvent,
   type FiTracker,
   type GameState,
+  type JobDefinition,
   type MarketDefinitions,
   type OpenPosition,
   type PendingBill,
@@ -79,6 +90,7 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'realized' &&
       kind !== 'skip' &&
       kind !== 'sectionChange' &&
+      kind !== 'jobChangeRequested' &&
       kind !== 'billPaid' &&
       kind !== 'coverableCheck' &&
       kind !== 'runEnded'
@@ -92,6 +104,19 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
         throw new Error(
           `pending ${kind} from and to must be sections, received ${describeValue(from)} -> ${describeValue(to)}`,
         )
+      }
+    }
+    if (event.kind === 'jobChangeRequested') {
+      assertSafeInteger(event.day, 'pending job request day', false)
+      if (typeof event.from !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(event.from)) {
+        throw new Error(`pending job request from must be an id token, received ${describeValue(event.from)}`)
+      }
+      if (typeof event.to !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(event.to)) {
+        throw new Error(`pending job request to must be an id token, received ${describeValue(event.to)}`)
+      }
+      assertSafeInteger(event.effectiveDay, 'pending job request effective day', false)
+      if (event.effectiveDay < event.day) {
+        throw new Error(`pending job request effective day ${event.effectiveDay} is before day ${event.day}`)
       }
     }
     if (event.kind === 'billPaid') {
@@ -260,6 +285,13 @@ function assertGame(state: GameState): void {
   }
   assertPlayerAccounts(state.accounts)
   assertDayState(state.section, state.sleepHours)
+  assertPlayerJob(state.job)
+  const employed = activeJob(state.job)
+  if (state.sleepHours !== employed.sleepHours) {
+    throw new Error(
+      `sleep hours must match ${employed.id}, received ${state.sleepHours} for ${employed.sleepHours}`,
+    )
+  }
   assertPositions(state.positions)
   assertRealized(state.realized)
   if (!Array.isArray(state.pending)) {
@@ -274,9 +306,17 @@ function assertGame(state: GameState): void {
   assertFi(state.fi)
 }
 
-/** Day 0 market plus 3E cash, 3E trading, and empty savings. */
-export function createGame(defs: MarketDefinitions, seed: string): GameState {
+/** Optional menu and starting job. Omitted means jobless, with no notice. */
+export type GameStart = {
+  jobs?: readonly JobDefinition[]
+  jobId?: string
+}
+
+/** Day 0 market plus 3E cash, 3E trading, and empty savings. The starting job applies immediately. */
+export function createGame(defs: MarketDefinitions, seed: string, start?: GameStart): GameState {
   assertDefinitionsObject(defs)
+  const playerJob = initialPlayerJob(start?.jobs, start?.jobId)
+  const job = activeJob(playerJob)
   return {
     market: createMarket(defs, seed),
     accounts: {
@@ -285,8 +325,9 @@ export function createGame(defs: MarketDefinitions, seed: string): GameState {
       savingsCents: STARTING_SAVINGS_CENTS,
       accruedSavingsCents: 0,
     },
-    section: DAY_START_SECTION,
-    sleepHours: SLEEP_HOURS,
+    section: sectionForJob(job),
+    sleepHours: job.sleepHours,
+    job: playerJob,
     positions: {},
     realized: [],
     pending: [],
@@ -339,10 +380,14 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
       for (const event of outcome.events) state.pending.push(event)
     }
   } else if (type === 'skip') {
-    const outcome = interpretSkip(state.section, state.market.day, PLAYER_IS_JOBLESS)
+    const outcome = interpretSkip(state.section, state.market.day, playerIsJobless(state.job))
     if (outcome.accepted) state.section = outcome.section
     const events = outcome.accepted ? outcome.events : [outcome.event]
     for (const event of events) state.pending.push(event)
+  } else if (type === 'setJob') {
+    const outcome = interpretSetJob(state, cmd)
+    if (outcome.accepted) state.job.pending = outcome.pending
+    state.pending.push(outcome.event)
   } else if (type === 'payBill') {
     const outcome = interpretPayBill(state)
     state.pending.push(outcome.event)
@@ -404,8 +449,8 @@ function savingsInterestReceived(events: readonly AccountLogEvent[]): number {
  * events stay off the market log. A wipe-out does not end the run. A pending
  * bill or an ended run throws before the market steps. On day 120, End day
  * seals the run and does not step prices. The day-120 bill still blocks that
- * seal. End day is otherwise allowed in any section. The next day starts again
- * at the end of sleep.
+ * seal. End day is otherwise allowed in any section. The next day starts at
+ * sleep when jobless, and at work when a job occupies that section.
  */
 export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   assertDefinitionsObject(defs)
@@ -418,6 +463,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
     state.pending = []
     return state
   }
+  recordJobDay(state)
   const commands = state.pending.slice()
   const equityAtStart = tradingEquity(state, defs).equity
   assertPolicyRateEntry(state.market, defs)
@@ -425,10 +471,13 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const traded = settleTradingAccount(state, defs, equityAtStart)
   const policyRate = readPolicyRatePercent(state.market, defs)
   const savings = settleSavings(state.accounts, state.market.day, policyRate)
+  const jobEvents = applyDueJobChange(state)
   const monthly = isMonthlyCycleDay(state.market.day) ? applyMonthlyCycle(state, defs) : []
   const fi = applyFiCheck(state, defs, savingsInterestReceived(monthly))
   state.pending = []
-  state.log = [...commands, ...traded, ...savings, ...monthly, ...fi]
-  state.section = DAY_START_SECTION
+  state.log = [...commands, ...traded, ...savings, ...jobEvents, ...monthly, ...fi]
+  const job = activeJob(state.job)
+  state.section = sectionForJob(job)
+  state.sleepHours = job.sleepHours
   return state
 }

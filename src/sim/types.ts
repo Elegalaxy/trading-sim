@@ -706,11 +706,48 @@ export type SectionChangeEvent = {
   clock: string
 }
 
-/** Salary added to cash. Amount is 0 until a job pays. */
+/**
+ * Salary added to cash. One event per job worked in that month.
+ * `days` is how many days of the 30-day month that job was active.
+ * `amountCents` is monthly pay × days ÷ 30, rounded half away from zero.
+ */
 export type SalaryPaidEvent = {
   kind: 'salaryPaid'
   day: number
+  job: string
+  days: number
   amountCents: number
+}
+
+/** The player asked to switch or quit. The job changes on `effectiveDay`. */
+export type JobChangeRequestedEvent = {
+  kind: 'jobChangeRequested'
+  day: number
+  from: string
+  to: string
+  effectiveDay: number
+}
+
+/** A notice finished and the active job changed. */
+export type JobChangedEvent = {
+  kind: 'jobChanged'
+  day: number
+  from: string
+  to: string
+  slots: number
+  sleepHours: number
+}
+
+/**
+ * A perk changed what the player pays or what the feed shows.
+ * Steady routine and quiet breaks are stored on the job and are not logged
+ * until a later step applies them.
+ */
+export type PerkAppliedEvent = {
+  kind: 'perkApplied'
+  day: number
+  job: string
+  perk: string
 }
 
 /** Expenses fixed for this cycle. `cashCents` is cash before the bill is paid. */
@@ -783,6 +820,7 @@ export type CommandLogEvent =
   | RealizedEvent
   | SkipEvent
   | SectionChangeEvent
+  | JobChangeRequestedEvent
   | BillPaidEvent
   | CoverableCheckEvent
   | RunEndedEvent
@@ -802,6 +840,8 @@ export type AccountLogEvent =
   | SavingsAccrualEvent
   | SavingsInterestPaidEvent
   | SalaryPaidEvent
+  | JobChangedEvent
+  | PerkAppliedEvent
   | BillDueEvent
   | BillPendingEvent
   | FiCheckEvent
@@ -885,6 +925,68 @@ export type FiInterest = {
   cents: number
 }
 
+/** Course that gates a job. None means the job is open. Purchases arrive in a later step. */
+export const COURSE_IDS = ['basic', 'finance'] as const
+
+export type CourseId = (typeof COURSE_IDS)[number]
+
+export type JobRequirement = 'none' | CourseId
+
+/** One perk. `none` is jobless. Steady routine and quiet breaks are stored until a later step. */
+export const JOB_PERKS = [
+  'none',
+  'staffDiscount',
+  'steadyRoutine',
+  'quietBreaks',
+  'industryContacts',
+  'analystTools',
+] as const
+
+export type JobPerk = (typeof JOB_PERKS)[number]
+
+/**
+ * One job on the menu. Passed into the simulation; `src/sim` does not import content.
+ * `slots` is 0 (jobless), 1 (part-time, 08:00–12:00), or 2 (full-time, 08:00–16:00).
+ * `payCents` is the monthly salary before the 30-day proration.
+ * `energyCost` and `stressCost` are stored per day and are not applied yet.
+ */
+export type JobDefinition = {
+  id: string
+  name: string
+  slots: number
+  payCents: number
+  requirement: JobRequirement
+  perk: JobPerk
+  energyCost: number
+  stressCost: number
+  sleepHours: number
+}
+
+/** Days of one job inside the current pay month, in the order they were worked. */
+export type JobWorked = {
+  jobId: string
+  days: number
+}
+
+/** A switch or quit that has not started. `effectiveDay` is the first day of the new job. */
+export type PendingJobChange = {
+  jobId: string
+  effectiveDay: number
+}
+
+/**
+ * Employment for this run. `catalog` is the menu copied at the start.
+ * `courses` stays empty until a later step sells courses. A required course
+ * that is missing keeps that job locked.
+ */
+export type PlayerJob = {
+  catalog: JobDefinition[]
+  jobId: string
+  pending: PendingJobChange | null
+  worked: JobWorked[]
+  courses: CourseId[]
+}
+
 /** Last end-of-day FI check. The meter reads this. It is not a second ledger. */
 export type FiStatus = {
   day: number
@@ -913,8 +1015,10 @@ export type FiTracker = {
  * borrow fees, margin check, savings accrual, and, on a 30th day, the monthly cycle.
  * `realized` is the per-day ledger (P&L minus fees, borrow fees, and margin interest).
  * One row per day that had a non-zero change. Days stay in increasing order.
- * `section` is the played part of the day. A new day is `sleep` (the end of sleep).
- * `sleepHours` is how long that sleep block lasts. The clock numbers are display only.
+ * `section` is the played part of the day. A jobless day starts at `sleep` (the end of sleep).
+ * A day with a job starts at `work`, because that job occupies the work section.
+ * `sleepHours` is how long that sleep block lasts. The active job sets it. The clock is display only.
+ * `job` is employment, the notice, and the days worked since the last salary. It is not on the market.
  * `bill` is set while expenses are unpaid. `runEnd` is set on an FI win, a bill loss, or day 120.
  * `fi` holds the interest rows and the last FI check. It does not copy the realized ledger.
  */
@@ -923,6 +1027,7 @@ export type GameState = {
   accounts: PlayerAccounts
   section: DaySection
   sleepHours: number
+  job: PlayerJob
   positions: Record<string, OpenPosition>
   realized: RealizedDay[]
   pending: CommandLogEvent[]

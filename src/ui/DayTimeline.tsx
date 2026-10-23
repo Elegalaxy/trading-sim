@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { PLAYER_IS_JOBLESS, SLEEP_HOURS } from '../sim/constants.ts'
+import { SLEEP_HOURS } from '../sim/constants.ts'
 import { dayBlocks, sectionClock } from '../sim/day.ts'
+import { activeJob } from '../sim/jobs.ts'
 import type { DaySection, GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { dispatch } from './store.ts'
@@ -15,7 +16,9 @@ export function DayTimeline({ game }: { game: GameState | null }) {
   const section: DaySection | null = game?.section ?? null
   const sleepHours = game?.sleepHours ?? SLEEP_HOURS
   const day = game?.market.day ?? null
-  const blocks = dayBlocks(sleepHours, PLAYER_IS_JOBLESS)
+  const job = game === null ? null : activeJob(game.job)
+  const jobless = job === null || job.slots === 0
+  const blocks = dayBlocks(sleepHours, jobless, job !== null && job.slots > 0 ? job.slots : undefined)
   const [message, setMessage] = useState<string | null>(null)
   const [trackedGame, setTrackedGame] = useState(game)
   const [trackedDay, setTrackedDay] = useState(day)

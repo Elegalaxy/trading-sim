@@ -1,8 +1,9 @@
 // Played day. Three sections: sleep, work, market. The clock minutes in
 // constants.ts are display only. This module stores the section and the
-// sleep hours. A new day starts at the end of sleep. skip, from the end of
-// work or from the end of sleep when jobless, moves to market open.
-// The caller passes jobless in. Orders outside market are rejected by the game.
+// sleep hours. skip, from the end of work or from the end of sleep when
+// jobless, moves to market open. The caller passes jobless in.
+// Work shows 08:00–12:00 for 1 slot and 08:00–16:00 for 2. Jobless lists both
+// and leaves the section empty. Orders outside market are rejected by the game.
 
 import {
   MARKET_CLOSE_MINUTE,
@@ -82,15 +83,28 @@ export type DayBlock = {
   empty: boolean
 }
 
-/** Sleep range ends at 07:00 and runs back `sleepHours`. Work lists both shifts. */
-export function dayBlocks(sleepHours: number, jobless: boolean): DayBlock[] {
+function workRange(jobless: boolean, slots: number | undefined): string {
+  const part = `${formatMinute(WORK_START_MINUTE)}-${formatMinute(WORK_PART_TIME_END_MINUTE)}`
+  const full = `${formatMinute(WORK_START_MINUTE)}-${formatMinute(WORK_FULL_TIME_END_MINUTE)}`
+  if (!jobless && slots === 1) return part
+  if (!jobless && slots === 2) return full
+  return `${part} part-time, ${full} full-time`
+}
+
+/**
+ * Sleep range ends at 07:00 and runs back `sleepHours`.
+ * Jobless work lists both shifts and is empty. One slot is 08:00–12:00.
+ * Two slots are 08:00–16:00.
+ */
+export function dayBlocks(sleepHours: number, jobless: boolean, slots?: number): DayBlock[] {
   assertDayState(DAY_START_SECTION, sleepHours)
   if (typeof jobless !== 'boolean') {
     throw new Error(`jobless must be boolean, received ${describeValue(jobless)}`)
   }
+  if (slots !== undefined && slots !== 1 && slots !== 2) {
+    throw new Error(`work slots must be 1 or 2 when passed, received ${describeValue(slots)}`)
+  }
   const sleepStart = (SLEEP_END_MINUTE - sleepHours * MINUTES_PER_HOUR + MINUTES_PER_DAY) % MINUTES_PER_DAY
-  const workPart = `${formatMinute(WORK_START_MINUTE)}-${formatMinute(WORK_PART_TIME_END_MINUTE)}`
-  const workFull = `${formatMinute(WORK_START_MINUTE)}-${formatMinute(WORK_FULL_TIME_END_MINUTE)}`
   return [
     {
       section: 'sleep',
@@ -101,7 +115,7 @@ export function dayBlocks(sleepHours: number, jobless: boolean): DayBlock[] {
     {
       section: 'work',
       title: 'Work',
-      clock: `${workPart} part-time, ${workFull} full-time`,
+      clock: workRange(jobless, slots),
       empty: jobless,
     },
     {

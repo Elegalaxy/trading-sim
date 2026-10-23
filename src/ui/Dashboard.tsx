@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { MARKET_DEFINITIONS } from '../content/index.ts'
+import { JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../content/index.ts'
+import { activeJob } from '../sim/jobs.ts'
+import type { JobDefinition } from '../sim/types.ts'
 import { Accounts } from './Accounts.tsx'
 import { BillBanner } from './BillBanner.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
@@ -12,19 +14,40 @@ import { OrderPanel } from './OrderPanel.tsx'
 import { Positions } from './Positions.tsx'
 import { PriceChart, type ChartPoint } from './PriceChart.tsx'
 import { RunEnd } from './RunEnd.tsx'
+import { JobPanel } from './JobPanel.tsx'
 import { defaultSeed, endDay, startGame, useTradingStore } from './store.ts'
+
+function startingJobLabel(job: JobDefinition): string {
+  if (job.requirement === 'none') return job.name
+  const course = job.requirement === 'basic' ? 'Basic' : 'Finance'
+  return `${job.name} (locked, needs ${course})`
+}
 
 export function Dashboard() {
   const snapshot = useTradingStore()
   const run = snapshot.run
   const assets = MARKET_DEFINITIONS.assets
   const [seed, setSeed] = useState(defaultSeed)
+  const [jobId, setJobId] = useState('jobless')
   const [seedError, setSeedError] = useState<string | null>(null)
   const [asset, setAsset] = useState(assets[0]?.id ?? 'NOVA')
 
   function onStart(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
-    setSeedError(startGame(seed))
+    setSeedError(startGame(seed, jobId))
+  }
+
+  function onStartingJob(value: string): void {
+    const job = JOB_DEFINITIONS.find((item) => item.id === value)
+    if (job === undefined) {
+      console.error(`[ui] rejected starting job ${JSON.stringify(value)}`)
+      return
+    }
+    if (job.requirement !== 'none') {
+      console.error(`[ui] rejected starting job ${job.id}: locked`)
+      return
+    }
+    setJobId(value)
   }
 
   function onAsset(value: string): void {
@@ -71,10 +94,21 @@ export function Dashboard() {
           />
         </label>
         <button type="submit">Start</button>
+        <label htmlFor="starting-job">
+          Starting job{' '}
+          <select id="starting-job" value={jobId} onChange={(event) => onStartingJob(event.target.value)}>
+            {JOB_DEFINITIONS.map((job) => (
+              <option key={job.id} value={job.id} disabled={job.requirement !== 'none'}>
+                {startingJobLabel(job)}
+              </option>
+            ))}
+          </select>
+        </label>
         {seedError !== null ? <p role="alert">{seedError}</p> : null}
       </form>
 
       <DayTimeline game={run?.game ?? null} />
+      <JobPanel game={run?.game ?? null} />
       {run !== null ? <RunEnd seed={run.seed} game={run.game} /> : null}
       <BillBanner game={run?.game ?? null} />
       <FiMeter game={run?.game ?? null} />
@@ -129,7 +163,11 @@ export function Dashboard() {
       </section>
 
       <CalendarPanel market={market} />
-      <NewsFeed key={market?.feed.day ?? 0} feed={market?.feed ?? null} />
+      <NewsFeed
+        key={market?.feed.day ?? 0}
+        feed={market?.feed ?? null}
+        job={run === null ? null : activeJob(run.game.job)}
+      />
       <DaySummaryPanel summary={run?.summary ?? null} liquidations={run?.liquidations ?? []} />
     </main>
   )

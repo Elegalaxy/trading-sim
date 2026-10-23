@@ -642,7 +642,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 23: Cosmetic effects and the accessibility toggle
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 22
 - Files to create or change: `src/ui/effects.ts`, `src/ui/StatMeters.tsx`, `src/ui/Settings.tsx`, `src/ui/PriceChart.tsx`, `src/ui/NewsFeed.tsx`, `src/ui/styles.css`
 - What changes:
@@ -657,7 +657,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm run typecheck`, `npm test`.
   - User: let energy drop below 40, see the blur and tell, turn on the toggle, reload, and see it still on.
-- Progress:
+- Progress: 2026-10-23: Cosmetic blur and a display-only delay on the price chart and news feed. Files: src/ui/effects.ts, src/ui/Settings.tsx, src/ui/StatMeters.tsx, src/ui/PriceChart.tsx, src/ui/NewsFeed.tsx, src/ui/styles.css. Provisional scale: no blur or delay at energy 40 or above; below that blur px = (40 - energy) * 2 / 40 and delay ms = (40 - energy) * 400 / 40, so energy 0 is 2px and 400ms. Reduce visual effects forces both to 0, keeps the meters and tells, and is stored as {"reduceVisualEffects":boolean} under trading-sim.settings.v1 (default false, effects on). A bad stored value is ignored. npm run typecheck passed. npm test passed (19 files, 105 tests). npm run lint passed. src/sim was not modified.
 
 ### Step 24: Start screen: modes, seed, and primer
 

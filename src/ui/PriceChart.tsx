@@ -1,3 +1,7 @@
+import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
+import { useTradingStore } from './store.ts'
+import { Tell } from './Tell.tsx'
+
 const CHART_DAYS = 60
 const WIDTH = 640
 const HEIGHT = 220
@@ -30,24 +34,49 @@ function position(index: number, count: number, price: number, min: number, span
   return { x, y }
 }
 
-export function PriceChart({ asset, points }: { asset: string; points: readonly ChartPoint[] }) {
+function chartSignature(asset: string, points: readonly ChartPoint[]): string {
+  const parts = [asset, String(points.length)]
+  for (let i = 0; i < points.length; i += 1) {
+    const point = points[i]
+    parts.push(point === undefined ? 'missing' : `${point.day}:${point.priceCents}`)
+  }
+  return parts.join('|')
+}
+
+function validatePoints(points: readonly ChartPoint[]): void {
   const shown = points.slice(-CHART_DAYS)
   for (let i = 0; i < shown.length; i += 1) {
     const point = shown[i]
     if (point === undefined) throw new Error(`chart point ${i} is missing`)
     assertPoint(point, i)
   }
+}
+
+export function PriceChart({ asset, points }: { asset: string; points: readonly ChartPoint[] }) {
+  const energy = useTradingStore().run?.game.stats.energy ?? null
+  const fx = useCosmeticFx(energy)
+  const view = useDelayedValue('price-chart', { asset, points }, fx.delayMs, chartSignature(asset, points))
+  validatePoints(points)
+  validatePoints(view.points)
+
+  const shown = view.points.slice(-CHART_DAYS)
+  const drawnAsset = view.asset
 
   const latest = shown[shown.length - 1]
   const caption =
     latest === undefined
-      ? `${asset}: no daily closes yet`
-      : `${asset}: ${shown.length} daily close${shown.length === 1 ? '' : 's'} in the last ${CHART_DAYS} days, latest ${latest.priceCents} cents (${(latest.priceCents / 100).toFixed(2)})`
+      ? `${drawnAsset}: no daily closes yet`
+      : `${drawnAsset}: ${shown.length} daily close${shown.length === 1 ? '' : 's'} in the last ${CHART_DAYS} days, latest ${latest.priceCents} cents (${(latest.priceCents / 100).toFixed(2)})`
+  const filter = blurFilter(fx.blurPx)
+  const blurStyle = filter === undefined ? undefined : { filter }
 
   if (shown.length === 0) {
     return (
       <div className="chart-wrap">
-        <p>{`${caption}. End the day to plot prices.`}</p>
+        {fx.tell ? <Tell /> : null}
+        <div style={blurStyle}>
+          <p>{`${caption}. End the day to plot prices.`}</p>
+        </div>
       </div>
     )
   }
@@ -67,24 +96,27 @@ export function PriceChart({ asset, points }: { asset: string; points: readonly 
 
   return (
     <div className="chart-wrap">
-      <p>{caption}</p>
-      <svg
-        className="chart"
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        role="img"
-        aria-label={`${asset} daily closes, ${shown.length} days`}
-      >
-        <polyline points={line} fill="none" stroke="#9ec1ff" strokeWidth="2" />
-        {coords.map((coord, index) => (
-          <circle key={shown[index]?.day ?? index} cx={coord.x} cy={coord.y} r="3" fill="#d6e4ff" />
-        ))}
-        <text x={PAD_LEFT} y={HEIGHT - 8} fill="#c5cad6" fontSize="12">
-          {first.day}
-        </text>
-        <text x={WIDTH - PAD_RIGHT} y={HEIGHT - 8} fill="#c5cad6" fontSize="12" textAnchor="end">
-          {last.day}
-        </text>
-      </svg>
+      {fx.tell ? <Tell /> : null}
+      <div style={blurStyle}>
+        <p>{caption}</p>
+        <svg
+          className="chart"
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          role="img"
+          aria-label={`${drawnAsset} daily closes, ${shown.length} days`}
+        >
+          <polyline points={line} fill="none" stroke="#9ec1ff" strokeWidth="2" />
+          {coords.map((coord, index) => (
+            <circle key={shown[index]?.day ?? index} cx={coord.x} cy={coord.y} r="3" fill="#d6e4ff" />
+          ))}
+          <text x={PAD_LEFT} y={HEIGHT - 8} fill="#c5cad6" fontSize="12">
+            {first.day}
+          </text>
+          <text x={WIDTH - PAD_RIGHT} y={HEIGHT - 8} fill="#c5cad6" fontSize="12" textAnchor="end">
+            {last.day}
+          </text>
+        </svg>
+      </div>
     </div>
   )
 }

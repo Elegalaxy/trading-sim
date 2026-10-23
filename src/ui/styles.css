@@ -389,3 +389,10 @@ ul {
   border-radius: 4px;
   padding: 2px 6px;
 }
+
+.visual-settings input {
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  accent-color: #3d6bf5;
+}

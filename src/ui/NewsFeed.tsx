@@ -3,13 +3,30 @@ import { VERIFY_ENERGY_COST } from '../sim/constants.ts'
 import { NEWS_READ_ENERGY_COST } from '../sim/stats.ts'
 import type { HeadlineItem, JobDefinition, ShownFeed, ShownItem } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
-import { dispatch } from './store.ts'
+import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
+import { dispatch, useTradingStore } from './store.ts'
 import { Tell } from './Tell.tsx'
 
 function itemText(item: ShownItem): string {
   if (item.kind === 'headline') return item.text
   if (item.kind === 'social') return `${item.text} (${item.sourceId}, ${item.tier})`
   return `${item.claim} (${item.sourceId}, ${item.tier})`
+}
+
+type FeedSnapshot = {
+  feed: ShownFeed
+  verified: boolean
+}
+
+function feedSignature(feed: ShownFeed, verified: boolean): string {
+  const items = feed.items.map((item, index) => {
+    if (item.kind === 'headline') {
+      return `h${index}:${item.distorted ? 1 : 0}:${item.top ? 1 : 0}:${item.eventId}:${item.text}`
+    }
+    if (item.kind === 'social') return `s${index}:${item.id}:${item.asset}:${item.text}`
+    return `r${index}:${item.distorted ? 1 : 0}:${item.noise ? 1 : 0}:${item.sourceId}:${item.claim}`
+  })
+  return `${verified ? 'v' : 's'}:${feed.day}:${items.join('\n')}`
 }
 
 function topHeadline(items: readonly ShownItem[]): ShownItem | undefined {
@@ -31,7 +48,14 @@ export function NewsFeed({
 }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  if (feed === null) {
+  const energy = useTradingStore().run?.game.stats.energy ?? null
+  const fx = useCosmeticFx(energy)
+  const live = feed === null ? null : { feed, verified }
+  const signature = live === null ? 'none' : feedSignature(live.feed, live.verified)
+  const delayed = useDelayedValue<FeedSnapshot | null>('news-feed', live, fx.delayMs, signature)
+  const shownFeed = delayed === null ? feed : delayed.feed
+  const shownVerified = delayed === null ? verified : delayed.verified
+  if (feed === null || shownFeed === null) {
     return (
       <section className="panel">
         <h2>News</h2>
@@ -40,8 +64,10 @@ export function NewsFeed({
     )
   }
 
-  const top = topHeadline(feed.items)
+  const top = topHeadline(shownFeed.items)
   const free = job?.perk === 'quietBreaks' && newsReads === 0
+  const filter = blurFilter(fx.blurPx)
+  const blurStyle = filter === undefined ? undefined : { filter }
 
   function onRead(): void {
     debugLog('[ui]', 'readNews')
@@ -71,12 +97,17 @@ export function NewsFeed({
 
   return (
     <section className="panel">
-      <h2>News</h2>
-      <p>Day {feed.day} headline</p>
-      <p className={top?.distorted === true ? 'distorted' : undefined}>
-        {top?.distorted === true ? <Tell /> : null}
-        {top === undefined ? 'No headline' : itemText(top)}
-      </p>
+      <h2>
+        {fx.tell ? <Tell /> : null}
+        News
+      </h2>
+      <div style={blurStyle}>
+        <p>Day {shownFeed.day} headline</p>
+        <p className={top?.distorted === true ? 'distorted' : undefined}>
+          {top?.distorted === true ? <Tell /> : null}
+          {top === undefined ? 'No headline' : itemText(top)}
+        </p>
+      </div>
       <p>{free ? 'The first read today is free.' : `Reading costs ${NEWS_READ_ENERGY_COST} energy.`}</p>
       <p>{`Verifying costs ${VERIFY_ENERGY_COST} energy.`}</p>
       <button type="button" onClick={onRead}>
@@ -85,22 +116,24 @@ export function NewsFeed({
       <button type="button" onClick={onVerify} disabled={verified}>
         {verified ? 'Verified' : 'Verify'}
       </button>
-      {verified ? <p>Showing today&apos;s true feed.</p> : null}
       {error !== null ? <p role="alert">{error}</p> : null}
-      {open ? (
-        feed.items.length === 0 ? (
-          <p>The visible feed is empty.</p>
-        ) : (
-          <ul>
-            {feed.items.map((item, index) => (
-              <li key={`${item.kind}-${index}`} className={item.distorted ? 'distorted' : undefined}>
-                {item.distorted ? <Tell /> : null}
-                {itemText(item)}
-              </li>
-            ))}
-          </ul>
-        )
-      ) : null}
+      <div style={blurStyle}>
+        {shownVerified ? <p>Showing today&apos;s true feed.</p> : null}
+        {open ? (
+          shownFeed.items.length === 0 ? (
+            <p>The visible feed is empty.</p>
+          ) : (
+            <ul>
+              {shownFeed.items.map((item, index) => (
+                <li key={`${item.kind}-${index}`} className={item.distorted ? 'distorted' : undefined}>
+                  {item.distorted ? <Tell /> : null}
+                  {itemText(item)}
+                </li>
+              ))}
+            </ul>
+          )
+        ) : null}
+      </div>
     </section>
   )
 }

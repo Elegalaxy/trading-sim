@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { ENERGY_WARNING_BELOW, STRESS_WARNING_ABOVE } from '../sim/stats.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
+import { formatFxLine, useVisualSettings } from './effects.ts'
+import { Settings } from './Settings.tsx'
 
 function assertStat(value: number, label: string): number {
   if (!Number.isSafeInteger(value) || value < 0 || value > 100) {
@@ -41,21 +43,32 @@ export function StatMeters({ game }: { game: GameState | null }) {
   const stressWarning = stress !== null && stress > STRESS_WARNING_ABOVE
   const signature = game === null ? 'none' : `energy=${energy} stress=${stress} energyWarning=${energyWarning} stressWarning=${stressWarning}`
 
+  const reduced = useVisualSettings().reduceVisualEffects
+  const fxLine = energy === null ? null : formatFxLine(energy, reduced)
+
   useEffect(() => {
     debugLog('[ui]', `stats ${signature}`)
   }, [signature])
 
+  useEffect(() => {
+    if (fxLine === null) return
+    debugLog('[fx]', fxLine)
+  }, [fxLine])
+
   return (
-    <section className="panel" aria-label="Energy and stress">
-      <h2>Energy and stress</h2>
-      {energy === null || stress === null ? (
-        <p>Start a game to see energy and stress.</p>
-      ) : (
-        <>
-          <Meter label="Energy" value={energy} warning={energyWarning} hint="(low)" />
-          <Meter label="Stress" value={stress} warning={stressWarning} hint="(high)" />
-        </>
-      )}
-    </section>
+    <>
+      <section className="panel" aria-label="Energy and stress">
+        <h2>Energy and stress</h2>
+        {energy === null || stress === null ? (
+          <p>Start a game to see energy and stress.</p>
+        ) : (
+          <>
+            <Meter label="Energy" value={energy} warning={energyWarning} hint="(low)" />
+            <Meter label="Stress" value={stress} warning={stressWarning} hint="(high)" />
+          </>
+        )}
+      </section>
+      <Settings />
+    </>
   )
 }

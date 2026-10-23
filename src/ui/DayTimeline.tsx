@@ -64,7 +64,7 @@ export function DayTimeline({ game }: { game: GameState | null }) {
         })}
       </ol>
       {section === null ? <p>Start a game to play the day.</p> : <p>Now {sectionClock(section)}.</p>}
-      <button type="button" onClick={onSkip} disabled={game === null}>
+      <button type="button" onClick={onSkip} disabled={game === null || game.runEnd !== null}>
         Skip
       </button>
       {message !== null ? (

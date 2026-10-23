@@ -5,6 +5,7 @@ import { stateHash } from './hash.ts'
 import { formatEvent } from './log.ts'
 import { createMarket, stepMarketDay } from './market.ts'
 import {
+  BASE_MONTHLY_EXPENSES_CENTS,
   CENTS_PER_E,
   SAVINGS_DAYS_PER_YEAR,
   SAVINGS_PAY_INTERVAL_DAYS,
@@ -447,7 +448,7 @@ describe('accounts and transfers', () => {
     expect(paid.accruedCents).toBe(0)
     expect(funded.accounts.savingsCents).toBe(moved + paid.amountCents)
     expect(funded.accounts.accruedSavingsCents).toBe(0)
-    expect(funded.accounts.cashCents).toBe(STARTING_CASH_CENTS - moved)
+    expect(funded.accounts.cashCents).toBe(STARTING_CASH_CENTS - moved - BASE_MONTHLY_EXPENSES_CENTS)
     expect(funded.accounts.tradingCents).toBe(STARTING_TRADING_CENTS)
     debugAccounts(
       `funded payment=${paid.amountCents} savings=${funded.accounts.savingsCents} day30accrual=${logged[29]} formula=${formulaSum}`,
@@ -484,7 +485,8 @@ describe('accounts and transfers', () => {
         }
       }
       expect(game.accounts.savingsCents).toBe(0)
-      expect(game.accounts.cashCents).toBe(STARTING_CASH_CENTS)
+      const billsDue = Math.floor(day / SAVINGS_PAY_INTERVAL_DAYS)
+      expect(game.accounts.cashCents).toBe(STARTING_CASH_CENTS - billsDue * BASE_MONTHLY_EXPENSES_CENTS)
       expect(game.accounts.tradingCents).toBe(STARTING_TRADING_CENTS)
     }
     expect(paidDays).toEqual([30, 60])

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { Accounts } from './Accounts.tsx'
+import { BillBanner } from './BillBanner.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
 import { DaySummaryPanel } from './DaySummary.tsx'
 import { DayTimeline } from './DayTimeline.tsx'
@@ -72,9 +73,21 @@ export function Dashboard() {
       </form>
 
       <DayTimeline game={run?.game ?? null} />
+      <BillBanner game={run?.game ?? null} />
 
       <section className="panel">
-        <button type="button" onClick={() => endDay()} disabled={run === null}>
+        <button
+          type="button"
+          onClick={() => endDay()}
+          disabled={run === null || run.game.bill !== null || run.game.runEnd !== null}
+          title={
+            run?.game.runEnd !== null
+              ? 'The run has ended.'
+              : run?.game.bill !== null
+                ? 'Pay the bill before ending the day.'
+                : undefined
+          }
+        >
           End day
         </button>
         {latest === undefined ? (

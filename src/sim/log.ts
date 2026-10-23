@@ -377,6 +377,51 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
         `startEquity=${formatNumber(event.startEquity)}`,
         `endEquity=${formatNumber(event.endEquity)}`,
       ].join(' ')
+    case 'salaryPaid':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=salaryPaid',
+        `amount=${formatNumber(event.amountCents)}`,
+      ].join(' ')
+    case 'billDue':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=billDue',
+        `amount=${formatNumber(event.amountCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+      ].join(' ')
+    case 'billPaid':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=billPaid',
+        `amount=${formatNumber(event.amountCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+      ].join(' ')
+    case 'billPending':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=billPending',
+        `amount=${formatNumber(event.amountCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+        `shortfall=${formatNumber(event.shortfallCents)}`,
+      ].join(' ')
+    case 'coverableCheck':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=coverableCheck',
+        `cash=${formatNumber(event.cashCents)}`,
+        `savings=${formatNumber(event.savingsCents)}`,
+        `tradingEquity=${formatNumber(event.tradingEquityCents)}`,
+        `loanLimit=${formatNumber(event.loanLimitCents)}`,
+        `total=${formatNumber(event.totalCents)}`,
+        `bill=${formatNumber(event.billCents)}`,
+      ].join(' ')
+    case 'runEnded':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=runEnded',
+        `reason=${formatToken(event.reason, 'reason')}`,
+      ].join(' ')
     default: {
       const unknown: never = event
       throw new Error(`formatEvent cannot format ${describeValue(unknown)}`)

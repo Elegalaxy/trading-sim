@@ -260,3 +260,20 @@ ul {
 .day-note {
   color: #b7becc;
 }
+
+.bill-banner {
+  background: #2a2618;
+  border-color: #e0b341;
+}
+
+.bill-ended {
+  background: #2a181c;
+  border-color: #e15b64;
+}
+
+.bill-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}

@@ -705,7 +705,62 @@ export type SectionChangeEvent = {
   clock: string
 }
 
-/** Player commands since the previous end of day. */
+/** Salary added to cash. Amount is 0 until a job pays. */
+export type SalaryPaidEvent = {
+  kind: 'salaryPaid'
+  day: number
+  amountCents: number
+}
+
+/** Expenses fixed for this cycle. `cashCents` is cash before the bill is paid. */
+export type BillDueEvent = {
+  kind: 'billDue'
+  day: number
+  amountCents: number
+  cashCents: number
+}
+
+/** Bill paid from cash. `cashCents` is cash after the payment. */
+export type BillPaidEvent = {
+  kind: 'billPaid'
+  day: number
+  amountCents: number
+  cashCents: number
+}
+
+/** Cash did not cover the bill. `shortfallCents` is the bill minus cash. */
+export type BillPendingEvent = {
+  kind: 'billPending'
+  day: number
+  amountCents: number
+  cashCents: number
+  shortfallCents: number
+}
+
+/**
+ * Usable money compared with the bill. `tradingEquityCents` is trading cash
+ * after closing every position at the current fill, including fees and spread.
+ * Nothing is sold. `loanLimitCents` is unused loan room.
+ */
+export type CoverableCheckEvent = {
+  kind: 'coverableCheck'
+  day: number
+  cashCents: number
+  savingsCents: number
+  tradingEquityCents: number
+  loanLimitCents: number
+  totalCents: number
+  billCents: number
+}
+
+/** The run is over. `reason` is an id token such as `cannotCoverBill`. */
+export type RunEndedEvent = {
+  kind: 'runEnded'
+  day: number
+  reason: string
+}
+
+/** Player commands since the previous end of day, plus a bill payment or cover check from those commands. */
 export type CommandLogEvent =
   | TransferEvent
   | CommandRejectedEvent
@@ -713,6 +768,9 @@ export type CommandLogEvent =
   | RealizedEvent
   | SkipEvent
   | SectionChangeEvent
+  | BillPaidEvent
+  | CoverableCheckEvent
+  | RunEndedEvent
 
 export type MarginLogEvent =
   | MarginInterestEvent
@@ -728,6 +786,9 @@ export type AccountLogEvent =
   | MarginLogEvent
   | SavingsAccrualEvent
   | SavingsInterestPaidEvent
+  | SalaryPaidEvent
+  | BillDueEvent
+  | BillPendingEvent
 
 export type LogEvent =
   | NoiseRollEvent
@@ -779,16 +840,30 @@ export type PlayerAccounts = {
   accruedSavingsCents: number
 }
 
+/** Expenses due until the player pays them from cash. The amount was fixed when it came due. */
+export type PendingBill = {
+  day: number
+  amountCents: number
+}
+
+/** A lost run. Further days do not advance. */
+export type RunEnd = {
+  outcome: 'lost'
+  day: number
+  reason: string
+}
+
 /**
  * Market plus the player. Commands, fills, and interest live on `pending` and `log`.
  * They are not written onto `market`, so a command cannot change the market hash.
  * `pending` holds commands since the previous `endDay`. `log` is those commands
  * until `endDay` replaces it with the commands, that day's margin interest,
- * borrow fees, margin check, and savings.
+ * borrow fees, margin check, savings accrual, and, on a 30th day, the monthly cycle.
  * `realized` is the per-day ledger (P&L minus fees, borrow fees, and margin interest).
  * One row per day that had a non-zero change. Days stay in increasing order.
  * `section` is the played part of the day. A new day is `sleep` (the end of sleep).
  * `sleepHours` is how long that sleep block lasts. The clock numbers are display only.
+ * `bill` is set while expenses are unpaid. `runEnd` is set when the bill cannot be covered.
  */
 export type GameState = {
   market: MarketState
@@ -799,4 +874,6 @@ export type GameState = {
   realized: RealizedDay[]
   pending: CommandLogEvent[]
   log: AccountLogEvent[]
+  bill: PendingBill | null
+  runEnd: RunEnd | null
 }

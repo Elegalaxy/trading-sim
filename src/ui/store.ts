@@ -3,7 +3,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
-import { applyCommand, createGame, endDay as simEndDay } from '../sim/game.ts'
+import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
 import type { GameState, LiquidationEvent } from '../sim/types.ts'
@@ -181,6 +181,28 @@ function logOrderOrTransfer(cmd: unknown, accepted: boolean, reason: string): vo
   }
 }
 
+/** `[store] bill pending|paid|runEnded ...` when a bill or a lost run is in view. */
+function logBill(game: GameState): void {
+  if (game.runEnd !== null) {
+    debugLog('[store]', `bill runEnded day=${game.runEnd.day} reason=${game.runEnd.reason}`)
+    return
+  }
+  if (game.bill !== null) {
+    const shortfall = game.bill.amountCents - game.accounts.cashCents
+    debugLog(
+      '[store]',
+      `bill pending day=${game.bill.day} amount=${game.bill.amountCents} cash=${game.accounts.cashCents} shortfall=${shortfall}`,
+    )
+    return
+  }
+  for (let index = game.log.length - 1; index >= 0; index -= 1) {
+    const event = game.log[index]
+    if (event?.kind !== 'billPaid') continue
+    debugLog('[store]', `bill paid day=${event.day} amount=${event.amountCents} cash=${event.cashCents}`)
+    return
+  }
+}
+
 /** One player command. Acceptance comes from the simulation log, not from a second set of rules. */
 export function dispatch(cmd: unknown): DispatchResult {
   const label = commandLabel(cmd)
@@ -206,12 +228,14 @@ export function dispatch(cmd: unknown): DispatchResult {
     debugLog('[store]', `dispatch ${label} -> rejected ${rejection.reason}`)
     logOrderOrTransfer(cmd, false, rejection.reason)
     logSkip(cmd, from, to, false, rejection.reason)
+    logBill(run.game)
     publish()
     return { accepted: false, reason: rejection.reason }
   }
   debugLog('[store]', `dispatch ${label} -> accepted`)
   logOrderOrTransfer(cmd, true, '')
   logSkip(cmd, from, to, true, '')
+  logBill(run.game)
   publish()
   return { accepted: true, reason: null }
 }
@@ -223,12 +247,18 @@ export function endDay(): void {
     debugLog('[store]', 'endDay -> rejected notStarted')
     return
   }
+  const block = endDayBlockReason(run.game)
+  if (block !== null) {
+    debugLog('[store]', `bill endDay blocked ${block} day=${run.game.market.day}`)
+    return
+  }
   try {
     simEndDay(run.game, definitions)
   } catch (error) {
     console.error('[store] endDay failed', error)
     throw error
   }
+  logBill(run.game)
   const prices = readPrices(run.game)
   const summary = daySummary(run.game.market.log)
   const liquidations = readLiquidations(run.game)

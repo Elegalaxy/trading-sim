@@ -474,7 +474,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 16: Monthly cycle, bills, and the shortfall choice
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 15, Q7
 - Files to create or change: `src/sim/monthly.ts`, `src/sim/monthly.test.ts`, `src/sim/game.ts`, `src/sim/types.ts`, `src/sim/constants.ts`, `src/sim/log.ts`, `src/ui/BillBanner.tsx`, `src/ui/store.ts`
 - What changes:
@@ -495,7 +495,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: move all cash to trading before day 30, reach day 30, see the banner, withdraw from savings, pay, and continue.
-- Progress:
+- Progress: 2026-10-23: Added the monthly cycle on days 30, 60, 90, and 120, after endDay increments the day and before the player acts. Files: src/sim/monthly.ts, src/sim/monthly.test.ts, src/sim/game.ts, src/sim/types.ts, src/sim/constants.ts, src/sim/log.ts, src/sim/accounts.ts, src/sim/accounts.test.ts, src/ui/BillBanner.tsx, src/ui/store.ts, src/ui/Dashboard.tsx, src/ui/DayTimeline.tsx, src/ui/styles.css. Salary is 0. Base bill is 1E, fixed when due. Cash that covers it pays automatically; otherwise the bill stays pending and End day throws before the market steps. payBill pays from cash. Cover check is cash + savings + close-out trading equity (fees and spread) + unused loan limit 0. Below the bill, the run ends with cannotCoverBill and the next day does not advance. The cycle does not sell or transfer. Savings interest is paid in this cycle, after that day's accrual, into savings. npm run typecheck passed; npm test passed (13 files, 68 tests); npm run lint passed. Market hashes matched a market-only twin. Browser: cash moved to savings, day 30 showed the banner and blocked End day, withdraw then Pay bill, day 31 advanced, Skip still opened the market.
 
 ### Step 17: FI tracking, run end, and score
 

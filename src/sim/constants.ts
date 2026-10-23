@@ -58,14 +58,27 @@ export const STARTING_SAVINGS_CENTS = 0
  * Annual rate = max(0, policyRate − SAVINGS_SPREAD_PERCENT) / 100.
  * Daily accrual cents = round half away from zero of
  * savingsCents × annualRate / SAVINGS_DAYS_PER_YEAR.
- * The unpaid cents accumulate. On each multiple of SAVINGS_PAY_INTERVAL_DAYS
- * (30, 60, 90, 120, and every later 30th day) they are paid into savings and
- * the accumulator resets. A pay day still logs a payment of 0 when savings is 0.
+ * The unpaid cents accumulate. The monthly cycle pays them into savings on each
+ * multiple of SAVINGS_PAY_INTERVAL_DAYS (30, 60, 90, 120, and every later 30th
+ * day), after that day's accrual, and the accumulator resets. A pay day still
+ * logs a payment of 0 when savings is 0.
  * The environment entry is `policyRate` unless the calendar names another id.
  */
 export const SAVINGS_SPREAD_PERCENT = 1.5
 export const SAVINGS_DAYS_PER_YEAR = 365
 export const SAVINGS_PAY_INTERVAL_DAYS = 30
+
+/** Section 6. Provisional salary until jobs exist. Paid to cash on each monthly cycle. */
+export const MONTHLY_SALARY_CENTS = 0
+
+/**
+ * Section 6. Provisional base monthly expenses: 1E.
+ * The bill copies this amount when it comes due and does not change after that.
+ */
+export const BASE_MONTHLY_EXPENSES_CENTS = CENTS_PER_E
+
+/** Section 12. Unused loan room in the bill cover check. 0 until loans exist. */
+export const UNUSED_LOAN_LIMIT_CENTS = 0
 
 /** Section 6. Provisional policy-rate entry when the run has no calendar. */
 export const POLICY_RATE_ENTRY_ID = 'policyRate'

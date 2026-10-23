@@ -1,11 +1,11 @@
 // Player accounts. Transfers and savings interest do not draw a random stream
 // and do not write to the market. Interest uses the policy rate after the
-// market step; the formula is next to the savings constants.
+// market step; the formula is next to the savings constants. Accrual is daily.
+// The monthly cycle pays the accumulator on each 30th day.
 
 import {
   POLICY_RATE_ENTRY_ID,
   SAVINGS_DAYS_PER_YEAR,
-  SAVINGS_PAY_INTERVAL_DAYS,
   SAVINGS_SPREAD_PERCENT,
 } from './constants.ts'
 import {
@@ -221,9 +221,30 @@ export function assertPolicyRateEntry(market: MarketState, defs: MarketDefinitio
 }
 
 /**
- * Accrue one day, then pay on each 30th day.
- * Inputs logged on the events: savings balance, policy percent, annual rate,
- * today's cents, and the accumulator before and after payment.
+ * Pay the accumulator into savings and reset it. The monthly cycle calls this
+ * on each 30th day, after that day's accrual. A zero balance still logs a payment.
+ */
+export function payAccruedSavings(accounts: PlayerAccounts, day: number): SavingsInterestPaidEvent {
+  assertPlayerAccounts(accounts)
+  if (!Number.isSafeInteger(day) || day < 1) {
+    throw new Error(`savings day must be a safe integer >= 1, received ${describeValue(day)}`)
+  }
+  const amountCents = accounts.accruedSavingsCents
+  accounts.savingsCents = addCents(accounts.savingsCents, amountCents, 'savings interest')
+  accounts.accruedSavingsCents = 0
+  return {
+    kind: 'savingsInterestPaid',
+    day,
+    amountCents,
+    savingsCents: accounts.savingsCents,
+    accruedCents: 0,
+  }
+}
+
+/**
+ * Accrue one day. Payment is the monthly cycle, not this function.
+ * Inputs logged: savings balance, policy percent, annual rate, today's cents,
+ * and the accumulator after accrual.
  */
 export function settleSavings(accounts: PlayerAccounts, day: number, policyPercent: number): AccountLogEvent[] {
   assertPlayerAccounts(accounts)
@@ -248,18 +269,5 @@ export function settleSavings(accounts: PlayerAccounts, day: number, policyPerce
     accrualCents,
     accruedCents: accounts.accruedSavingsCents,
   }
-  const events: AccountLogEvent[] = [accrual]
-  if (day % SAVINGS_PAY_INTERVAL_DAYS !== 0) return events
-  const amountCents = accounts.accruedSavingsCents
-  accounts.savingsCents = addCents(accounts.savingsCents, amountCents, 'savings interest')
-  accounts.accruedSavingsCents = 0
-  const paid: SavingsInterestPaidEvent = {
-    kind: 'savingsInterestPaid',
-    day,
-    amountCents,
-    savingsCents: accounts.savingsCents,
-    accruedCents: 0,
-  }
-  events.push(paid)
-  return events
+  return [accrual]
 }

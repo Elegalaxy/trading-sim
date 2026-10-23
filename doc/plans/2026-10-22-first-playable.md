@@ -406,7 +406,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 13: Read-only dashboard, day advance, and admin log panel
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 12, Q2
 - Files to create or change: `src/ui/store.ts`, `src/ui/App.tsx`, `src/ui/Dashboard.tsx`, `src/ui/PriceChart.tsx`, `src/ui/NewsFeed.tsx`, `src/ui/CalendarPanel.tsx`, `src/ui/DaySummary.tsx`, `src/ui/AdminLog.tsx`, `src/ui/debug.ts`, `src/ui/styles.css`
 - What changes:
@@ -428,7 +428,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm run typecheck`, `npm test`, `npm run build`.
   - User: run `npm run dev`, enter seed `demo`, press End day 10 times. Compare the day-10 hash in the console with `npm run sim -- --seed demo --days 10 --quiet`. Open the admin panel and find an event roll.
-- Progress:
+- Progress: 2026-10-23: Added the read-only dashboard. Files: src/ui/store.ts, src/ui/App.tsx, src/ui/Dashboard.tsx, src/ui/PriceChart.tsx, src/ui/NewsFeed.tsx, src/ui/CalendarPanel.tsx, src/ui/DaySummary.tsx, src/ui/AdminLog.tsx, src/ui/styles.css. The store calls createGame and endDay only, and keeps daily closes itself. Seed demo day-10 stateHash=17ad2ed590c04463 from both `npm run sim -- --seed demo --days 10 --quiet` and the store path (browser console `[store] endDay day=10 events=62 hash=17ad2ed590c04463`, day-10 closes NOVA=4622 BLSW=10569 HRBU=3171 KSR=6988 M4X=100534). The dev-only admin marker is absent from dist/. The dev server still shows the admin log. Checks: npm run typecheck passed; npm test passed (11 files, 61 tests, architecture violations=0); npm run lint passed; npm run build passed. The golden market log was not updated.
 
 ### Step 14: Trading, accounts, and the margin meter in the UI
 

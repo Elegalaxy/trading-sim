@@ -30,6 +30,8 @@ function orderReasonText(reason: string): string {
       return 'Unknown asset.'
     case 'notStarted':
       return 'Start a game first.'
+    case 'marketClosed':
+      return 'The market is closed.'
     default:
       return reason
   }
@@ -47,6 +49,7 @@ function ratioAfterText(equity: number, gross: number): string {
 
 /** Fill, fee, spread, and the ratio after the trade. The clone is not the live game. */
 function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: number): OrderQuote {
+  if (game.section !== 'market') return { accepted: false, reason: 'marketClosed' }
   let clone: GameState
   try {
     clone = structuredClone(game)
@@ -88,9 +91,12 @@ export function OrderPanel({ game }: { game: GameState | null }) {
   const [quantityText, setQuantityText] = useState('')
   const [attempted, setAttempted] = useState(false)
   const [resultMessage, setResultMessage] = useState<string | null>(null)
+  const section = game?.section ?? null
   const [trackedGame, setTrackedGame] = useState(game)
-  if (trackedGame !== game) {
+  const [trackedSection, setTrackedSection] = useState(section)
+  if (trackedGame !== game || trackedSection !== section) {
     setTrackedGame(game)
+    setTrackedSection(section)
     setResultMessage(null)
   }
 

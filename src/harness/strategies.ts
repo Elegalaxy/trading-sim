@@ -1,8 +1,9 @@
 // Harness strategies. They place orders through applyCommand and never write
-// the market. maxLongIndex and maxShortIndex press M4X up to the 5x cap
-// (margin ratio 20%). A rejected order shrinks the quantity. The walk is capped.
-// random draws a stream created in the harness. It does not touch the game's
-// market, events, info, or distortion streams.
+// the market. Each day starts at the end of sleep, so actDay skips to the
+// market section before any order. maxLongIndex and maxShortIndex press M4X
+// up to the 5x cap (margin ratio 20%). A rejected order shrinks the quantity.
+// The walk is capped. random draws a stream created in the harness. It does
+// not touch the game's market, events, info, or distortion streams.
 
 import {
   MARGIN_MIN_RATIO_DENOMINATOR,
@@ -226,6 +227,35 @@ function placeRandom(game: GameState, defs: MarketDefinitions, stream: RngStream
   return action
 }
 
+/** Open the market. A day starts closed, and an order before this is rejected. */
+function skipToMarket(game: GameState, defs: MarketDefinitions): void {
+  const from = game.section
+  const before = game.pending.length
+  applyCommand(game, defs, { type: 'skip' })
+  const added = game.pending.slice(before)
+  let skipped = false
+  let rejected = false
+  let reason = ''
+  for (const event of added) {
+    if (event.kind === 'skip') skipped = true
+    else if (event.kind === 'sectionChange') {
+      if (event.to !== 'market') {
+        throw new Error(`[DEBUG batch] skip sectionChange went to ${event.to}`)
+      }
+    } else if (event.kind === 'commandRejected') {
+      rejected = true
+      reason = event.reason
+    } else {
+      throw new Error(`[DEBUG batch] unexpected skip log event ${event.kind}`)
+    }
+  }
+  if (!skipped || rejected || game.section !== 'market') {
+    throw new Error(
+      `[DEBUG batch] skip from=${from} did not open the market section=${game.section} skipped=${skipped} rejected=${rejected} reason=${reason}`,
+    )
+  }
+}
+
 /** One day of the named strategy. `randomStream` is required only for `random`. */
 export function actDay(
   strategy: StrategyName,
@@ -233,6 +263,7 @@ export function actDay(
   defs: MarketDefinitions,
   randomStream: RngStream | null,
 ): DayAction {
+  skipToMarket(game, defs)
   if (strategy === 'hold') return emptyAction()
   if (strategy === 'maxLongIndex') {
     assertIndex(defs)

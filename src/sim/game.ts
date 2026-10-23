@@ -2,6 +2,8 @@
 // `endDay` steps the market once, then charges margin interest, short borrow,
 // the margin check, and savings. It does not draw a random stream of its own,
 // and it does not write player lines onto the market. Orders never change prices.
+// A day starts at the end of sleep. `skip` opens the market. Orders before that
+// are rejected. End day is allowed in any section and the next day starts at sleep.
 
 import {
   assertPlayerAccounts,
@@ -10,7 +12,14 @@ import {
   readPolicyRatePercent,
   settleSavings,
 } from './accounts.ts'
-import { STARTING_CASH_CENTS, STARTING_SAVINGS_CENTS, STARTING_TRADING_CENTS } from './constants.ts'
+import {
+  PLAYER_IS_JOBLESS,
+  SLEEP_HOURS,
+  STARTING_CASH_CENTS,
+  STARTING_SAVINGS_CENTS,
+  STARTING_TRADING_CENTS,
+} from './constants.ts'
+import { DAY_START_SECTION, assertDayState, interpretSkip, isDaySection } from './day.ts'
 import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
 import { interpretOrder, settleBorrowFees, tradingEquity } from './trading.ts'
@@ -35,8 +44,24 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       throw new Error(`pending account event must be an object, received ${describeValue(event)}`)
     }
     const kind = (event as { kind?: unknown }).kind
-    if (kind !== 'transfer' && kind !== 'commandRejected' && kind !== 'orderFill' && kind !== 'realized') {
+    if (
+      kind !== 'transfer' &&
+      kind !== 'commandRejected' &&
+      kind !== 'orderFill' &&
+      kind !== 'realized' &&
+      kind !== 'skip' &&
+      kind !== 'sectionChange'
+    ) {
       throw new Error(`pending account event must be a command, received ${describeValue(kind)}`)
+    }
+    if (kind === 'skip' || kind === 'sectionChange') {
+      const from = (event as { from?: unknown }).from
+      const to = (event as { to?: unknown }).to
+      if (!isDaySection(from) || !isDaySection(to)) {
+        throw new Error(
+          `pending ${kind} from and to must be sections, received ${describeValue(from)} -> ${describeValue(to)}`,
+        )
+      }
     }
   }
 }
@@ -92,6 +117,7 @@ function assertGame(state: GameState): void {
     throw new Error(`game market must be an object, received ${describeValue(state.market)}`)
   }
   assertPlayerAccounts(state.accounts)
+  assertDayState(state.section, state.sleepHours)
   assertPositions(state.positions)
   assertRealized(state.realized)
   if (!Array.isArray(state.pending)) {
@@ -114,6 +140,8 @@ export function createGame(defs: MarketDefinitions, seed: string): GameState {
       savingsCents: STARTING_SAVINGS_CENTS,
       accruedSavingsCents: 0,
     },
+    section: DAY_START_SECTION,
+    sleepHours: SLEEP_HOURS,
     positions: {},
     realized: [],
     pending: [],
@@ -121,18 +149,34 @@ export function createGame(defs: MarketDefinitions, seed: string): GameState {
   }
 }
 
-function isOrderCommand(cmd: unknown): boolean {
-  if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) return false
-  return (cmd as { type?: unknown }).type === 'order'
+function commandType(cmd: unknown): string | null {
+  if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) return null
+  const type = (cmd as { type?: unknown }).type
+  return typeof type === 'string' ? type : null
 }
 
 /** Apply one player command. A rejection logs the reason and leaves balances and positions unchanged. */
 export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unknown): GameState {
   assertDefinitionsObject(defs)
   assertGame(state)
-  if (isOrderCommand(cmd)) {
-    const outcome = interpretOrder(state, defs, cmd)
-    for (const event of outcome.events) state.pending.push(event)
+  const type = commandType(cmd)
+  if (type === 'order') {
+    if (state.section !== 'market') {
+      state.pending.push({
+        kind: 'commandRejected',
+        day: state.market.day,
+        command: 'order',
+        reason: 'marketClosed',
+      })
+    } else {
+      const outcome = interpretOrder(state, defs, cmd)
+      for (const event of outcome.events) state.pending.push(event)
+    }
+  } else if (type === 'skip') {
+    const outcome = interpretSkip(state.section, state.market.day, PLAYER_IS_JOBLESS)
+    if (outcome.accepted) state.section = outcome.section
+    const events = outcome.accepted ? outcome.events : [outcome.event]
+    for (const event of events) state.pending.push(event)
   } else {
     const outcome = interpretCommand(state.accounts, state.market.day, cmd)
     state.pending.push(outcome.event)
@@ -165,7 +209,8 @@ export function settleTradingAccount(
  * Advance one player day: the existing market step once, then margin interest,
  * short borrow, the margin check, then savings interest. Interest and borrow
  * use the post-step prices and that day's policy rate. Player events stay off
- * the market log. A wipe-out does not end the run.
+ * the market log. A wipe-out does not end the run. End day is allowed in any
+ * section. The next day starts again at the end of sleep.
  */
 export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   assertDefinitionsObject(defs)
@@ -179,5 +224,6 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const savings = settleSavings(state.accounts, state.market.day, policyRate)
   state.pending = []
   state.log = [...commands, ...traded, ...savings]
+  state.section = DAY_START_SECTION
   return state
 }

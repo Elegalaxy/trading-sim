@@ -3,6 +3,7 @@ import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { Accounts } from './Accounts.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
 import { DaySummaryPanel } from './DaySummary.tsx'
+import { DayTimeline } from './DayTimeline.tsx'
 import { MarginMeter } from './MarginMeter.tsx'
 import { NewsFeed } from './NewsFeed.tsx'
 import { OrderPanel } from './OrderPanel.tsx'
@@ -69,6 +70,8 @@ export function Dashboard() {
         <button type="submit">Start</button>
         {seedError !== null ? <p role="alert">{seedError}</p> : null}
       </form>
+
+      <DayTimeline game={run?.game ?? null} />
 
       <section className="panel">
         <button type="button" onClick={() => endDay()} disabled={run === null}>

@@ -55,6 +55,14 @@ function formatToken(value: string, label: string): string {
   return value
 }
 
+/** Display clock `HH:MM`. Not a timestamp. */
+function formatClock(value: string): string {
+  if (typeof value !== 'string' || !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+    throw new Error(`formatEvent clock must be HH:MM, received ${describeValue(value)}`)
+  }
+  return value
+}
+
 function formatEffectId(value: string): string {
   if (typeof value !== 'string' || !/^[A-Za-z][A-Za-z0-9]*(?::[A-Za-z][A-Za-z0-9]*)+:[1-9][0-9]*$/.test(value)) {
     throw new Error(`formatEvent effect must be type:target:day, received ${describeValue(value)}`)
@@ -257,6 +265,21 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
         `reason=${formatToken(event.reason, 'reason')}`,
       ].join(' ') + account
     }
+    case 'skip':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=skip',
+        `from=${formatToken(event.from, 'from')}`,
+        `to=${formatToken(event.to, 'to')}`,
+      ].join(' ')
+    case 'sectionChange':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=sectionChange',
+        `from=${formatToken(event.from, 'from')}`,
+        `to=${formatToken(event.to, 'to')}`,
+        `clock=${formatClock(event.clock)}`,
+      ].join(' ')
     case 'savingsAccrual':
       return [
         `day=${formatNumber(event.day)}`,

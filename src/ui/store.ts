@@ -142,6 +142,17 @@ function commandToken(value: unknown): string {
   return 'invalid'
 }
 
+function isSkipCommand(cmd: unknown): boolean {
+  return typeof cmd === 'object' && cmd !== null && !Array.isArray(cmd) && (cmd as { type?: unknown }).type === 'skip'
+}
+
+/** `[store] skip from=... to=...` with accepted or rejected. */
+function logSkip(cmd: unknown, from: string, to: string, accepted: boolean, reason: string): void {
+  if (!isSkipCommand(cmd)) return
+  const status = accepted ? 'accepted' : `rejected ${reason}`
+  debugLog('[store]', `skip from=${commandToken(from)} to=${commandToken(to)} ${status}`)
+}
+
 /** `[store] order ...` and `[store] transfer ...` with accepted or rejected. */
 function logOrderOrTransfer(cmd: unknown, accepted: boolean, reason: string): void {
   if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) return
@@ -177,8 +188,10 @@ export function dispatch(cmd: unknown): DispatchResult {
     console.error(`[store] dispatch ${label} rejected: game has not started`)
     debugLog('[store]', `dispatch ${label} -> rejected notStarted`)
     logOrderOrTransfer(cmd, false, 'notStarted')
+    if (isSkipCommand(cmd)) debugLog('[store]', 'skip rejected notStarted')
     return { accepted: false, reason: 'notStarted' }
   }
+  const from = run.game.section
   const before = run.game.pending.length
   try {
     applyCommand(run.game, definitions, cmd)
@@ -188,14 +201,17 @@ export function dispatch(cmd: unknown): DispatchResult {
   }
   const added = run.game.pending.slice(before)
   const rejection = added.find((event) => event.kind === 'commandRejected')
+  const to = run.game.section
   if (rejection !== undefined) {
     debugLog('[store]', `dispatch ${label} -> rejected ${rejection.reason}`)
     logOrderOrTransfer(cmd, false, rejection.reason)
+    logSkip(cmd, from, to, false, rejection.reason)
     publish()
     return { accepted: false, reason: rejection.reason }
   }
   debugLog('[store]', `dispatch ${label} -> accepted`)
   logOrderOrTransfer(cmd, true, '')
+  logSkip(cmd, from, to, true, '')
   publish()
   return { accepted: true, reason: null }
 }

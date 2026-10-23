@@ -47,6 +47,18 @@ function market(): MarketDefinitions {
   }
 }
 
+/** Orders are rejected until skip opens the market. Probes and live orders both use this. */
+function place(
+  game: GameState,
+  defs: MarketDefinitions,
+  cmd: { type: 'order'; asset: string; side: OrderSide; quantity: number },
+): void {
+  if (game.section !== 'market') applyCommand(game, defs, { type: 'skip' })
+  const section: string = game.section
+  if (section !== 'market') throw new Error(`[DEBUG margin] skip left section ${section}`)
+  applyCommand(game, defs, cmd)
+}
+
 function order(asset: string, side: OrderSide, quantity: number) {
   return { type: 'order' as const, asset, side, quantity }
 }
@@ -87,7 +99,7 @@ function searchOrders(game: GameState, defs: MarketDefinitions, asset: string, s
   const accepted = (quantity: number): boolean => {
     if (!Number.isSafeInteger(quantity) || quantity <= 0) return false
     const trial = cloneGame(game)
-    applyCommand(trial, defs, order(asset, side, quantity))
+    place(trial, defs, order(asset, side, quantity))
     return trial.log.at(-1)?.kind === 'orderFill'
   }
   if (!accepted(1)) return 0
@@ -162,7 +174,7 @@ describe('leverage, margin, and the loss cap', () => {
     const fairs = fairPicture(game)
     const quantity = searchOrders(game, defs, 'NOVA', 'buy')
     expect(quantity).toBeGreaterThan(1)
-    applyCommand(game, defs, order('NOVA', 'buy', quantity))
+    place(game, defs, order('NOVA', 'buy', quantity))
     expect(game.positions.NOVA?.signedShares).toBe(quantity)
     expect(game.accounts.tradingCents).toBeLessThan(0)
     expect(game.accounts.cashCents).toBe(STARTING_CASH_CENTS)
@@ -170,7 +182,7 @@ describe('leverage, margin, and the loss cap', () => {
     expect(opened.equity).toBeGreaterThan(0)
     expect(opened.equity * 5).toBeGreaterThanOrEqual(opened.gross)
     const oneMore = cloneGame(game)
-    applyCommand(oneMore, defs, order('NOVA', 'buy', 1))
+    place(oneMore, defs, order('NOVA', 'buy', 1))
     expect(oneMore.log.at(-1)).toMatchObject({ kind: 'commandRejected', reason: 'insufficientBuyingPower' })
     const repay = cloneGame(game)
     applyCommand(repay, defs, { type: 'transfer', from: 'cash', to: 'trading', amountCents: 1 })
@@ -212,7 +224,7 @@ describe('leverage, margin, and the loss cap', () => {
     const streams = streamPicture(game)
     const fairs = fairPicture(game)
     const quantity = searchOrders(game, defs, 'NOVA', 'buy')
-    applyCommand(game, defs, order('NOVA', 'buy', quantity))
+    place(game, defs, order('NOVA', 'buy', quantity))
     const firstStart = tradingEquity(game, defs).equity
     const firstMove = forceCappedMove(game, 'NOVA', -1)
     const first = settleTradingAccount(game, defs, firstStart)
@@ -272,12 +284,12 @@ describe('leverage, margin, and the loss cap', () => {
     const streams = streamPicture(game)
     const quantity = searchOrders(game, defs, 'NOVA', 'sell')
     expect(quantity).toBeGreaterThan(1)
-    applyCommand(game, defs, order('NOVA', 'sell', quantity))
+    place(game, defs, order('NOVA', 'sell', quantity))
     expect(game.positions.NOVA?.signedShares).toBe(-quantity)
     const opened = tradingEquity(game, defs)
     expect(opened.equity * 5).toBeGreaterThanOrEqual(opened.gross)
     const oneMore = cloneGame(game)
-    applyCommand(oneMore, defs, order('NOVA', 'sell', 1))
+    place(oneMore, defs, order('NOVA', 'sell', 1))
     expect(oneMore.log.at(-1)).toMatchObject({ kind: 'commandRejected', reason: 'insufficientBuyingPower' })
     const startEquity = opened.equity
     const moved = forceCappedMove(game, 'NOVA', 1)
@@ -315,13 +327,13 @@ describe('leverage, margin, and the loss cap', () => {
       for (let i = 0; i < days; i += 1) {
         const extra = searchOrders(game, defs, 'M4X', 'buy')
         if (extra > 0) {
-          applyCommand(game, defs, order('M4X', 'buy', extra))
+          place(game, defs, order('M4X', 'buy', extra))
           if (game.log.at(-1)?.kind !== 'orderFill') {
             throw new Error(`[DEBUG margin] seed=${seed} day=${game.market.day} rejected cap buy ${extra}`)
           }
         }
         const trial = cloneGame(game)
-        applyCommand(trial, defs, order('M4X', 'buy', 1))
+        place(trial, defs, order('M4X', 'buy', 1))
         if (trial.log.at(-1)?.kind !== 'commandRejected') {
           throw new Error(`[DEBUG margin] seed=${seed} day=${game.market.day} bought past the 5x cap`)
         }
@@ -357,7 +369,7 @@ describe('leverage, margin, and the loss cap', () => {
     const defs = market()
     const game = createGame(defs, 'wipe')
     const quantity = searchOrders(game, defs, 'NOVA', 'buy')
-    applyCommand(game, defs, order('NOVA', 'buy', quantity))
+    place(game, defs, order('NOVA', 'buy', quantity))
     const startEquity = tradingEquity(game, defs).equity
     const nova = game.market.assets.NOVA
     if (nova === undefined) throw new Error('[DEBUG margin] missing NOVA')

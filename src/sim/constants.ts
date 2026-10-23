@@ -126,3 +126,22 @@ export const MARGIN_DAYS_PER_YEAR = 365
  */
 export const WIPE_OUT_RATIO_NUMERATOR = 10
 export const WIPE_OUT_RATIO_DENOMINATOR = 100
+
+/**
+ * Section 4. Provisional clock. Display only. The simulation stores the
+ * section and the sleep hours; these minutes are not a running timer.
+ * Sleep ends at 07:00. Work is 08:00–12:00 (part-time) or 08:00–16:00
+ * (full-time). The market is open 17:00–21:00.
+ */
+export const SLEEP_END_MINUTE = 7 * 60
+export const WORK_START_MINUTE = 8 * 60
+export const WORK_PART_TIME_END_MINUTE = 12 * 60
+export const WORK_FULL_TIME_END_MINUTE = 16 * 60
+export const MARKET_OPEN_MINUTE = 17 * 60
+export const MARKET_CLOSE_MINUTE = 21 * 60
+
+/** Section 4. Provisional hours asleep until a job sets them. Shown on the sleep block. */
+export const SLEEP_HOURS = 8
+
+/** Section 4. Provisional: every player is jobless until jobs exist. */
+export const PLAYER_IS_JOBLESS = true

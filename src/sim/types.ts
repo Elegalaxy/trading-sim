@@ -683,8 +683,36 @@ export type WipeOutEvent = {
   endEquity: number
 }
 
+/** Sections of one played day. A new day is `sleep`, which means the end of sleep. */
+export const DAY_SECTIONS = ['sleep', 'work', 'market'] as const
+
+export type DaySection = (typeof DAY_SECTIONS)[number]
+
+/** The player skipped ahead. `from` and `to` are sections. */
+export type SkipEvent = {
+  kind: 'skip'
+  day: number
+  from: DaySection
+  to: DaySection
+}
+
+/** The played section changed. `clock` is display-only `HH:MM` at `to`. */
+export type SectionChangeEvent = {
+  kind: 'sectionChange'
+  day: number
+  from: DaySection
+  to: DaySection
+  clock: string
+}
+
 /** Player commands since the previous end of day. */
-export type CommandLogEvent = TransferEvent | CommandRejectedEvent | OrderFillEvent | RealizedEvent
+export type CommandLogEvent =
+  | TransferEvent
+  | CommandRejectedEvent
+  | OrderFillEvent
+  | RealizedEvent
+  | SkipEvent
+  | SectionChangeEvent
 
 export type MarginLogEvent =
   | MarginInterestEvent
@@ -759,10 +787,14 @@ export type PlayerAccounts = {
  * borrow fees, margin check, and savings.
  * `realized` is the per-day ledger (P&L minus fees, borrow fees, and margin interest).
  * One row per day that had a non-zero change. Days stay in increasing order.
+ * `section` is the played part of the day. A new day is `sleep` (the end of sleep).
+ * `sleepHours` is how long that sleep block lasts. The clock numbers are display only.
  */
 export type GameState = {
   market: MarketState
   accounts: PlayerAccounts
+  section: DaySection
+  sleepHours: number
   positions: Record<string, OpenPosition>
   realized: RealizedDay[]
   pending: CommandLogEvent[]

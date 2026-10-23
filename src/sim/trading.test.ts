@@ -171,6 +171,18 @@ function order(asset: string, side: OrderSide, quantity: number): { type: 'order
   return { type: 'order', asset, side, quantity }
 }
 
+/** Orders are rejected until skip opens the market. Existing cases trade after that. */
+function place(
+  game: GameState,
+  defs: MarketDefinitions,
+  cmd: { type: 'order'; asset: string; side: OrderSide; quantity: number },
+): void {
+  if (game.section !== 'market') applyCommand(game, defs, { type: 'skip' })
+  const section: string = game.section
+  if (section !== 'market') throw new Error(`[DEBUG trading] skip left section ${section}`)
+  applyCommand(game, defs, cmd)
+}
+
 function fills(game: GameState): OrderFillEvent[] {
   return game.log.filter((event): event is OrderFillEvent => event.kind === 'orderFill')
 }
@@ -211,8 +223,8 @@ describe('orders, fees, and borrow', () => {
     const price = quote(game, 'NOVA')
     const half = halfSpreadCents(price, spreadOf('NOVA'), false)
     const quantity = 10
-    applyCommand(game, defs, order('NOVA', 'buy', quantity))
-    applyCommand(game, defs, order('NOVA', 'sell', quantity))
+    place(game, defs, order('NOVA', 'buy', quantity))
+    place(game, defs, order('NOVA', 'sell', quantity))
     const [buy, sell] = fills(game)
     if (buy === undefined || sell === undefined) throw new Error('[DEBUG trading] missing round-trip fills')
     expect(buy.price).toBe(price)
@@ -250,7 +262,7 @@ describe('orders, fees, and borrow', () => {
     nova.priceCents = 1250
     const halfRawNumerator = 1250 * spreadOf('NOVA')
     expect(halfRawNumerator / (RATE_PPM_SCALE * 2)).toBe(2.5)
-    applyCommand(spreadGame, defs, order('NOVA', 'buy', 1))
+    place(spreadGame, defs, order('NOVA', 'buy', 1))
     const spreadFill = fills(spreadGame)[0]
     if (spreadFill === undefined) throw new Error('[DEBUG trading] missing half-spread fill')
     expect(spreadFill.halfSpread).toBe(3)
@@ -266,7 +278,7 @@ describe('orders, fees, and borrow', () => {
     const fill = 1248 + half
     expect(fill).toBe(1250)
     expect((2 * fill) / TRADE_FEE_DENOMINATOR).toBe(2.5)
-    applyCommand(feeGame, defs, order('NOVA', 'buy', 2))
+    place(feeGame, defs, order('NOVA', 'buy', 2))
     const feeFill = fills(feeGame)[0]
     if (feeFill === undefined) throw new Error('[DEBUG trading] missing half-fee fill')
     expect(feeFill.fee).toBe(3)
@@ -278,7 +290,7 @@ describe('orders, fees, and borrow', () => {
   it('gains on a short when the quoted price falls', () => {
     const defs = market()
     const game = createGame(defs, 'short')
-    applyCommand(game, defs, order('NOVA', 'sell', 10))
+    place(game, defs, order('NOVA', 'sell', 10))
     const opened = fills(game)[0]
     if (opened === undefined) throw new Error('[DEBUG trading] missing short open')
     expect(game.positions.NOVA?.signedShares).toBe(-10)
@@ -297,7 +309,7 @@ describe('orders, fees, and borrow', () => {
     expect(markGain).toBe(10 * (priceBefore - priceAfter))
     expect(markGain).toBeGreaterThan(0)
     const beforeCover = marketPicture(game)
-    applyCommand(game, defs, order('NOVA', 'buy', 10))
+    place(game, defs, order('NOVA', 'buy', 10))
     const covered = fills(game)[1]
     const pnl = realizedEvents(game)[0]
     if (covered === undefined || pnl === undefined) throw new Error('[DEBUG trading] missing short cover')
@@ -380,19 +392,21 @@ describe('orders, fees, and borrow', () => {
       const game = createGame(defs, 'reject')
       const marketBefore = marketPicture(game)
       const playerBefore = playerPicture(game)
+      if (entry.command === 'order') applyCommand(game, defs, { type: 'skip' })
       applyCommand(game, defs, entry.cmd)
       expect(playerPicture(game)).toBe(playerBefore)
       expect(marketPicture(game)).toBe(marketBefore)
-      const logged = game.log[0]
+      const rejections = game.log.filter((event) => event.kind === 'commandRejected')
+      expect(rejections).toHaveLength(1)
+      const logged = rejections[0]
       if (logged?.kind !== 'commandRejected') throw new Error(`[DEBUG trading] missing rejection ${entry.reason}`)
       expect(logged.reason).toBe(entry.reason)
       expect(logged.command).toBe(entry.command)
-      expect(game.log).toHaveLength(1)
       debugTrading(formatEvent(logged))
     }
 
     const leveragedBuy = createGame(defs, 'allow-buy')
-    applyCommand(leveragedBuy, defs, order('NOVA', 'buy', buyWasCash))
+    place(leveragedBuy, defs, order('NOVA', 'buy', buyWasCash))
     expect(leveragedBuy.positions.NOVA?.signedShares).toBe(buyWasCash)
     expect(leveragedBuy.accounts.tradingCents).toBeLessThan(0)
     expect(leveragedBuy.accounts.cashCents).toBe(STARTING_CASH_CENTS)
@@ -401,7 +415,7 @@ describe('orders, fees, and borrow', () => {
     expect(buyEquity).toBeGreaterThanOrEqual(0)
     expect(buyEquity * MARGIN_MIN_RATIO_DENOMINATOR).toBeGreaterThanOrEqual(buyGross * MARGIN_MIN_RATIO_NUMERATOR)
     const oldShort = createGame(defs, 'allow-sell')
-    applyCommand(oldShort, defs, order('NOVA', 'sell', sellWasOneX))
+    place(oldShort, defs, order('NOVA', 'sell', sellWasOneX))
     expect(oldShort.positions.NOVA?.signedShares).toBe(-sellWasOneX)
     const shortEquity = oldShort.accounts.tradingCents + -sellWasOneX * price
     const shortGross = sellWasOneX * price
@@ -409,12 +423,12 @@ describe('orders, fees, and borrow', () => {
     expect(shortEquity).toBeGreaterThanOrEqual(0)
     expect(shortEquity * MARGIN_MIN_RATIO_DENOMINATOR).toBeGreaterThanOrEqual(shortGross * MARGIN_MIN_RATIO_NUMERATOR)
     const capBuy = createGame(defs, 'cap-buy')
-    applyCommand(capBuy, defs, order('NOVA', 'buy', buyPower - 1))
+    place(capBuy, defs, order('NOVA', 'buy', buyPower - 1))
     expect(capBuy.positions.NOVA?.signedShares).toBe(buyPower - 1)
     const capEquity = capBuy.accounts.tradingCents + (buyPower - 1) * price
     expect(capEquity).toBeGreaterThanOrEqual(0)
     const capSell = createGame(defs, 'cap-sell')
-    applyCommand(capSell, defs, order('NOVA', 'sell', sellPower - 1))
+    place(capSell, defs, order('NOVA', 'sell', sellPower - 1))
     expect(capSell.positions.NOVA?.signedShares).toBe(-(sellPower - 1))
     const capShortEquity = capSell.accounts.tradingCents + -(sellPower - 1) * price
     expect(capShortEquity).toBeGreaterThanOrEqual(0)
@@ -429,7 +443,7 @@ describe('orders, fees, and borrow', () => {
     applyCommand(empty, defs, { type: 'transfer', from: 'trading', to: 'savings', amountCents: STARTING_TRADING_CENTS })
     const parked = playerPicture(empty)
     const parkedMarket = marketPicture(empty)
-    applyCommand(empty, defs, order('NOVA', 'buy', 1))
+    place(empty, defs, order('NOVA', 'buy', 1))
     expect(playerPicture(empty)).toBe(parked)
     expect(empty.accounts.tradingCents).toBe(0)
     expect(empty.accounts.savingsCents).toBe(STARTING_TRADING_CENTS)
@@ -442,8 +456,8 @@ describe('orders, fees, and borrow', () => {
     debugTrading(formatEvent(rejectedOrder))
 
     const flip = createGame(defs, 'flip')
-    applyCommand(flip, defs, order('NOVA', 'buy', 5))
-    applyCommand(flip, defs, order('NOVA', 'sell', 8))
+    place(flip, defs, order('NOVA', 'buy', 5))
+    place(flip, defs, order('NOVA', 'sell', 8))
     const [bought, sold] = fills(flip)
     if (bought === undefined || sold === undefined) throw new Error('[DEBUG trading] missing flip fills')
     expect(flip.positions.NOVA).toEqual({
@@ -463,7 +477,7 @@ describe('orders, fees, and borrow', () => {
   it('doubles the spread on an event day before rounding, and the index only for a calendar item', () => {
     const defs = market()
     const quiet = createGame(defs, 'wide')
-    applyCommand(quiet, defs, order('NOVA', 'buy', 1))
+    place(quiet, defs, order('NOVA', 'buy', 1))
     const quietHalf = fills(quiet)[0]?.halfSpread
     expect(quietHalf).toBe(halfSpreadCents(quote(quiet, 'NOVA'), spreadOf('NOVA'), false))
 
@@ -473,8 +487,8 @@ describe('orders, fees, and borrow', () => {
       items: [{ kind: 'headline', eventId: 'earningsBeat:NOVA:0', text: 'NOVA up', magnitude: 2, top: true }],
     }
     const before = marketPicture(named)
-    applyCommand(named, defs, order('NOVA', 'buy', 1))
-    applyCommand(named, defs, order('HRBU', 'buy', 1))
+    place(named, defs, order('NOVA', 'buy', 1))
+    place(named, defs, order('HRBU', 'buy', 1))
     const novaFill = fills(named).find((event) => event.asset === 'NOVA')
     const hrbuFill = fills(named).find((event) => event.asset === 'HRBU')
     if (novaFill === undefined || hrbuFill === undefined) throw new Error('[DEBUG trading] missing widened fills')
@@ -491,7 +505,7 @@ describe('orders, fees, and borrow', () => {
       day: 1,
       items: [{ kind: 'headline', eventId: 'earningsBeat:NOVA:1', text: 'NOVA tomorrow', magnitude: 2, top: true }],
     }
-    applyCommand(stale, defs, order('NOVA', 'buy', 1))
+    place(stale, defs, order('NOVA', 'buy', 1))
     expect(fills(stale)[0]?.halfSpread).toBe(quietHalf)
 
     const sector = createGame(defs, 'wide')
@@ -499,7 +513,7 @@ describe('orders, fees, and borrow', () => {
       day: 1,
       items: [{ kind: 'headline', eventId: 'regulation:A:0', text: 'sector A', magnitude: 2, top: true }],
     }
-    applyCommand(sector, defs, order('NOVA', 'buy', 1))
+    place(sector, defs, order('NOVA', 'buy', 1))
     expect(fills(sector)[0]?.halfSpread).toBe(quietHalf)
 
     const indexHeadline = createGame(defs, 'wide')
@@ -507,7 +521,7 @@ describe('orders, fees, and borrow', () => {
       day: 1,
       items: [{ kind: 'headline', eventId: 'sentiment:M4X:0', text: 'index up', magnitude: 2, top: true }],
     }
-    applyCommand(indexHeadline, defs, order('M4X', 'buy', 1))
+    place(indexHeadline, defs, order('M4X', 'buy', 1))
     const indexQuiet = fills(indexHeadline)[0]
     if (indexQuiet === undefined) throw new Error('[DEBUG trading] missing index fill')
     expect(indexQuiet.halfSpread).toBe(halfSpreadCents(100000, 1500, false))
@@ -523,9 +537,9 @@ describe('orders, fees, and borrow', () => {
       applied: true,
     })
     const macroBefore = marketPicture(macro)
-    applyCommand(macro, defs, order('NOVA', 'buy', 1))
-    applyCommand(macro, defs, order('HRBU', 'buy', 1))
-    applyCommand(macro, defs, order('M4X', 'buy', 1))
+    place(macro, defs, order('NOVA', 'buy', 1))
+    place(macro, defs, order('HRBU', 'buy', 1))
+    place(macro, defs, order('M4X', 'buy', 1))
     const widened = fills(macro)
     expect(widened.map((event) => event.halfSpread)).toEqual([
       halfSpreadCents(4800, 4000, true),
@@ -543,7 +557,7 @@ describe('orders, fees, and borrow', () => {
   it('charges a short a daily borrow fee after the market step and logs an unpaid remainder', () => {
     const defs = market()
     const held = createGame(defs, 'borrow')
-    applyCommand(held, defs, order('NOVA', 'buy', 1))
+    place(held, defs, order('NOVA', 'buy', 1))
     endDay(held, defs)
     expect(held.log.some((event) => event.kind === 'borrowFee')).toBe(false)
     expect(held.accounts.cashCents).toBe(STARTING_CASH_CENTS)
@@ -551,7 +565,7 @@ describe('orders, fees, and borrow', () => {
 
     const opened = createGame(defs, 'demo')
     const priceBefore = quote(opened, 'NOVA')
-    applyCommand(opened, defs, order('NOVA', 'sell', 10))
+    place(opened, defs, order('NOVA', 'sell', 10))
     const cashBefore = opened.accounts.cashCents
     const savingsBefore = opened.accounts.savingsCents
     endDay(opened, defs)
@@ -601,8 +615,8 @@ describe('orders, fees, and borrow', () => {
     const defs = demoMarket()
     const quiet = createGame(defs, 'demo')
     const traded = createGame(defs, 'demo')
-    applyCommand(traded, defs, order('HRBU', 'sell', 1))
-    applyCommand(traded, defs, order('NOVA', 'buy', 1))
+    place(traded, defs, order('HRBU', 'sell', 1))
+    place(traded, defs, order('NOVA', 'buy', 1))
     expect(marketPicture(traded)).toBe(marketPicture(quiet))
 
     const seen = new Set<string>()
@@ -625,7 +639,7 @@ describe('orders, fees, and borrow', () => {
       expect(marketPicture(traded)).toBe(marketPicture(quiet))
       expect(take(traded.market.log)).toEqual(take(quiet.market.log))
       if (day === 5) {
-        applyCommand(traded, defs, order('HRBU', 'buy', 1))
+        place(traded, defs, order('HRBU', 'buy', 1))
         fills += traded.log.filter((event) => event.kind === 'orderFill').length
         expect(marketPicture(traded)).toBe(marketPicture(quiet))
       }

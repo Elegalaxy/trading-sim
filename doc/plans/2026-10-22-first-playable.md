@@ -453,7 +453,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 15: Day sections, provisional clock, and skip
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 14, Q3, Q5
 - Files to create or change: `src/sim/day.ts`, `src/sim/day.test.ts`, `src/sim/game.ts`, `src/sim/types.ts`, `src/sim/constants.ts`, `src/sim/log.ts`, `src/ui/DayTimeline.tsx`, `src/ui/store.ts`, `src/harness/strategies.ts`
 - What changes:
@@ -470,7 +470,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`, `npm run sim -- --batch 50 --strategy maxLongIndex`.
   - User: start a day, try to buy before market open and see the rejection, press Skip, then buy.
-- Progress:
+- Progress: 2026-10-23: Added day sections, the provisional clock, and skip. Files: src/sim/day.ts, src/sim/day.test.ts, src/sim/game.ts, src/sim/types.ts, src/sim/constants.ts, src/sim/log.ts, src/ui/DayTimeline.tsx, src/ui/Dashboard.tsx, src/ui/store.ts, src/ui/OrderPanel.tsx, src/ui/styles.css, src/harness/strategies.ts, src/sim/trading.test.ts, src/sim/margin.test.ts. A new day starts at the end of sleep (07:00, 8h shown as 23:00-07:00). Work is empty while jobless (08:00-12:00 part-time, 08:00-16:00 full-time). Skip opens the market at 17:00. Orders before that log marketClosed. npm run typecheck passed; npm test passed (12 files, 65 tests); npm run lint passed. `npm run sim -- --batch 50 --strategy maxLongIndex --seed demo --days 120` passed. The 50-run CSV matches the Step 12 n500 file row for row (equity, liquidations, wipe-outs, backstop). Prices were not retuned.
 
 ### Step 16: Monthly cycle, bills, and the shortfall choice
 

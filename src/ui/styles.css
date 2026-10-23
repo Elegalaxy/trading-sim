@@ -233,3 +233,30 @@ ul {
   margin-left: -1px;
   background: #f4f6fb;
 }
+
+.day-timeline {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.day-timeline li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  padding: 8px 10px;
+  border: 1px solid #3d4660;
+  border-radius: 6px;
+}
+
+.day-current {
+  border-color: #6aa2ff;
+  background: #182033;
+}
+
+.day-note {
+  color: #b7becc;
+}

@@ -129,3 +129,107 @@ ul {
   margin: 8px 0 0;
   padding-left: 18px;
 }
+
+.trade-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.trade-form p,
+.trade-form .estimate {
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+.estimate p {
+  margin: 4px 0 0;
+}
+
+.trade-alert {
+  color: #ffd0d0;
+}
+
+.trade-ok {
+  color: #c9f7d5;
+}
+
+.balance-list {
+  margin-top: 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.positions-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.positions-table th,
+.positions-table td {
+  padding: 4px 8px;
+  text-align: left;
+  color: #e7e9ee;
+  border-bottom: 1px solid #3d4660;
+  white-space: nowrap;
+}
+
+.pnl-gain {
+  color: #b6f5c8;
+}
+
+.pnl-loss {
+  color: #ffb4b4;
+}
+
+.margin-ok {
+  border-color: #6aa2ff;
+}
+
+.margin-warning {
+  background: #2a2618;
+  border-color: #e0b341;
+  color: #f4f6fb;
+}
+
+.margin-liquidation {
+  background: #2a181c;
+  border-color: #e15b64;
+  color: #f4f6fb;
+}
+
+.margin-track {
+  position: relative;
+  height: 14px;
+  margin: 10px 0 4px;
+  background: #0e1118;
+  border: 1px solid #6a738c;
+  border-radius: 7px;
+}
+
+.margin-fill {
+  height: 100%;
+  background: #6aa2ff;
+  border-radius: 7px;
+}
+
+.margin-warning .margin-fill {
+  background: #e0b341;
+}
+
+.margin-liquidation .margin-fill {
+  background: #e15b64;
+}
+
+.margin-mark {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 22px;
+  margin-left: -1px;
+  background: #f4f6fb;
+}

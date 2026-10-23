@@ -432,7 +432,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 14: Trading, accounts, and the margin meter in the UI
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 13
 - Files to create or change: `src/ui/OrderPanel.tsx`, `src/ui/Positions.tsx`, `src/ui/Accounts.tsx`, `src/ui/MarginMeter.tsx`, `src/ui/store.ts`, `src/ui/styles.css`
 - What changes:
@@ -449,7 +449,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm run typecheck`, `npm test`.
   - User: on seed `demo`, open a 5x position, end days until the meter warns, keep going, and read the liquidation in the summary. Try quantity `-3` and `1.5` and see the rejection.
-- Progress:
+- Progress: 2026-10-23: Added the order form, positions, accounts, transfer form, and margin meter, and showed liquidations in the day summary from the game log. Files: src/ui/OrderPanel.tsx, src/ui/Positions.tsx, src/ui/Accounts.tsx, src/ui/MarginMeter.tsx, src/ui/store.ts, src/ui/styles.css, src/ui/Dashboard.tsx, src/ui/DaySummary.tsx. The estimate clones the game and calls interpretOrder. Checks: npm run typecheck passed; npm test passed (11 files, 61 tests, architecture violations=0); npm run lint passed. On the existing dev server, seed demo NOVA buy 307 was accepted (fill 4810 cents, fee 1477, spread cost 3070, ratio 20.05%); 308 showed too little buying power; -3 and 1.5 showed a reason and did not dispatch. The meter was warning by day 7. The day 36 summary said "Liquidated NOVA: 307 shares."
 
 ### Step 15: Day sections, provisional clock, and skip
 

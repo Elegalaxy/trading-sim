@@ -6,7 +6,7 @@ import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { applyCommand, createGame, endDay as simEndDay } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
-import type { GameState } from '../sim/types.ts'
+import type { GameState, LiquidationEvent } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 
 const SEED_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-'
@@ -24,7 +24,16 @@ export type TradingRun = {
   game: GameState
   closes: readonly CloseRow[]
   summary: DaySummary | null
+  /** Liquidations from the game log for the summary day. The next command replaces that log. */
+  liquidations: readonly LiquidationEvent[]
 }
+
+export type DispatchResult = {
+  accepted: boolean
+  reason: string | null
+}
+
+export type ParsedInteger = { ok: true; value: number } | { ok: false; reason: string }
 
 export type TradingSnapshot = {
   run: TradingRun | null
@@ -121,19 +130,54 @@ export function startGame(seed: string): string | null {
     console.error('[store] createGame failed', error)
     throw error
   }
-  run = { seed, game, closes: [], summary: null }
+  run = { seed, game, closes: [], summary: null, liquidations: [] }
   debugLog('[ui]', `seed=${seed}`)
   publish()
   return null
 }
 
+function commandToken(value: unknown): string {
+  if (typeof value === 'string' && value.length > 0 && !/[\r\n]/.test(value)) return value
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  return 'invalid'
+}
+
+/** `[store] order ...` and `[store] transfer ...` with accepted or rejected. */
+function logOrderOrTransfer(cmd: unknown, accepted: boolean, reason: string): void {
+  if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) return
+  const record = cmd as {
+    type?: unknown
+    asset?: unknown
+    side?: unknown
+    quantity?: unknown
+    from?: unknown
+    to?: unknown
+    amountCents?: unknown
+  }
+  const status = accepted ? 'accepted' : `rejected ${reason}`
+  if (record.type === 'order') {
+    debugLog(
+      '[store]',
+      `order ${commandToken(record.asset)} ${commandToken(record.side)} ${commandToken(record.quantity)} ${status}`,
+    )
+    return
+  }
+  if (record.type === 'transfer') {
+    debugLog(
+      '[store]',
+      `transfer ${commandToken(record.from)} ${commandToken(record.to)} ${commandToken(record.amountCents)} ${status}`,
+    )
+  }
+}
+
 /** One player command. Acceptance comes from the simulation log, not from a second set of rules. */
-export function dispatch(cmd: unknown): void {
+export function dispatch(cmd: unknown): DispatchResult {
   const label = commandLabel(cmd)
   if (run === null) {
     console.error(`[store] dispatch ${label} rejected: game has not started`)
     debugLog('[store]', `dispatch ${label} -> rejected notStarted`)
-    return
+    logOrderOrTransfer(cmd, false, 'notStarted')
+    return { accepted: false, reason: 'notStarted' }
   }
   const before = run.game.pending.length
   try {
@@ -146,10 +190,14 @@ export function dispatch(cmd: unknown): void {
   const rejection = added.find((event) => event.kind === 'commandRejected')
   if (rejection !== undefined) {
     debugLog('[store]', `dispatch ${label} -> rejected ${rejection.reason}`)
-  } else {
-    debugLog('[store]', `dispatch ${label} -> accepted`)
+    logOrderOrTransfer(cmd, false, rejection.reason)
+    publish()
+    return { accepted: false, reason: rejection.reason }
   }
+  debugLog('[store]', `dispatch ${label} -> accepted`)
+  logOrderOrTransfer(cmd, true, '')
   publish()
+  return { accepted: true, reason: null }
 }
 
 /** Advance one day. Records that day's closes because the market log will be replaced tomorrow. */
@@ -167,6 +215,7 @@ export function endDay(): void {
   }
   const prices = readPrices(run.game)
   const summary = daySummary(run.game.market.log)
+  const liquidations = readLiquidations(run.game)
   const day = run.game.market.day
   const events = run.game.market.log.length
   const hash = stateHash(run.game.market)
@@ -175,7 +224,81 @@ export function endDay(): void {
     game: run.game,
     closes: [...run.closes, { day, prices }],
     summary,
+    liquidations,
   }
   debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
+  debugLog(
+    '[store]',
+    `liquidations ${
+      liquidations.length === 0
+        ? 'none'
+        : liquidations.map((event) => `${event.asset} quantity=${event.quantity}`).join(', ')
+    }`,
+  )
   publish()
+}
+
+/**
+ * Positive whole number in the safe-integer range.
+ * Empty, fractional, negative, and huge text are reasons and are not parsed.
+ */
+export function parsePositiveInteger(raw: string, label: string): ParsedInteger {
+  if (typeof raw !== 'string') return { ok: false, reason: `${label} must be a positive whole number.` }
+  if (label.length === 0 || /[\r\n]/.test(label)) {
+    throw new Error(`integer label must be a single line, received ${JSON.stringify(label)}`)
+  }
+  const text = raw.trim()
+  if (text.length === 0) return { ok: false, reason: `${label} is empty.` }
+  if (text.includes('.')) return { ok: false, reason: `${label} must be a whole number.` }
+  if (text.startsWith('-')) return { ok: false, reason: `${label} must be positive.` }
+  if (!/^[0-9]+$/.test(text)) return { ok: false, reason: `${label} must be a positive whole number.` }
+  if (/^0+$/.test(text)) return { ok: false, reason: `${label} must be positive.` }
+  if (text.length > 1 && text.startsWith('0')) {
+    return { ok: false, reason: `${label} must be a positive whole number.` }
+  }
+  const max = String(Number.MAX_SAFE_INTEGER)
+  if (text.length > max.length || (text.length === max.length && text > max)) {
+    return { ok: false, reason: `${label} is too large.` }
+  }
+  const value = Number(text)
+  if (!Number.isSafeInteger(value) || value <= 0) return { ok: false, reason: `${label} is too large.` }
+  return { ok: true, value }
+}
+
+/** Copy liquidation rows off the game log before the next command replaces it. */
+function readLiquidations(game: GameState): LiquidationEvent[] {
+  const found: LiquidationEvent[] = []
+  for (const event of game.log) {
+    if (event.kind !== 'liquidation') continue
+    if (!Number.isSafeInteger(event.day) || event.day < 0) {
+      throw new Error(`liquidation day must be a safe integer >= 0, received ${String(event.day)}`)
+    }
+    if (typeof event.asset !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(event.asset)) {
+      throw new Error(`liquidation asset is invalid, received ${JSON.stringify(event.asset)}`)
+    }
+    if (!Number.isSafeInteger(event.quantity) || event.quantity <= 0) {
+      throw new Error(
+        `liquidation quantity for ${event.asset} must be a positive safe integer, received ${String(event.quantity)}`,
+      )
+    }
+    if (!Number.isSafeInteger(event.fill) || event.fill <= 0) {
+      throw new Error(
+        `liquidation fill for ${event.asset} must be a positive safe integer, received ${String(event.fill)}`,
+      )
+    }
+    if (event.ratioAfter !== null && (typeof event.ratioAfter !== 'number' || !Number.isFinite(event.ratioAfter))) {
+      throw new Error(
+        `liquidation ratio for ${event.asset} must be a finite number or null, received ${String(event.ratioAfter)}`,
+      )
+    }
+    found.push({
+      kind: 'liquidation',
+      day: event.day,
+      asset: event.asset,
+      quantity: event.quantity,
+      fill: event.fill,
+      ratioAfter: event.ratioAfter,
+    })
+  }
+  return found
 }

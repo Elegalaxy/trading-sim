@@ -1,8 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
+import { Accounts } from './Accounts.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
 import { DaySummaryPanel } from './DaySummary.tsx'
+import { MarginMeter } from './MarginMeter.tsx'
 import { NewsFeed } from './NewsFeed.tsx'
+import { OrderPanel } from './OrderPanel.tsx'
+import { Positions } from './Positions.tsx'
 import { PriceChart, type ChartPoint } from './PriceChart.tsx'
 import { defaultSeed, endDay, startGame, useTradingStore } from './store.ts'
 
@@ -85,6 +89,11 @@ export function Dashboard() {
         )}
       </section>
 
+      <Accounts game={run?.game ?? null} />
+      <MarginMeter game={run?.game ?? null} />
+      <OrderPanel game={run?.game ?? null} />
+      <Positions game={run?.game ?? null} />
+
       <section className="panel">
         <label htmlFor="asset">
           Asset{' '}
@@ -101,7 +110,7 @@ export function Dashboard() {
 
       <CalendarPanel market={market} />
       <NewsFeed key={market?.feed.day ?? 0} feed={market?.feed ?? null} />
-      <DaySummaryPanel summary={run?.summary ?? null} />
+      <DaySummaryPanel summary={run?.summary ?? null} liquidations={run?.liquidations ?? []} />
     </main>
   )
 }

@@ -1,7 +1,8 @@
-// Sandbox admin log for one seeded run.
-// Player time goes through createGame and endDay. The market log is unchanged.
+// Sandbox admin log for one seeded run, and the batch risk report.
+// Player time goes through createGame, applyCommand, and endDay.
 // One [sim] accounts line per day follows that day's market log and account events.
 // --asset filters the market log. The closes table still lists every asset.
+// --batch prints one line per run and a [sim] report. It does not print the day log.
 
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { createGame, endDay } from '../sim/game.ts'
@@ -9,14 +10,21 @@ import { stateHash } from '../sim/hash.ts'
 import { formatEvent } from '../sim/log.ts'
 import { daySummary, formatSummary } from '../sim/summary.ts'
 import type { GameState, LogEvent } from '../sim/types.ts'
+import { runBatch } from './batch.ts'
+import { STRATEGY_NAMES, isStrategyName, type StrategyName } from './strategies.ts'
 
-const USAGE =
-  'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>] [--events-only] [--feed]'
+const USAGE = [
+  'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>] [--events-only] [--feed]',
+  `       npm run sim -- --seed <seed> --days <1-1000> --batch <1-5000> --strategy <${STRATEGY_NAMES.join('|')}>`,
+].join('\n')
 const SEED_PATTERN = /^[A-Za-z0-9-]{1,32}$/
 const DAYS_MIN = 1
 const DAYS_MAX = 1000
+const BATCH_MIN = 1
+const BATCH_MAX = 5000
 
-type CliOptions = {
+type SingleOptions = {
+  mode: 'single'
   seed: string
   days: number
   quiet: boolean
@@ -24,6 +32,16 @@ type CliOptions = {
   feed: boolean
   asset: string | undefined
 }
+
+type BatchOptions = {
+  mode: 'batch'
+  seed: string
+  days: number
+  batch: number
+  strategy: StrategyName
+}
+
+type CliOptions = SingleOptions | BatchOptions
 
 type CloseRow = {
   day: number
@@ -55,15 +73,23 @@ function readOptionValue(
   return { value: next, consumed: 1 }
 }
 
-function parseDays(text: string): number {
+function parseBoundedInt(text: string, name: string, min: number, max: number): number {
   if (!/^[1-9][0-9]*$/.test(text)) {
-    fail(`--days must be an integer from ${DAYS_MIN} to ${DAYS_MAX}, received ${JSON.stringify(text)}`)
+    fail(`--${name} must be an integer from ${min} to ${max}, received ${JSON.stringify(text)}`)
   }
-  const days = Number(text)
-  if (!Number.isSafeInteger(days) || days < DAYS_MIN || days > DAYS_MAX) {
-    fail(`--days must be an integer from ${DAYS_MIN} to ${DAYS_MAX}, received ${JSON.stringify(text)}`)
+  const value = Number(text)
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
+    fail(`--${name} must be an integer from ${min} to ${max}, received ${JSON.stringify(text)}`)
   }
-  return days
+  return value
+}
+
+function parseDays(text: string): number {
+  return parseBoundedInt(text, 'days', DAYS_MIN, DAYS_MAX)
+}
+
+function parseBatch(text: string): number {
+  return parseBoundedInt(text, 'batch', BATCH_MIN, BATCH_MAX)
 }
 
 function parseSeed(text: string): string {
@@ -86,6 +112,8 @@ function parseArgs(argv: readonly string[]): CliOptions {
   const ids = assetIds()
   let seed: string | undefined
   let days: number | undefined
+  let batch: number | undefined
+  let strategy: string | undefined
   let quiet = false
   let eventsOnly = false
   let feed = false
@@ -133,6 +161,20 @@ function parseArgs(argv: readonly string[]): CliOptions {
       i += read.consumed
       continue
     }
+    if (name === '--batch') {
+      if (batch !== undefined) fail('duplicate --batch')
+      const read = readOptionValue(argv, i, 'batch', inline)
+      batch = parseBatch(read.value)
+      i += read.consumed
+      continue
+    }
+    if (name === '--strategy') {
+      if (strategy !== undefined) fail('duplicate --strategy')
+      const read = readOptionValue(argv, i, 'strategy', inline)
+      strategy = read.value
+      i += read.consumed
+      continue
+    }
     if (arg.startsWith('-')) fail(`unknown argument ${JSON.stringify(arg)}`, true)
     fail(`unexpected argument ${JSON.stringify(arg)}`, true)
   }
@@ -144,7 +186,22 @@ function parseArgs(argv: readonly string[]): CliOptions {
     fail(`missing ${missing.join(' and ')}`, true)
   }
 
-  return { seed, days, quiet, eventsOnly, feed, asset }
+  if (strategy !== undefined && !isStrategyName(strategy)) {
+    fail(`unknown strategy ${JSON.stringify(strategy)}. strategies: ${STRATEGY_NAMES.join(', ')}`)
+  }
+  if (batch !== undefined || strategy !== undefined) {
+    if (batch === undefined) fail('--strategy requires --batch')
+    if (strategy === undefined) fail('--batch requires --strategy')
+    if (!isStrategyName(strategy)) {
+      fail(`unknown strategy ${JSON.stringify(strategy)}. strategies: ${STRATEGY_NAMES.join(', ')}`)
+    }
+    if (quiet || eventsOnly || feed || asset !== undefined) {
+      fail('--batch cannot be combined with --quiet, --asset, --events-only, or --feed')
+    }
+    return { mode: 'batch', seed, days, batch, strategy }
+  }
+
+  return { mode: 'single', seed, days, quiet, eventsOnly, feed, asset }
 }
 
 function isPriceKind(kind: LogEvent['kind']): boolean {
@@ -186,14 +243,14 @@ function matchesAsset(event: LogEvent, asset: string): boolean {
   }
 }
 
-function showDayLog(options: CliOptions): boolean {
+function showDayLog(options: SingleOptions): boolean {
   // Feed lines live in the day log, so the default log shows them.
   // --feed adds the day summary and does not hide event lines.
   // --events-only still hides price lines. --quiet hides the log, except feed lines when --feed is set.
   return !options.quiet || options.eventsOnly || options.feed
 }
 
-function printAccountLog(game: GameState, options: CliOptions): void {
+function printAccountLog(game: GameState, options: SingleOptions): void {
   if (!showDayLog(options)) return
   for (const event of game.log) {
     console.log(`[sim] ${formatEvent(event)}`)
@@ -224,7 +281,7 @@ function accountsLine(game: GameState): string {
   return line
 }
 
-function printDayLog(log: readonly LogEvent[], options: CliOptions): void {
+function printDayLog(log: readonly LogEvent[], options: SingleOptions): void {
   if (showDayLog(options)) {
     for (const event of log) {
       if (options.quiet && !options.eventsOnly && !isFeedKind(event.kind)) continue
@@ -263,7 +320,7 @@ function closeTable(ids: readonly string[], rows: readonly CloseRow[]): string[]
   return [render(header), ...body.map((cells) => render(cells))]
 }
 
-function run(options: CliOptions): void {
+function run(options: SingleOptions): void {
   const defs = MARKET_DEFINITIONS
   const ids = defs.assets.map((asset) => asset.id)
   const game = createGame(defs, options.seed)
@@ -297,4 +354,6 @@ function run(options: CliOptions): void {
   console.log(`[sim] stateHash=${stateHash(game.market)}`)
 }
 
-run(parseArgs(process.argv.slice(2)))
+const options = parseArgs(process.argv.slice(2))
+if (options.mode === 'batch') runBatch(options)
+else run(options)

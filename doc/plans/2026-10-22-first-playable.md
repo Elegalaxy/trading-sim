@@ -387,7 +387,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 12: Batch harness and risk report
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 11
 - Files to create or change: `src/harness/cli.ts`, `src/harness/batch.ts`, `src/harness/strategies.ts`, `src/harness/report.ts`
 - What changes:
@@ -402,7 +402,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: the example command for each strategy.
   - User: read the report. Note the liquidation rate for `maxLongIndex` and the share of capped days; these feed the "price feels random or predictable" risk.
-- Progress:
+- Progress: 2026-10-23: Added the batch harness and risk report. Files: src/harness/cli.ts, src/harness/batch.ts, src/harness/strategies.ts, src/harness/report.ts. `npm run sim -- --seed demo --batch 500 --strategy <name> --days 120` passed the 60s limit: hold 5.713s, maxLongIndex 5.229s, maxShortIndex 5.325s, random 5.510s. Largest daily move 8.000000% (on the cap; BLSW day 100 of run 86). Capped-day share 0.002617 (157 of 60000 run-days). Both are the same for every strategy. Liquidation rate (runs with at least one liquidation): hold 0, maxLongIndex 0.968 (484/500), maxShortIndex 0.468 (234/500), random 0. Total backstop write-off 0. Fair-value clip count 0. Two maxLongIndex invocations printed the same output. npm test passed (11 files, 61 tests); npm run typecheck passed. The golden market log was not updated.
 
 ### Step 13: Read-only dashboard, day advance, and admin log panel
 

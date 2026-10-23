@@ -59,17 +59,11 @@ label {
   padding: 12px 16px;
 }
 
-.seed-form,
 .panel label {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-}
-
-.seed-form p {
-  flex: 1 0 100%;
-  margin: 0;
 }
 
 input,
@@ -391,6 +385,54 @@ ul {
 }
 
 .visual-settings input {
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  accent-color: #3d6bf5;
+}
+
+.start-screen {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.start-form {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+}
+
+.start-form p {
+  margin: 0;
+}
+
+.primer p {
+  margin: 0 0 8px;
+}
+
+.primer p:last-child {
+  margin-bottom: 0;
+}
+
+.mode-choice {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.mode-choice legend {
+  padding: 0;
+  color: #e7e9ee;
+}
+
+.mode-choice input {
   width: 1.1rem;
   height: 1.1rem;
   padding: 0;

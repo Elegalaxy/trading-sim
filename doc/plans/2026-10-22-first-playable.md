@@ -661,7 +661,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 24: Start screen: modes, seed, and primer
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 23
 - Files to create or change: `src/ui/StartScreen.tsx`, `src/ui/Primer.tsx`, `src/ui/App.tsx`, `src/ui/store.ts`
 - What changes:
@@ -676,7 +676,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm run typecheck`, `npm test`.
   - User: start Seeded `demo` twice and compare prices, try seed `bad seed!`, then start Normal.
-- Progress:
+- Progress: 2026-10-23: Replaced the Step 13 seed field with one start screen. Files: src/ui/StartScreen.tsx, src/ui/Primer.tsx, src/ui/App.tsx, src/ui/store.ts, src/ui/Dashboard.tsx, src/ui/styles.css. Primer text is provisional. Seeded takes a seed of 1 to 32 characters from A-Z, a-z, 0-9, and hyphen. Normal draws a seed with crypto.getRandomValues. The existing job list stays, including locked course-gated jobs. Invalid seed message: "Seed must be 1 to 32 characters from A-Z, a-z, 0-9, and hyphen." The run does not start. Header shows the seed during the run. Debug print `[ui] newRun mode=<m> seed=<s> job=<j>` goes through debugLog. npm run typecheck passed. npm test passed (19 files, 105 tests, architecture violations=0). npm run lint passed. src/sim was not modified.
 
 ### Step 25: Local save, end-of-run screen, and separate scores
 

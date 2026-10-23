@@ -67,6 +67,12 @@ export function useTradingStore(): TradingSnapshot {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
+export type RunMode = 'seeded' | 'normal'
+
+function isRunMode(mode: string): mode is RunMode {
+  return mode === 'seeded' || mode === 'normal'
+}
+
 /** 8 characters from the harness seed alphabet. Rejects bytes that would bias the draw. */
 export function randomSeed(): string {
   if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') {
@@ -90,8 +96,6 @@ export function randomSeed(): string {
   if (!SEED_PATTERN.test(seed)) throw new Error(`generated seed failed validation, received ${JSON.stringify(seed)}`)
   return seed
 }
-
-export const defaultSeed = randomSeed()
 
 function commandLabel(cmd: unknown): string {
   if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) return 'invalid'
@@ -118,9 +122,18 @@ function readPrices(game: GameState): Record<string, number> {
   return prices
 }
 
-/** Reset to day 0. Does not advance the market. Returns a reason when the seed or starting job is rejected. */
-export function startGame(seed: string, jobId = 'jobless'): string | null {
-  if (typeof seed !== 'string' || !SEED_PATTERN.test(seed)) {
+/**
+ * Reset to day 0. Does not advance the market.
+ * Seeded uses the entered seed. Normal draws a new seed from crypto.getRandomValues.
+ * Returns a reason when the mode, seed, or starting job is rejected, and does not start a run.
+ */
+export function startGame(seed: string, jobId = 'jobless', mode: string = 'seeded'): string | null {
+  if (!isRunMode(mode)) {
+    const reason = 'Pick Seeded or Normal.'
+    console.error(`[ui] rejected mode ${JSON.stringify(mode)}: ${reason}`)
+    return reason
+  }
+  if (mode === 'seeded' && (typeof seed !== 'string' || !SEED_PATTERN.test(seed))) {
     const reason = 'Seed must be 1 to 32 characters from A-Z, a-z, 0-9, and hyphen.'
     console.error(`[ui] rejected seed ${JSON.stringify(seed)}: ${reason}`)
     return reason
@@ -144,9 +157,10 @@ export function startGame(seed: string, jobId = 'jobless'): string | null {
     debugLog('[store]', `job start ${jobId} rejected jobLocked`)
     return reason
   }
+  const chosenSeed = mode === 'normal' ? randomSeed() : seed
   let game: GameState
   try {
-    game = createGame(definitions, seed, {
+    game = createGame(definitions, chosenSeed, {
       jobs: JOB_DEFINITIONS,
       jobId,
       consumables: CONSUMABLE_DEFINITIONS,
@@ -156,8 +170,8 @@ export function startGame(seed: string, jobId = 'jobless'): string | null {
     console.error('[store] createGame failed', error)
     throw error
   }
-  run = { seed, game, closes: [], summary: null, liquidations: [], forcedSales: [] }
-  debugLog('[ui]', `seed=${seed}`)
+  run = { seed: chosenSeed, game, closes: [], summary: null, liquidations: [], forcedSales: [] }
+  debugLog('[ui]', `newRun mode=${mode} seed=${chosenSeed} job=${jobId}`)
   debugLog(
     '[store]',
     `job start ${jobId} slots=${chosen.slots} sleepHours=${chosen.sleepHours} pay=${chosen.payCents}`,

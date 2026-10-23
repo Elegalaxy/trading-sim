@@ -1,8 +1,7 @@
-import { useState, type FormEvent } from 'react'
-import { JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../content/index.ts'
+import { useState } from 'react'
+import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { activeJob } from '../sim/jobs.ts'
 import { viewedFeed } from '../sim/game.ts'
-import type { JobDefinition } from '../sim/types.ts'
 import { Accounts } from './Accounts.tsx'
 import { Consumables } from './Consumables.tsx'
 import { BillBanner } from './BillBanner.tsx'
@@ -20,40 +19,13 @@ import { StatMeters } from './StatMeters.tsx'
 import { JobPanel } from './JobPanel.tsx'
 import { LifestylePanel } from './LifestylePanel.tsx'
 import { LoanPanel } from './LoanPanel.tsx'
-import { defaultSeed, endDay, startGame, useTradingStore } from './store.ts'
-
-function startingJobLabel(job: JobDefinition): string {
-  if (job.requirement === 'none') return job.name
-  const course = job.requirement === 'basic' ? 'Basic' : 'Finance'
-  return `${job.name} (locked, needs ${course})`
-}
+import { endDay, useTradingStore } from './store.ts'
 
 export function Dashboard() {
   const snapshot = useTradingStore()
   const run = snapshot.run
   const assets = MARKET_DEFINITIONS.assets
-  const [seed, setSeed] = useState(defaultSeed)
-  const [jobId, setJobId] = useState('jobless')
-  const [seedError, setSeedError] = useState<string | null>(null)
   const [asset, setAsset] = useState(assets[0]?.id ?? 'NOVA')
-
-  function onStart(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    setSeedError(startGame(seed, jobId))
-  }
-
-  function onStartingJob(value: string): void {
-    const job = JOB_DEFINITIONS.find((item) => item.id === value)
-    if (job === undefined) {
-      console.error(`[ui] rejected starting job ${JSON.stringify(value)}`)
-      return
-    }
-    if (job.requirement !== 'none') {
-      console.error(`[ui] rejected starting job ${job.id}: locked`)
-      return
-    }
-    setJobId(value)
-  }
 
   function onAsset(value: string): void {
     if (!assets.some((item) => item.id === value)) {
@@ -78,39 +50,8 @@ export function Dashboard() {
     <main className="dashboard">
       <header>
         <h1>Trading Sim</h1>
-        <p>
-          {run === null
-            ? 'Choose a seed and press Start. Days do not advance until then.'
-            : `Seed ${run.seed}. Day ${run.game.market.day}.`}
-        </p>
+        <p>{run === null ? 'No run yet.' : `Seed ${run.seed}. Day ${run.game.market.day}.`}</p>
       </header>
-
-      <form className="panel seed-form" onSubmit={onStart}>
-        <label htmlFor="seed">
-          Seed{' '}
-          <input
-            id="seed"
-            value={seed}
-            maxLength={32}
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            onChange={(event) => setSeed(event.target.value)}
-          />
-        </label>
-        <button type="submit">Start</button>
-        <label htmlFor="starting-job">
-          Starting job{' '}
-          <select id="starting-job" value={jobId} onChange={(event) => onStartingJob(event.target.value)}>
-            {JOB_DEFINITIONS.map((job) => (
-              <option key={job.id} value={job.id} disabled={job.requirement !== 'none'}>
-                {startingJobLabel(job)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {seedError !== null ? <p role="alert">{seedError}</p> : null}
-      </form>
 
       <StatMeters game={run?.game ?? null} />
       <DayTimeline game={run?.game ?? null} />

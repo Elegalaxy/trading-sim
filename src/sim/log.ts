@@ -457,6 +457,31 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
         `expenses=${formatNumber(event.expensesCents)}`,
         `streak=${formatNumber(event.streak)}`,
       ].join(' ')
+    case 'statChange':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=statChange',
+        `stat=${formatToken(event.stat, 'stat')}`,
+        `before=${formatNumber(event.before)}`,
+        `cause=${formatToken(event.cause, 'cause')}`,
+        `delta=${formatNumber(event.delta)}`,
+        `after=${formatNumber(event.after)}`,
+      ].join(' ')
+    case 'consume':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=consume',
+        `item=${formatToken(event.item, 'item')}`,
+        `cost=${formatNumber(event.cost)}`,
+        `energy=${formatNumber(event.energyDelta)}`,
+        `stress=${formatNumber(event.stressDelta)}`,
+      ].join(' ')
+    case 'newsRead':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=newsRead',
+        `cost=${formatNumber(event.cost)}`,
+      ].join(' ')
     default: {
       const unknown: never = event
       throw new Error(`formatEvent cannot format ${describeValue(unknown)}`)

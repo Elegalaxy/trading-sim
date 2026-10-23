@@ -88,6 +88,8 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
     bill: null,
     runEnd: null,
     fi: initialFi(),
+    stats: state.stats,
+    consumables: state.consumables,
   }
   for (const id of ids) {
     const position = state.positions[id]

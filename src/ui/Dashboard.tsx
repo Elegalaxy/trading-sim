@@ -3,6 +3,7 @@ import { JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../content/index.ts'
 import { activeJob } from '../sim/jobs.ts'
 import type { JobDefinition } from '../sim/types.ts'
 import { Accounts } from './Accounts.tsx'
+import { Consumables } from './Consumables.tsx'
 import { BillBanner } from './BillBanner.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
 import { DaySummaryPanel } from './DaySummary.tsx'
@@ -14,6 +15,7 @@ import { OrderPanel } from './OrderPanel.tsx'
 import { Positions } from './Positions.tsx'
 import { PriceChart, type ChartPoint } from './PriceChart.tsx'
 import { RunEnd } from './RunEnd.tsx'
+import { StatMeters } from './StatMeters.tsx'
 import { JobPanel } from './JobPanel.tsx'
 import { defaultSeed, endDay, startGame, useTradingStore } from './store.ts'
 
@@ -107,6 +109,7 @@ export function Dashboard() {
         {seedError !== null ? <p role="alert">{seedError}</p> : null}
       </form>
 
+      <StatMeters game={run?.game ?? null} />
       <DayTimeline game={run?.game ?? null} />
       <JobPanel game={run?.game ?? null} />
       {run !== null ? <RunEnd seed={run.seed} game={run.game} /> : null}
@@ -144,6 +147,7 @@ export function Dashboard() {
       </section>
 
       <Accounts game={run?.game ?? null} />
+      <Consumables game={run?.game ?? null} />
       <MarginMeter game={run?.game ?? null} />
       <OrderPanel game={run?.game ?? null} />
       <Positions game={run?.game ?? null} />
@@ -167,6 +171,7 @@ export function Dashboard() {
         key={market?.feed.day ?? 0}
         feed={market?.feed ?? null}
         job={run === null ? null : activeJob(run.game.job)}
+        newsReads={run?.game.stats.newsReads ?? 0}
       />
       <DaySummaryPanel summary={run?.summary ?? null} liquidations={run?.liquidations ?? []} />
     </main>

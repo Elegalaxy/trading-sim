@@ -7,7 +7,7 @@ import type { FairValueChangeEvent, LogEvent } from '../sim/types.ts'
 import { CALENDAR_DEFINITIONS } from './calendar.ts'
 import { ENVIRONMENT_DEFINITIONS } from './environment.ts'
 import { EVENT_DEFINITIONS } from './events.ts'
-import { MARKET_DEFINITIONS } from './index.ts'
+import { CONSUMABLE_DEFINITIONS, MARKET_DEFINITIONS } from './index.ts'
 import { SOURCE_DEFINITIONS } from './sources.ts'
 
 const io = (await import(['node', 'fs'].join(':'))) as {
@@ -239,5 +239,15 @@ describe('provisional content', () => {
       break
     }
     expect(traced).toBe(true)
+  })
+
+  it('lists the provisional consumables once per item', () => {
+    expect(CONSUMABLE_DEFINITIONS).toEqual([
+      { id: 'coffee', name: 'Coffee', costCents: 1_000, energy: 15, stress: 0 },
+      { id: 'herbalTea', name: 'Herbal tea', costCents: 1_000, energy: 0, stress: -12 },
+      { id: 'homeCookedMeal', name: 'Home-cooked meal', costCents: 2_000, energy: 8, stress: -6 },
+      { id: 'nightOut', name: 'Night out', costCents: 6_000, energy: 0, stress: -25 },
+    ])
+    debugContent(`consumables=${CONSUMABLE_DEFINITIONS.map((item) => item.id).join(',')}`)
   })
 })

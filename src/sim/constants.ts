@@ -170,7 +170,7 @@ export const MARGIN_DAYS_PER_YEAR = 365
 /**
  * Section 7. Provisional wipe-out. After the end-of-day check, trading equity
  * is below this fraction of its value at the start of the day (before the
- * market step). The flag does not end the run and does not change stress.
+ * market step). The flag does not end the run. Stats reads it for the stress spike.
  * Integer test: end × DENOMINATOR < start × NUMERATOR.
  */
 export const WIPE_OUT_RATIO_NUMERATOR = 10

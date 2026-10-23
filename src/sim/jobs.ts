@@ -1,8 +1,8 @@
 // Jobs. The menu is passed in; this file does not import content.
 // A starting job applies immediately. A later switch or quit waits JOB_NOTICE_DAYS.
 // Pay is monthly pay × days worked that month ÷ 30, rounded half away from zero.
-// Energy and stress costs stay on the definition and are not applied here.
-// Perks change the bill or the visible feed. They do not draw and do not change the stored feed.
+// Energy and stress costs stay on the definition. stats.ts applies them at the end of the day.
+// Perks change the bill, the visible feed, or stats. They do not draw and do not change the stored feed.
 
 import {
   BASE_MONTHLY_EXPENSES_CENTS,
@@ -367,7 +367,7 @@ export function billDueForJob(player: PlayerJob, day: number): { amountCents: nu
 
 /**
  * Apply a notice that has come due. Visibility perks log `perkApplied` here.
- * Staff discount logs when the bill is cut. Steady routine and quiet breaks stay stored.
+ * Staff discount logs when the bill is cut. Steady routine and quiet breaks are applied by stats.
  */
 export function applyDueJobChange(state: GameState): Array<JobChangedEvent | PerkAppliedEvent> {
   const pending = state.job.pending

@@ -675,7 +675,7 @@ export type BackstopWriteOffEvent = {
 
 /**
  * Trading equity ended below 10% of its value at the start of the day.
- * This does not end the run and does not change stress.
+ * This does not end the run. The stress spike is applied from this event.
  */
 export type WipeOutEvent = {
   kind: 'wipeOut'
@@ -740,8 +740,7 @@ export type JobChangedEvent = {
 
 /**
  * A perk changed what the player pays or what the feed shows.
- * Steady routine and quiet breaks are stored on the job and are not logged
- * until a later step applies them.
+ * Steady routine and quiet breaks change stats. They are not logged here.
  */
 export type PerkAppliedEvent = {
   kind: 'perkApplied'
@@ -812,6 +811,44 @@ export type FiCheckEvent = {
   streak: number
 }
 
+export const STAT_NAMES = ['energy', 'stress'] as const
+
+export type StatName = (typeof STAT_NAMES)[number]
+
+/**
+ * One stat moved. `delta` is the applied change after the 0 to 100 clamp,
+ * so before + delta = after. `cause` is an id such as job, shortSleep, or consume.
+ */
+export type StatChangeEvent = {
+  kind: 'statChange'
+  day: number
+  stat: StatName
+  before: number
+  cause: string
+  delta: number
+  after: number
+}
+
+/**
+ * One consumable paid from cash. `cost` is cents.
+ * `energyDelta` and `stressDelta` are the applied changes after the perk and the clamp.
+ */
+export type ConsumeEvent = {
+  kind: 'consume'
+  day: number
+  item: string
+  cost: number
+  energyDelta: number
+  stressDelta: number
+}
+
+/** The player read the news. `cost` is the energy price, 0 when the read was free. */
+export type NewsReadEvent = {
+  kind: 'newsRead'
+  day: number
+  cost: number
+}
+
 /** Player commands since the previous end of day, plus a bill payment or cover check from those commands. */
 export type CommandLogEvent =
   | TransferEvent
@@ -824,6 +861,9 @@ export type CommandLogEvent =
   | BillPaidEvent
   | CoverableCheckEvent
   | RunEndedEvent
+  | StatChangeEvent
+  | ConsumeEvent
+  | NewsReadEvent
 
 export type MarginLogEvent =
   | MarginInterestEvent
@@ -932,7 +972,7 @@ export type CourseId = (typeof COURSE_IDS)[number]
 
 export type JobRequirement = 'none' | CourseId
 
-/** One perk. `none` is jobless. Steady routine and quiet breaks are stored until a later step. */
+/** One perk. `none` is jobless. Steady routine and quiet breaks change stats. */
 export const JOB_PERKS = [
   'none',
   'staffDiscount',
@@ -948,7 +988,7 @@ export type JobPerk = (typeof JOB_PERKS)[number]
  * One job on the menu. Passed into the simulation; `src/sim` does not import content.
  * `slots` is 0 (jobless), 1 (part-time, 08:00–12:00), or 2 (full-time, 08:00–16:00).
  * `payCents` is the monthly salary before the 30-day proration.
- * `energyCost` and `stressCost` are stored per day and are not applied yet.
+ * `energyCost` and `stressCost` are applied at the end of each day that job was active.
  */
 export type JobDefinition = {
   id: string
@@ -972,6 +1012,28 @@ export type JobWorked = {
 export type PendingJobChange = {
   jobId: string
   effectiveDay: number
+}
+
+/**
+ * One food or drink. Passed in with the job menu. `src/sim` does not import content.
+ * `costCents` is paid from cash. `energy` and `stress` are signed.
+ * Positive energy raises energy. Negative stress lowers stress.
+ * Using one does not take a section of the day.
+ */
+export type ConsumableDefinition = {
+  id: string
+  name: string
+  costCents: number
+  energy: number
+  stress: number
+}
+
+/** Energy, stress, and what was used since the last end of day. */
+export type PlayerStats = {
+  energy: number
+  stress: number
+  consumed: string[]
+  newsReads: number
 }
 
 /**
@@ -1021,6 +1083,8 @@ export type FiTracker = {
  * `job` is employment, the notice, and the days worked since the last salary. It is not on the market.
  * `bill` is set while expenses are unpaid. `runEnd` is set on an FI win, a bill loss, or day 120.
  * `fi` holds the interest rows and the last FI check. It does not copy the realized ledger.
+ * `stats` is energy and stress. `consumables` is the menu copied at the start.
+ * End-of-day stat lines sit on `log` with the other account events. They are not on the market.
  */
 export type GameState = {
   market: MarketState
@@ -1035,4 +1099,6 @@ export type GameState = {
   bill: PendingBill | null
   runEnd: RunEnd | null
   fi: FiTracker
+  stats: PlayerStats
+  consumables: ConsumableDefinition[]
 }

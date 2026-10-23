@@ -2,7 +2,7 @@
 // MarketState.log is replaced on every endDay.
 
 import { useSyncExternalStore } from 'react'
-import { JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../content/index.ts'
+import { CONSUMABLE_DEFINITIONS, JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../content/index.ts'
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
@@ -144,7 +144,7 @@ export function startGame(seed: string, jobId = 'jobless'): string | null {
   }
   let game: GameState
   try {
-    game = createGame(definitions, seed, { jobs: JOB_DEFINITIONS, jobId })
+    game = createGame(definitions, seed, { jobs: JOB_DEFINITIONS, jobId, consumables: CONSUMABLE_DEFINITIONS })
   } catch (error) {
     console.error('[store] createGame failed', error)
     throw error
@@ -218,6 +218,46 @@ function isSetJobCommand(cmd: unknown): boolean {
   return typeof cmd === 'object' && cmd !== null && !Array.isArray(cmd) && (cmd as { type?: unknown }).type === 'setJob'
 }
 
+function isTypedCommand(cmd: unknown, type: string): boolean {
+  return typeof cmd === 'object' && cmd !== null && !Array.isArray(cmd) && (cmd as { type?: unknown }).type === type
+}
+
+/** `[store] consume <item> accepted|rejected`. */
+function logConsume(cmd: unknown, game: GameState | null, accepted: boolean, reason: string): void {
+  if (!isTypedCommand(cmd, 'consume')) return
+  const item = commandToken((cmd as { item?: unknown }).item)
+  if (!accepted || game === null) {
+    debugLog('[store]', `consume ${item} rejected ${reason}`)
+    return
+  }
+  const event = [...game.pending].reverse().find((entry) => entry.kind === 'consume')
+  if (event === undefined || event.kind !== 'consume') {
+    console.error('[store] consume accepted without a consume event')
+    debugLog('[store]', `consume ${item} accepted missing-event`)
+    return
+  }
+  debugLog(
+    '[store]',
+    `consume ${event.item} cost=${event.cost} energy=${event.energyDelta} stress=${event.stressDelta}`,
+  )
+}
+
+/** `[store] readNews cost=... energy=...` when the read is accepted. */
+function logNewsRead(cmd: unknown, game: GameState | null, accepted: boolean, reason: string): void {
+  if (!isTypedCommand(cmd, 'readNews')) return
+  if (!accepted || game === null) {
+    debugLog('[store]', `readNews rejected ${reason}`)
+    return
+  }
+  const event = [...game.pending].reverse().find((entry) => entry.kind === 'newsRead')
+  if (event === undefined || event.kind !== 'newsRead') {
+    console.error('[store] readNews accepted without a newsRead event')
+    debugLog('[store]', 'readNews accepted missing-event')
+    return
+  }
+  debugLog('[store]', `readNews cost=${event.cost} energy=${game.stats.energy}`)
+}
+
 /** `[store] job setJob ... accepted|rejected`. */
 function logJobCommand(cmd: unknown, accepted: boolean, reason: string, effectiveDay: number | null): void {
   if (!isSetJobCommand(cmd)) return
@@ -281,6 +321,8 @@ export function dispatch(cmd: unknown): DispatchResult {
     logOrderOrTransfer(cmd, false, 'notStarted')
     if (isSkipCommand(cmd)) debugLog('[store]', 'skip rejected notStarted')
     logJobCommand(cmd, false, 'notStarted', null)
+    logConsume(cmd, null, false, 'notStarted')
+    logNewsRead(cmd, null, false, 'notStarted')
     return { accepted: false, reason: 'notStarted' }
   }
   if (run.game.runEnd !== null) {
@@ -289,6 +331,8 @@ export function dispatch(cmd: unknown): DispatchResult {
     logOrderOrTransfer(cmd, false, 'runEnded')
     if (isSkipCommand(cmd)) debugLog('[store]', 'skip rejected runEnded')
     logJobCommand(cmd, false, 'runEnded', null)
+    logConsume(cmd, run.game, false, 'runEnded')
+    logNewsRead(cmd, run.game, false, 'runEnded')
     return { accepted: false, reason: 'runEnded' }
   }
   const from = run.game.section
@@ -307,6 +351,8 @@ export function dispatch(cmd: unknown): DispatchResult {
     logOrderOrTransfer(cmd, false, rejection.reason)
     logSkip(cmd, from, to, false, rejection.reason)
     logJobCommand(cmd, false, rejection.reason, null)
+    logConsume(cmd, run.game, false, rejection.reason)
+    logNewsRead(cmd, run.game, false, rejection.reason)
     logBill(run.game)
     logRunEnd(run.game)
     publish()
@@ -316,6 +362,8 @@ export function dispatch(cmd: unknown): DispatchResult {
   logOrderOrTransfer(cmd, true, '')
   logSkip(cmd, from, to, true, '')
   logJobCommand(cmd, true, '', run.game.job.pending?.effectiveDay ?? null)
+  logConsume(cmd, run.game, true, '')
+  logNewsRead(cmd, run.game, true, '')
   logBill(run.game)
   logRunEnd(run.game)
   publish()
@@ -345,6 +393,7 @@ export function endDay(): void {
   logBill(run.game)
   logRunEnd(run.game)
   logJobDay(run.game)
+  debugLog('[store]', `stats energy=${run.game.stats.energy} stress=${run.game.stats.stress}`)
   if (run.game.market.day === dayBefore) {
     const day = run.game.market.day
     const events = run.game.market.log.length

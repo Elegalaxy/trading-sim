@@ -312,3 +312,47 @@ ul {
   gap: 8px;
   align-items: center;
 }
+
+.stat-meter {
+  margin-top: 8px;
+}
+
+.stat-warning {
+  background: #2a2618;
+  border: 1px solid #e0b341;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.stat-track {
+  height: 14px;
+  margin: 6px 0 4px;
+  background: #0e1118;
+  border: 1px solid #6a738c;
+  border-radius: 7px;
+}
+
+.stat-fill {
+  height: 100%;
+  background: #6aa2ff;
+  border-radius: 7px;
+}
+
+.stat-warning .stat-fill {
+  background: #e0b341;
+}
+
+.consumable-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.consumable-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}

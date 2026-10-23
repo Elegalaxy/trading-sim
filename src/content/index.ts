@@ -18,6 +18,7 @@ export { CALENDAR_DEFINITIONS } from './calendar.ts'
 export { ENVIRONMENT_DEFINITIONS } from './environment.ts'
 export { EVENT_DEFINITIONS } from './events.ts'
 export { SOURCE_DEFINITIONS } from './sources.ts'
+export { CONSUMABLE_DEFINITIONS } from './consumables.ts'
 export { JOB_DEFINITIONS } from './jobs.ts'
 export type {
   AssetDefinition,

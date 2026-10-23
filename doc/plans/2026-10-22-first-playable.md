@@ -545,7 +545,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 19: Energy, stress, sleep, and consumables
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 18, Q10, Q11
 - Files to create or change: `src/sim/stats.ts`, `src/sim/stats.test.ts`, `src/content/consumables.ts`, `src/sim/game.ts`, `src/sim/feed.ts`, `src/ui/StatMeters.tsx`, `src/ui/Consumables.tsx`, `src/ui/store.ts`
 - What changes:
@@ -565,7 +565,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: work Night-shift warehouse for 5 days without eating and watch the energy meter reach the warning color, then buy Coffee and see it rise.
-- Progress:
+- Progress: 2026-10-23: Added energy and stress, short sleep, consumables, and the news-read cost. Files: src/sim/stats.ts, src/sim/stats.test.ts, src/content/consumables.ts, src/content/index.ts, src/content/content.test.ts, src/sim/game.ts, src/sim/types.ts, src/sim/log.ts, src/sim/constants.ts, src/sim/monthly.ts, src/sim/jobs.ts, src/content/jobs.ts, src/ui/StatMeters.tsx, src/ui/Consumables.tsx, src/ui/NewsFeed.tsx, src/ui/Dashboard.tsx, src/ui/store.ts, src/ui/styles.css. Feed generation was not changed. Read news is a readNews command. There is no drawdown log flag; a large drawdown is a trading-equity drop of 10% or more from the start of that day. Margin warning and wipe-out are read from those log events. A day that is all three adds +10, +8, and +25. Home recovery is not applied. Office clerk with no food: energy 80, 70, 60, 50. Night-shift warehouse: 80 to 52 (job −20, short sleep −8). Stats clamp at 0 and 100. npm run typecheck passed; npm test passed (16 files, 86 tests); npm run lint passed. `npm run sim -- --seed demo --days 10 --quiet` stateHash=17ad2ed590c04463, same closes. Browser, seed demo, Night-shift warehouse: day 0 energy 80 stress 20; day 2 energy 24 (low) stress 52; Coffee to 39, cash 299000; second Coffee rejected alreadyConsumed; first Read news cost 0 and showed the feed; second Read news cost 2, energy 37. Day 2 closes matched the demo hash (NOVA=4629).
 
 ### Step 20: Lifestyle upgrades, downgrades, and courses
 

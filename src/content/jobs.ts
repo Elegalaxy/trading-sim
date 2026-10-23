@@ -2,7 +2,7 @@
 // Pay is monthly, before the 30-day proration in the sim.
 // Office clerk, trading-floor assistant, and freelance analyst name a course.
 // Those courses are not sold yet, so the jobs stay locked.
-// Energy and stress costs are stored for a later step and are not applied here.
+// Energy and stress costs are applied at the end of the day.
 
 import type { JobDefinition } from '../sim/types.ts'
 

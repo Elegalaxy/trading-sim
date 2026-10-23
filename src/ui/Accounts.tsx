@@ -83,6 +83,12 @@ export function Accounts({ game }: { game: GameState | null }) {
       setResultMessage('Start a game first.')
       return
     }
+    if (game.runEnd !== null) {
+      console.error('[ui] rejected transfer: run ended')
+      debugLog('[ui]', 'transfer rejected before dispatch: runEnded')
+      setResultMessage('The run has ended.')
+      return
+    }
     const outcome = dispatch({ type: 'transfer', from, to, amountCents: parsed.value })
     if (outcome.accepted) {
       setResultMessage('Transfer accepted.')
@@ -138,7 +144,9 @@ export function Accounts({ game }: { game: GameState | null }) {
             }}
           />
         </label>
-        <button type="submit">Transfer</button>
+        <button type="submit" disabled={game?.runEnd != null}>
+          Transfer
+        </button>
         {amountError !== null ? (
           <p className="trade-alert" role="alert">
             {amountError}

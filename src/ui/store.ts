@@ -181,6 +181,16 @@ function logOrderOrTransfer(cmd: unknown, accepted: boolean, reason: string): vo
   }
 }
 
+/** `[store] runEnded outcome=... reason=... day=... netWorth=... score=...` */
+function logRunEnd(game: GameState): void {
+  const end = game.runEnd
+  if (end === null) return
+  debugLog(
+    '[store]',
+    `runEnded outcome=${end.outcome} reason=${end.reason} day=${end.day} netWorth=${end.netWorthCents} score=${end.score}`,
+  )
+}
+
 /** `[store] bill pending|paid|runEnded ...` when a bill or a lost run is in view. */
 function logBill(game: GameState): void {
   if (game.runEnd !== null) {
@@ -213,6 +223,13 @@ export function dispatch(cmd: unknown): DispatchResult {
     if (isSkipCommand(cmd)) debugLog('[store]', 'skip rejected notStarted')
     return { accepted: false, reason: 'notStarted' }
   }
+  if (run.game.runEnd !== null) {
+    logRunEnd(run.game)
+    debugLog('[store]', `dispatch ${label} -> rejected runEnded`)
+    logOrderOrTransfer(cmd, false, 'runEnded')
+    if (isSkipCommand(cmd)) debugLog('[store]', 'skip rejected runEnded')
+    return { accepted: false, reason: 'runEnded' }
+  }
   const from = run.game.section
   const before = run.game.pending.length
   try {
@@ -229,6 +246,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logOrderOrTransfer(cmd, false, rejection.reason)
     logSkip(cmd, from, to, false, rejection.reason)
     logBill(run.game)
+    logRunEnd(run.game)
     publish()
     return { accepted: false, reason: rejection.reason }
   }
@@ -236,6 +254,7 @@ export function dispatch(cmd: unknown): DispatchResult {
   logOrderOrTransfer(cmd, true, '')
   logSkip(cmd, from, to, true, '')
   logBill(run.game)
+  logRunEnd(run.game)
   publish()
   return { accepted: true, reason: null }
 }
@@ -250,8 +269,10 @@ export function endDay(): void {
   const block = endDayBlockReason(run.game)
   if (block !== null) {
     debugLog('[store]', `bill endDay blocked ${block} day=${run.game.market.day}`)
+    if (block === 'runEnded') logRunEnd(run.game)
     return
   }
+  const dayBefore = run.game.market.day
   try {
     simEndDay(run.game, definitions)
   } catch (error) {
@@ -259,6 +280,15 @@ export function endDay(): void {
     throw error
   }
   logBill(run.game)
+  logRunEnd(run.game)
+  if (run.game.market.day === dayBefore) {
+    const day = run.game.market.day
+    const events = run.game.market.log.length
+    const hash = stateHash(run.game.market)
+    debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
+    publish()
+    return
+  }
   const prices = readPrices(run.game)
   const summary = daySummary(run.game.market.log)
   const liquidations = readLiquidations(run.game)

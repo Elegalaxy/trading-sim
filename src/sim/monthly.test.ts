@@ -246,7 +246,13 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
     expect(lost.accounts.tradingCents).toBe(0)
     expect(lost.positions).toEqual({})
     expect(lost.bill).toBeNull()
-    expect(lost.runEnd).toEqual({ outcome: 'lost', day: 30, reason: RUN_LOST_BILL_REASON })
+    expect(lost.runEnd).toEqual({
+      outcome: 'lost',
+      day: 30,
+      reason: RUN_LOST_BILL_REASON,
+      netWorthCents: 0,
+      score: 0,
+    })
     expect(eventKind(lost, 'billPaid')).toBeUndefined()
     const check = coverable(lost)
     expect(check.cashCents).toBe(0)

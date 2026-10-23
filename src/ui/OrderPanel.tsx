@@ -153,6 +153,12 @@ export function OrderPanel({ game }: { game: GameState | null }) {
       setResultMessage('Start a game first.')
       return
     }
+    if (game.runEnd !== null) {
+      console.error('[ui] rejected order: run ended')
+      debugLog('[ui]', 'order rejected before dispatch: runEnded')
+      setResultMessage('The run has ended.')
+      return
+    }
     const outcome = dispatch({ type: 'order', asset, side, quantity: parsed.value })
     if (outcome.accepted) {
       setResultMessage('Order accepted.')
@@ -199,7 +205,9 @@ export function OrderPanel({ game }: { game: GameState | null }) {
             }}
           />
         </label>
-        <button type="submit">Place order</button>
+        <button type="submit" disabled={game?.runEnd != null}>
+          Place order
+        </button>
         {quantityError !== null ? (
           <p className="trade-alert" role="alert">
             {quantityError}

@@ -422,6 +422,15 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
         'kind=runEnded',
         `reason=${formatToken(event.reason, 'reason')}`,
       ].join(' ')
+    case 'fiCheck':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=fiCheck',
+        `windowDays=${formatNumber(event.windowDays)}`,
+        `passive=${formatNumber(event.passiveCents)}`,
+        `expenses=${formatNumber(event.expensesCents)}`,
+        `streak=${formatNumber(event.streak)}`,
+      ].join(' ')
     default: {
       const unknown: never = event
       throw new Error(`formatEvent cannot format ${describeValue(unknown)}`)

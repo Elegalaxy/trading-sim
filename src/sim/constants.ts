@@ -74,8 +74,31 @@ export const MONTHLY_SALARY_CENTS = 0
 /**
  * Section 6. Provisional base monthly expenses: 1E.
  * The bill copies this amount when it comes due and does not change after that.
+ * The FI check uses this as monthly expenses until lifestyle exists.
  */
 export const BASE_MONTHLY_EXPENSES_CENTS = CENTS_PER_E
+
+/**
+ * Section 8. Provisional FI window and hold.
+ * Passive income is the realized ledger (already net of fees, spread, borrow
+ * fees, and margin interest) plus savings interest received. The rolling sum
+ * uses this many day-numbers. The hold counts only from `FI_STREAK_FROM_DAY`.
+ * The job is not required to be quit.
+ */
+export const FI_WINDOW_DAYS = 30
+export const FI_HOLD_DAYS = 5
+export const FI_STREAK_FROM_DAY = 30
+
+/** Section 8. A run seals at the end of this day. The day-120 bill is not skipped. */
+export const RUN_LENGTH_DAYS = 120
+
+/**
+ * Section 8. Provisional score.
+ * Lost scores 0. Otherwise score = truncTowardZero(netWorthCents × SCORE_PER_E / CENTS_PER_E),
+ * plus SCORE_PER_DAY_LEFT × (RUN_LENGTH_DAYS − end day) on a win. 1E = CENTS_PER_E.
+ */
+export const SCORE_PER_E = 100
+export const SCORE_PER_DAY_LEFT = 10
 
 /** Section 12. Unused loan room in the bill cover check. 0 until loans exist. */
 export const UNUSED_LOAN_LIMIT_CENTS = 0

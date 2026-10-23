@@ -5,11 +5,13 @@ import { BillBanner } from './BillBanner.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
 import { DaySummaryPanel } from './DaySummary.tsx'
 import { DayTimeline } from './DayTimeline.tsx'
+import { FiMeter } from './FiMeter.tsx'
 import { MarginMeter } from './MarginMeter.tsx'
 import { NewsFeed } from './NewsFeed.tsx'
 import { OrderPanel } from './OrderPanel.tsx'
 import { Positions } from './Positions.tsx'
 import { PriceChart, type ChartPoint } from './PriceChart.tsx'
+import { RunEnd } from './RunEnd.tsx'
 import { defaultSeed, endDay, startGame, useTradingStore } from './store.ts'
 
 export function Dashboard() {
@@ -73,7 +75,9 @@ export function Dashboard() {
       </form>
 
       <DayTimeline game={run?.game ?? null} />
+      {run !== null ? <RunEnd seed={run.seed} game={run.game} /> : null}
       <BillBanner game={run?.game ?? null} />
+      <FiMeter game={run?.game ?? null} />
 
       <section className="panel">
         <button

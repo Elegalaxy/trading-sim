@@ -499,7 +499,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 17: FI tracking, run end, and score
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 16
 - Files to create or change: `src/sim/fi.ts`, `src/sim/fi.test.ts`, `src/sim/game.ts`, `src/sim/log.ts`, `src/ui/FiMeter.tsx`, `src/ui/RunEnd.tsx`, `src/ui/store.ts`
 - What changes:
@@ -515,7 +515,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: play a seed to day 120, or use a test fixture that reaches FI, and read the end screen.
-- Progress:
+- Progress: 2026-10-23: Added the FI window, the 5-day hold from day 30, run end, and the provisional score. Files: src/sim/fi.ts, src/sim/fi.test.ts, src/sim/game.ts, src/sim/log.ts, src/sim/types.ts, src/sim/constants.ts, src/sim/monthly.ts, src/sim/monthly.test.ts, src/ui/FiMeter.tsx, src/ui/RunEnd.tsx, src/ui/store.ts, src/ui/Dashboard.tsx, src/ui/BillBanner.tsx, src/ui/OrderPanel.tsx, src/ui/Accounts.tsx, src/ui/styles.css. Passive income is the realized ledger plus savings interest received. Salary cash and unrealized gains are not added. Margin interest is not subtracted twice (day 1 loan interest 19, passive -19). Day 29 can cover expenses with streak 0. Day 33 is streak 4 and does not win. Day 34 wins, score 1360 (net worth 500000 cents, 86 days left). Day 120 keeps the pending bill, then seals at the same market hash without another price step; score 200, net worth 200000 cents. A bill loss still scores 0. npm run typecheck passed. npm test passed (14 files, 75 tests). npm run lint passed. The golden market log was not updated.
 
 ### Step 18: Jobs
 

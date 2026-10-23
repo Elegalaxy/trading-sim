@@ -11,9 +11,8 @@ function cents(value: number, label: string): string {
 
 export function BillBanner({ game }: { game: GameState | null }) {
   const day = game?.market.day ?? null
-  const ended = game?.runEnd?.reason ?? null
   const billDay = game?.bill?.day ?? null
-  const key = `${day ?? 'x'}|${ended ?? ''}|${billDay ?? ''}`
+  const key = `${day ?? 'x'}|${billDay ?? ''}`
   const [message, setMessage] = useState<string | null>(null)
   const [tracked, setTracked] = useState(key)
   if (tracked !== key) {
@@ -21,21 +20,9 @@ export function BillBanner({ game }: { game: GameState | null }) {
     setMessage(null)
   }
 
-  if (game === null || (game.bill === null && game.runEnd === null)) return null
-
-  if (game.runEnd !== null) {
-    return (
-      <section className="panel bill-ended" role="alert" aria-label="Run ended">
-        <h2>Run ended</h2>
-        <p>
-          Day {cents(game.runEnd.day, 'run end day')}. You cannot cover the bill. The day cannot advance.
-        </p>
-      </section>
-    )
-  }
+  if (game === null || game.runEnd !== null || game.bill === null) return null
 
   const bill = game.bill
-  if (bill === null) return null
   const shortfall = bill.amountCents - game.accounts.cashCents
   if (!Number.isSafeInteger(shortfall)) {
     throw new Error(`bill shortfall is not a safe integer, received ${String(shortfall)}`)

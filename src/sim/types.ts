@@ -566,8 +566,9 @@ export type OpenPosition = {
 
 /**
  * One market day's net realized result, in cents: closed-position P&L minus
- * trade fees, borrow fees, and margin interest. Kept for the Step 17 FI window.
- * This step does not check FI. A missing day means zero.
+ * trade fees, borrow fees, and margin interest. The FI check reads this total
+ * and does not subtract fees, spread, borrow, or margin interest again.
+ * A missing day means zero.
  */
 export type RealizedDay = {
   day: number
@@ -760,6 +761,20 @@ export type RunEndedEvent = {
   reason: string
 }
 
+/**
+ * End-of-day FI check. `passiveCents` is the rolling window sum.
+ * `windowDays` is how many day-numbers are in that sum.
+ * `streak` counts covered days from day 30, and only those days.
+ */
+export type FiCheckEvent = {
+  kind: 'fiCheck'
+  day: number
+  windowDays: number
+  passiveCents: number
+  expensesCents: number
+  streak: number
+}
+
 /** Player commands since the previous end of day, plus a bill payment or cover check from those commands. */
 export type CommandLogEvent =
   | TransferEvent
@@ -789,6 +804,7 @@ export type AccountLogEvent =
   | SalaryPaidEvent
   | BillDueEvent
   | BillPendingEvent
+  | FiCheckEvent
 
 export type LogEvent =
   | NoiseRollEvent
@@ -846,11 +862,47 @@ export type PendingBill = {
   amountCents: number
 }
 
-/** A lost run. Further days do not advance. */
+/** How a run stopped. `finished` is day 120 without a win or a loss. */
+export const RUN_OUTCOMES = ['won', 'lost', 'finished'] as const
+
+export type RunOutcome = (typeof RUN_OUTCOMES)[number]
+
+/**
+ * The run is over. Further days do not advance and commands are rejected.
+ * `netWorthCents` and `score` are fixed here. Lost scores 0.
+ */
 export type RunEnd = {
-  outcome: 'lost'
+  outcome: RunOutcome
   day: number
   reason: string
+  netWorthCents: number
+  score: number
+}
+
+/** Savings interest received on one monthly day. The FI window adds this to realized. */
+export type FiInterest = {
+  day: number
+  cents: number
+}
+
+/** Last end-of-day FI check. The meter reads this. It is not a second ledger. */
+export type FiStatus = {
+  day: number
+  windowDays: number
+  passiveCents: number
+  expensesCents: number
+  streak: number
+}
+
+/**
+ * FI progress. `interest` is savings interest received, by the day it was paid.
+ * The window sum reads the live realized ledger plus these rows.
+ * `streak` is consecutive covered checks from day 30.
+ */
+export type FiTracker = {
+  streak: number
+  interest: FiInterest[]
+  status: FiStatus | null
 }
 
 /**
@@ -863,7 +915,8 @@ export type RunEnd = {
  * One row per day that had a non-zero change. Days stay in increasing order.
  * `section` is the played part of the day. A new day is `sleep` (the end of sleep).
  * `sleepHours` is how long that sleep block lasts. The clock numbers are display only.
- * `bill` is set while expenses are unpaid. `runEnd` is set when the bill cannot be covered.
+ * `bill` is set while expenses are unpaid. `runEnd` is set on an FI win, a bill loss, or day 120.
+ * `fi` holds the interest rows and the last FI check. It does not copy the realized ledger.
  */
 export type GameState = {
   market: MarketState
@@ -876,4 +929,5 @@ export type GameState = {
   log: AccountLogEvent[]
   bill: PendingBill | null
   runEnd: RunEnd | null
+  fi: FiTracker
 }

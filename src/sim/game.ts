@@ -1,12 +1,14 @@
 // Player time. `applyCommand` and `endDay` are the harness and UI entry points.
 // `endDay` steps the market once, then charges margin interest, short borrow,
 // the margin check, and savings accrual. On day 30, 60, 90, 120, and later
-// 30th days it then runs the monthly cycle before the player acts. It does not
-// draw a random stream of its own, and it does not write player lines onto the
-// market. Orders never change prices.
+// 30th days it then runs the monthly cycle before the player acts. After those
+// effects it runs the FI check. It does not draw a random stream of its own,
+// and it does not write player lines onto the market. Orders never change prices.
 // A day starts at the end of sleep. `skip` opens the market. Orders before that
 // are rejected. End day is allowed in any section, except while a bill is
 // pending or the run has ended. The next day starts at sleep.
+// Day 120 does not step again. The bill from the start of that day still blocks
+// End day. After it is paid, End day seals the run at the day-120 prices.
 
 import {
   assertPlayerAccounts,
@@ -17,6 +19,7 @@ import {
 } from './accounts.ts'
 import {
   PLAYER_IS_JOBLESS,
+  RUN_LENGTH_DAYS,
   SAVINGS_PAY_INTERVAL_DAYS,
   SLEEP_HOURS,
   STARTING_CASH_CENTS,
@@ -24,19 +27,22 @@ import {
   STARTING_TRADING_CENTS,
 } from './constants.ts'
 import { DAY_START_SECTION, assertDayState, interpretSkip, isDaySection } from './day.ts'
+import { applyFiCheck, finishAtDayLimit, initialFi } from './fi.ts'
 import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
 import { applyMonthlyCycle, interpretPayBill, isMonthlyCycleDay, reviewCoverable } from './monthly.ts'
 import { interpretOrder, settleBorrowFees, tradingEquity } from './trading.ts'
-import type {
-  AccountLogEvent,
-  CommandLogEvent,
-  GameState,
-  MarketDefinitions,
-  OpenPosition,
-  PendingBill,
-  RealizedDay,
-  RunEnd,
+import {
+  RUN_OUTCOMES,
+  type AccountLogEvent,
+  type CommandLogEvent,
+  type FiTracker,
+  type GameState,
+  type MarketDefinitions,
+  type OpenPosition,
+  type PendingBill,
+  type RealizedDay,
+  type RunEnd,
 } from './types.ts'
 
 function describeValue(value: unknown): string {
@@ -141,14 +147,64 @@ function assertRunEnd(runEnd: RunEnd | null): void {
   if (typeof runEnd !== 'object' || Array.isArray(runEnd)) {
     throw new Error(`run end must be an object, received ${describeValue(runEnd)}`)
   }
-  if (runEnd.outcome !== 'lost') {
-    throw new Error(`run end outcome must be lost, received ${describeValue(runEnd.outcome)}`)
+  if (!(RUN_OUTCOMES as readonly string[]).includes(runEnd.outcome)) {
+    throw new Error(`run end outcome must be won, lost, or finished, received ${describeValue(runEnd.outcome)}`)
   }
   if (!Number.isSafeInteger(runEnd.day) || runEnd.day < 1) {
     throw new Error(`run end day must be a safe integer >= 1, received ${describeValue(runEnd.day)}`)
   }
   if (typeof runEnd.reason !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(runEnd.reason)) {
     throw new Error(`run end reason must be an id token, received ${describeValue(runEnd.reason)}`)
+  }
+  if (!Number.isSafeInteger(runEnd.netWorthCents)) {
+    throw new Error(`run end net worth must be a safe integer, received ${describeValue(runEnd.netWorthCents)}`)
+  }
+  if (!Number.isSafeInteger(runEnd.score)) {
+    throw new Error(`run end score must be a safe integer, received ${describeValue(runEnd.score)}`)
+  }
+}
+
+function assertFi(fi: FiTracker): void {
+  if (typeof fi !== 'object' || fi === null || Array.isArray(fi)) {
+    throw new Error(`FI tracker must be an object, received ${describeValue(fi)}`)
+  }
+  if (!Number.isSafeInteger(fi.streak) || fi.streak < 0) {
+    throw new Error(`FI streak must be a safe integer >= 0, received ${describeValue(fi.streak)}`)
+  }
+  if (!Array.isArray(fi.interest)) {
+    throw new Error(`FI interest must be an array, received ${describeValue(fi.interest)}`)
+  }
+  let previous = 0
+  for (const row of fi.interest) {
+    if (typeof row !== 'object' || row === null) {
+      throw new Error(`FI interest row must be an object, received ${describeValue(row)}`)
+    }
+    if (!Number.isSafeInteger(row.day) || row.day <= previous) {
+      throw new Error(`FI interest day must be a safe integer greater than ${previous}, received ${describeValue(row.day)}`)
+    }
+    if (!Number.isSafeInteger(row.cents) || row.cents <= 0) {
+      throw new Error(`FI interest cents must be a positive safe integer, received ${describeValue(row.cents)}`)
+    }
+    previous = row.day
+  }
+  if (fi.status === null) return
+  if (typeof fi.status !== 'object' || Array.isArray(fi.status)) {
+    throw new Error(`FI status must be an object, received ${describeValue(fi.status)}`)
+  }
+  if (!Number.isSafeInteger(fi.status.day) || fi.status.day < 1) {
+    throw new Error(`FI status day must be a safe integer >= 1, received ${describeValue(fi.status.day)}`)
+  }
+  if (!Number.isSafeInteger(fi.status.windowDays) || fi.status.windowDays < 1) {
+    throw new Error(`FI span days must be a safe integer >= 1, received ${describeValue(fi.status.windowDays)}`)
+  }
+  if (!Number.isSafeInteger(fi.status.passiveCents)) {
+    throw new Error(`FI passive income must be a safe integer, received ${describeValue(fi.status.passiveCents)}`)
+  }
+  if (!Number.isSafeInteger(fi.status.expensesCents) || fi.status.expensesCents <= 0) {
+    throw new Error(`FI expenses must be a positive safe integer, received ${describeValue(fi.status.expensesCents)}`)
+  }
+  if (!Number.isSafeInteger(fi.status.streak) || fi.status.streak < 0) {
+    throw new Error(`FI status streak must be a safe integer >= 0, received ${describeValue(fi.status.streak)}`)
   }
 }
 
@@ -215,6 +271,7 @@ function assertGame(state: GameState): void {
   }
   assertBill(state.bill)
   assertRunEnd(state.runEnd)
+  assertFi(state.fi)
 }
 
 /** Day 0 market plus 3E cash, 3E trading, and empty savings. */
@@ -236,6 +293,7 @@ export function createGame(defs: MarketDefinitions, seed: string): GameState {
     log: [],
     bill: null,
     runEnd: null,
+    fi: initialFi(),
   }
 }
 
@@ -322,14 +380,31 @@ export function settleTradingAccount(
   return [interest, ...borrow, ...margin]
 }
 
+function savingsInterestReceived(events: readonly AccountLogEvent[]): number {
+  let total = 0
+  for (const event of events) {
+    if (event.kind !== 'savingsInterestPaid') continue
+    if (!Number.isSafeInteger(event.amountCents) || event.amountCents < 0) {
+      throw new Error(`savings interest paid must be a safe integer >= 0, received ${describeValue(event.amountCents)}`)
+    }
+    total += event.amountCents
+    if (!Number.isSafeInteger(total)) {
+      throw new Error(`savings interest total is not a safe integer, received ${describeValue(total)}`)
+    }
+  }
+  return total
+}
+
 /**
  * Advance one player day: the existing market step once, then margin interest,
  * short borrow, the margin check, then savings accrual. Interest and borrow
  * use the post-step prices and that day's policy rate. When the new day number
  * is a multiple of 30, the monthly cycle pays savings interest, salary, and the
- * bill before the player acts. Player events stay off the market log. A wipe-out
- * does not end the run. A pending bill or a lost run throws before the market
- * steps. End day is otherwise allowed in any section. The next day starts again
+ * bill before the player acts. The FI check runs after those effects. Player
+ * events stay off the market log. A wipe-out does not end the run. A pending
+ * bill or an ended run throws before the market steps. On day 120, End day
+ * seals the run and does not step prices. The day-120 bill still blocks that
+ * seal. End day is otherwise allowed in any section. The next day starts again
  * at the end of sleep.
  */
 export function endDay(state: GameState, defs: MarketDefinitions): GameState {
@@ -337,6 +412,12 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   assertGame(state)
   const block = endDayBlockReason(state)
   if (block !== null) throw new Error(`end day blocked: ${block}`)
+  if (state.market.day >= RUN_LENGTH_DAYS) {
+    const ended = finishAtDayLimit(state, defs)
+    state.log = [...state.log, ended]
+    state.pending = []
+    return state
+  }
   const commands = state.pending.slice()
   const equityAtStart = tradingEquity(state, defs).equity
   assertPolicyRateEntry(state.market, defs)
@@ -345,8 +426,9 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const policyRate = readPolicyRatePercent(state.market, defs)
   const savings = settleSavings(state.accounts, state.market.day, policyRate)
   const monthly = isMonthlyCycleDay(state.market.day) ? applyMonthlyCycle(state, defs) : []
+  const fi = applyFiCheck(state, defs, savingsInterestReceived(monthly))
   state.pending = []
-  state.log = [...commands, ...traded, ...savings, ...monthly]
+  state.log = [...commands, ...traded, ...savings, ...monthly, ...fi]
   state.section = DAY_START_SECTION
   return state
 }

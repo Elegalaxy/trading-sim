@@ -271,6 +271,37 @@ ul {
   border-color: #e15b64;
 }
 
+.fi-covered {
+  border-color: #6aa2ff;
+}
+
+.fi-track {
+  height: 14px;
+  margin: 10px 0 4px;
+  background: #0e1118;
+  border: 1px solid #6a738c;
+  border-radius: 7px;
+}
+
+.fi-fill {
+  height: 100%;
+  background: #6aa2ff;
+  border-radius: 7px;
+}
+
+.run-won {
+  border-color: #7dcea0;
+}
+
+.run-lost {
+  background: #2a181c;
+  border-color: #e15b64;
+}
+
+.run-finished {
+  border-color: #6aa2ff;
+}
+
 .bill-actions {
   display: flex;
   flex-wrap: wrap;

@@ -6,6 +6,7 @@
 // next endDay is blocked. The check never sells a position or moves savings.
 
 import { assertPlayerAccounts, payAccruedSavings } from './accounts.ts'
+import { initialFi, netWorthCents } from './fi.ts'
 import {
   BASE_MONTHLY_EXPENSES_CENTS,
   MONTHLY_SALARY_CENTS,
@@ -86,6 +87,7 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
     log: [],
     bill: null,
     runEnd: null,
+    fi: initialFi(),
   }
   for (const id of ids) {
     const position = state.positions[id]
@@ -177,9 +179,10 @@ function payPendingBill(state: GameState): BillPaidEvent {
   }
 }
 
-function loseRun(state: GameState, day: number): RunEndedEvent {
+function loseRun(state: GameState, defs: MarketDefinitions, day: number): RunEndedEvent {
   state.bill = null
-  state.runEnd = { outcome: 'lost', day, reason: RUN_LOST_BILL_REASON }
+  const worth = netWorthCents(state, defs)
+  state.runEnd = { outcome: 'lost', day, reason: RUN_LOST_BILL_REASON, netWorthCents: worth, score: 0 }
   return { kind: 'runEnded', day, reason: RUN_LOST_BILL_REASON }
 }
 
@@ -215,7 +218,7 @@ export function applyMonthlyCycle(state: GameState, defs: MarketDefinitions): Ac
   const parts = measureCoverable(state, defs, amount)
   events.push(coverableEvent(day, parts))
   if (parts.totalCents < amount) {
-    events.push(loseRun(state, day))
+    events.push(loseRun(state, defs, day))
     assertPlayerAccounts(state.accounts)
     return events
   }
@@ -249,7 +252,7 @@ export function reviewCoverable(state: GameState, defs: MarketDefinitions): Arra
   const day = state.market.day
   const parts = measureCoverable(state, defs, state.bill.amountCents)
   const events: Array<CoverableCheckEvent | RunEndedEvent> = [coverableEvent(day, parts)]
-  if (parts.totalCents < state.bill.amountCents) events.push(loseRun(state, day))
+  if (parts.totalCents < state.bill.amountCents) events.push(loseRun(state, defs, day))
   return events
 }
 

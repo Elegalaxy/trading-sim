@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
   BASE_MONTHLY_EXPENSES_CENTS,
+  LOAN_BASE_CENTS,
   MONTHLY_SALARY_CENTS,
   STARTING_CASH_CENTS,
   STARTING_TRADING_CENTS,
-  UNUSED_LOAN_LIMIT_CENTS,
 } from './constants.ts'
 import { applyCommand, createGame, endDay } from './game.ts'
 import { stateHash } from './hash.ts'
@@ -63,7 +63,7 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
   it('pays the bill from cash on day 30 and day 60 when cash covers it', () => {
     expect(BASE_MONTHLY_EXPENSES_CENTS).toBe(100_000)
     expect(MONTHLY_SALARY_CENTS).toBe(0)
-    expect(UNUSED_LOAN_LIMIT_CENTS).toBe(0)
+    expect(LOAN_BASE_CENTS).toBe(200_000)
     expect(STARTING_CASH_CENTS).toBe(300_000)
 
     const defs = market()
@@ -89,7 +89,7 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
         if (salary?.kind !== 'salaryPaid') throw new Error('[DEBUG monthly] missing salaryPaid')
         expect(salary.amountCents).toBe(0)
         const check = coverable(game)
-        expect(check.loanLimitCents).toBe(0)
+        expect(check.loanLimitCents).toBe(LOAN_BASE_CENTS)
         expect(check.totalCents).toBe(check.cashCents + check.savingsCents + check.tradingEquityCents + check.loanLimitCents)
         expect(check.totalCents).toBeGreaterThanOrEqual(check.billCents)
         expect(check.cashCents).toBe(due.cashCents)
@@ -234,7 +234,10 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
     lost.accounts.cashCents = 0
     lost.accounts.tradingCents = 0
     lost.accounts.savingsCents = 0
-    debugMonthly('loss fixture cash=0 trading=0 savings=0 because transfers cannot destroy money')
+    lost.loan.balanceCents = LOAN_BASE_CENTS
+    debugMonthly(
+      'loss fixture cash=0 trading=0 savings=0 loan filled so unused room is 0, because transfers cannot destroy money',
+    )
     advance(lost, defs, 29)
     advance(plain, defs, 29)
     expect(lost.runEnd).toBeNull()
@@ -282,5 +285,24 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
     expect(plain.runEnd).toBeNull()
     expect(plain.accounts.cashCents).toBe(STARTING_CASH_CENTS - BASE_MONTHLY_EXPENSES_CENTS)
     debugMonthly(`loss blocked day=${lost.market.day} plain cash=${plain.accounts.cashCents}`)
+  })
+
+  it('does not treat leftover loan room as coverable while a loan is outstanding', () => {
+    const defs = market()
+    const stuck = createGame(defs, 'partial')
+    stuck.accounts.cashCents = 0
+    stuck.accounts.tradingCents = 0
+    stuck.accounts.savingsCents = 0
+    stuck.loan.balanceCents = 1_000
+    debugMonthly('partial loan balance=1000 other money=0 leftover room is not drawable')
+    advance(stuck, defs, 29)
+    endDay(stuck, defs)
+    expect(stuck.market.day).toBe(30)
+    expect(stuck.runEnd?.outcome).toBe('lost')
+    const check = coverable(stuck)
+    expect(check.loanLimitCents).toBe(0)
+    expect(check.totalCents).toBe(0)
+    expect(stuck.loan.balanceCents).toBe(1_000)
+    debugMonthly(`partial-loan loss ${formatEvent(check)} balance=${stuck.loan.balanceCents}`)
   })
 })

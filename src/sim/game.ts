@@ -39,6 +39,7 @@ import {
 } from './jobs.ts'
 import { applyFiCheck, finishAtDayLimit, initialFi } from './fi.ts'
 import { assertLifestyle, assertLifestyleCommand, initialLifestyle, interpretBuyCourse, interpretSetLifestyle } from './lifestyle.ts'
+import { assertLoan, initialLoan, interpretRepayLoan, interpretTakeLoan, settleMissedLoanInterest } from './loan.ts'
 import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
 import { applyMonthlyCycle, interpretPayBill, isMonthlyCycleDay, reviewCoverable } from './monthly.ts'
@@ -109,7 +110,9 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'consume' &&
       kind !== 'newsRead' &&
       kind !== 'lifestyleChange' &&
-      kind !== 'coursePurchased'
+      kind !== 'coursePurchased' &&
+      kind !== 'loanTaken' &&
+      kind !== 'loanRepaid'
     ) {
       throw new Error(`pending account event must be a command, received ${describeValue(kind)}`)
     }
@@ -169,6 +172,25 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       assertSafeInteger(event.day, 'pending run end day', false)
       if (typeof event.reason !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(event.reason)) {
         throw new Error(`pending run end reason must be an id token, received ${describeValue(event.reason)}`)
+      }
+    }
+    if (event.kind === 'loanTaken') {
+      assertSafeInteger(event.day, 'pending loan draw day', false)
+      assertSafeInteger(event.amountCents, 'pending loan draw amount', false)
+      assertSafeInteger(event.balanceCents, 'pending loan draw balance', false)
+      assertSafeInteger(event.cashCents, 'pending loan draw cash', false)
+      assertSafeInteger(event.limitCents, 'pending loan draw limit', false)
+      if (event.amountCents <= 0) {
+        throw new Error(`pending loan draw amount must be > 0, received ${describeValue(event.amountCents)}`)
+      }
+    }
+    if (event.kind === 'loanRepaid') {
+      assertSafeInteger(event.day, 'pending loan repayment day', false)
+      assertSafeInteger(event.amountCents, 'pending loan repayment amount', false)
+      assertSafeInteger(event.balanceCents, 'pending loan repayment balance', false)
+      assertSafeInteger(event.cashCents, 'pending loan repayment cash', false)
+      if (event.amountCents <= 0) {
+        throw new Error(`pending loan repayment amount must be > 0, received ${describeValue(event.amountCents)}`)
       }
     }
   }
@@ -328,6 +350,7 @@ function assertGame(state: GameState): void {
   assertFi(state.fi)
   assertPlayerStats(state.stats, state.consumables)
   assertLifestyle(state.lifestyle)
+  assertLoan(state.loan)
 }
 
 /** Optional menus and starting job. Omitted jobs means jobless. Omitted consumables means nothing is for sale. */
@@ -363,6 +386,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     stats: initialStats(),
     consumables: copyConsumables(start?.consumables),
     lifestyle: initialLifestyle(),
+    loan: initialLoan(),
   }
 }
 
@@ -434,8 +458,14 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
   } else if (type === 'buyCourse') {
     const outcome = interpretBuyCourse(state, cmd)
     state.pending.push(outcome.event)
+  } else if (type === 'takeLoan') {
+    const outcome = interpretTakeLoan(state, cmd)
+    state.pending.push(outcome.event)
+  } else if (type === 'repayLoan') {
+    const outcome = interpretRepayLoan(state, cmd)
+    state.pending.push(outcome.event)
   } else {
-    const outcome = interpretCommand(state.accounts, state.market.day, cmd)
+    const outcome = interpretCommand(state.accounts, state.market.day, cmd, state.loan.balanceCents)
     state.pending.push(outcome.event)
   }
   state.log = state.pending.slice()
@@ -487,9 +517,11 @@ function savingsInterestReceived(events: readonly AccountLogEvent[]): number {
  * Advance one player day: the existing market step once, then margin interest,
  * short borrow, the margin check, then savings accrual. Interest and borrow
  * use the post-step prices and that day's policy rate. When the new day number
- * is a multiple of 30, the monthly cycle pays savings interest, salary, and the
- * bill before the player acts. Energy and stress are updated after the margin
- * settlement and before the FI check. Player
+ * is a multiple of 30, the monthly cycle pays savings interest, salary, loan
+ * interest, and the bill before the player acts. Unpaid loan interest is
+ * collected at the end of that day, before the next market step: positions
+ * first, then savings. That sale does not pay the expense bill. Energy and
+ * stress are updated after the margin settlement and before the FI check. Player
  * events stay off the market log. A wipe-out does not end the run. A pending
  * bill or an ended run throws before the market steps. On day 120, End day
  * seals the run and does not step prices. The day-120 bill still blocks that
@@ -501,9 +533,15 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   assertGame(state)
   const block = endDayBlockReason(state)
   if (block !== null) throw new Error(`end day blocked: ${block}`)
+  const loanEvents = settleMissedLoanInterest(state, defs)
+  if (state.runEnd !== null) {
+    state.log = [...state.pending, ...loanEvents]
+    state.pending = []
+    return state
+  }
   if (state.market.day >= RUN_LENGTH_DAYS) {
     const ended = finishAtDayLimit(state, defs)
-    state.log = [...state.log, ended]
+    state.log = [...state.log, ...loanEvents, ended]
     state.pending = []
     return state
   }
@@ -523,7 +561,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const monthly = isMonthlyCycleDay(state.market.day) ? applyMonthlyCycle(state, defs) : []
   const fi = applyFiCheck(state, defs, savingsInterestReceived(monthly))
   state.pending = []
-  state.log = [...commands, ...traded, ...savings, ...statEvents, ...jobEvents, ...monthly, ...fi]
+  state.log = [...commands, ...loanEvents, ...traded, ...savings, ...statEvents, ...jobEvents, ...monthly, ...fi]
   const job = activeJob(state.job)
   state.section = sectionForJob(job)
   state.sleepHours = job.sleepHours

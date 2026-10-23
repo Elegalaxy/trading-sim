@@ -6,6 +6,7 @@ import {
   FI_HOLD_DAYS,
   FI_STREAK_FROM_DAY,
   FI_WINDOW_DAYS,
+  LOAN_BASE_CENTS,
   MONTHLY_SALARY_CENTS,
   RUN_LENGTH_DAYS,
   SCORE_PER_DAY_LEFT,
@@ -221,6 +222,7 @@ describe('FI hold, run end, and score', () => {
     game.accounts.cashCents = 0
     game.accounts.tradingCents = 0
     game.accounts.savingsCents = 0
+    game.loan.balanceCents = LOAN_BASE_CENTS
     for (let day = 1; day < FI_STREAK_FROM_DAY; day += 1) endDay(game, defs)
     endDay(game, defs)
     expect(game.runEnd).toEqual({

@@ -592,7 +592,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 21: Bank loan
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 20, Q9
 - Files to create or change: `src/sim/loan.ts`, `src/sim/loan.test.ts`, `src/sim/monthly.ts`, `src/sim/accounts.ts`, `src/sim/game.ts`, `src/ui/LoanPanel.tsx`, `src/ui/BillBanner.tsx`, `src/ui/store.ts`
 - What changes:
@@ -612,7 +612,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: reach day 30 short of cash, take the loan from the bill banner, pay, then on day 60 leave the interest unpaid and read the forced sale in the summary.
-- Progress:
+- Progress: 2026-10-23: Added the bank loan. Files: src/sim/loan.ts, src/sim/loan.test.ts, src/sim/monthly.ts, src/sim/monthly.test.ts, src/sim/accounts.ts, src/sim/game.ts, src/sim/constants.ts, src/sim/types.ts, src/sim/log.ts, src/sim/fi.test.ts, src/ui/LoanPanel.tsx, src/ui/BillBanner.tsx, src/ui/store.ts, src/ui/Dashboard.tsx, src/ui/DaySummary.tsx, src/ui/Accounts.tsx. One loan. Limit is 2E plus the active job's monthly pay plus 0.25E times home tier plus information-feed tier. Rate is policy plus 4 points a year, charged monthly, rounded half away from zero. takeLoan adds cash up to the unused limit and rejects a second draw while a balance remains. Interest is due with the bill and is paid from cash when cash covers it. Unpaid interest is collected at the end of that day by selling whole positions from the worst unrealized loss, then savings. Lifestyle is unchanged. A remaining shortfall ends the run with cannotPayLoanInterest. The expense bill is not paid by that sale. The cover check includes unused loan room only while the balance is 0. Leftover room while a loan is outstanding is not coverable, because a second draw is rejected. The bill banner's loan button calls takeLoan for the shortfall or the unused limit, whichever is smaller, and does not pay the bill. A transfer into trading that would leave cash plus savings below the loan balance is rejected. npm run typecheck passed. npm test passed (18 files, 99 tests). npm run lint passed. Browser, seed 5L1TN2lU: jobless limit 200000 at 8 percent. A 100000 draw raised cash from 300000 to 400000 and disabled a second draw. Transferring 300001 cash into trading was rejected with belowLoanBalance and left both balances unchanged. Repaying 100000 restored cash to 300000 and enabled another draw. Prices did not move.
 
 ### Step 22: Biased news, verify, and the tell
 

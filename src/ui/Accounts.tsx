@@ -11,6 +11,8 @@ function transferReasonText(reason: string): string {
   switch (reason) {
     case 'insufficientFunds':
       return 'That account does not have enough.'
+    case 'belowLoanBalance':
+      return 'That would leave cash and savings below the loan balance.'
     case 'sameAccount':
       return 'Choose two different accounts.'
     case 'unknownAccount':

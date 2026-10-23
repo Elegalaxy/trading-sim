@@ -127,8 +127,20 @@ export const RUN_LENGTH_DAYS = 120
 export const SCORE_PER_E = 100
 export const SCORE_PER_DAY_LEFT = 10
 
-/** Section 12. Unused loan room in the bill cover check. 0 until loans exist. */
-export const UNUSED_LOAN_LIMIT_CENTS = 0
+/**
+ * Section 12. One bank loan.
+ * Limit cents = 2E + the active job's monthly pay + 0.25E × (home tier + information-feed tier).
+ * A notice job does not count. Jobless pay is 0.
+ * Annual rate = max(0, that day's policy percent + LOAN_RATE_SPREAD_PERCENT) / 100.
+ * Interest cents = round half away from zero of balance × annual rate / LOAN_MONTHS_PER_YEAR.
+ * It is due at the start of each 30th day and is paid from cash. Missed interest is
+ * collected at the end of that day. A transfer into trading cannot leave cash plus
+ * savings below the outstanding balance.
+ */
+export const LOAN_BASE_CENTS = 2 * CENTS_PER_E
+export const LOAN_TIER_CENTS = CENTS_PER_E / 4
+export const LOAN_RATE_SPREAD_PERCENT = 4
+export const LOAN_MONTHS_PER_YEAR = 12
 
 /** Section 6. Provisional policy-rate entry when the run has no calendar. */
 export const POLICY_RATE_ENTRY_ID = 'policyRate'

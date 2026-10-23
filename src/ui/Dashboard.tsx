@@ -18,6 +18,7 @@ import { RunEnd } from './RunEnd.tsx'
 import { StatMeters } from './StatMeters.tsx'
 import { JobPanel } from './JobPanel.tsx'
 import { LifestylePanel } from './LifestylePanel.tsx'
+import { LoanPanel } from './LoanPanel.tsx'
 import { defaultSeed, endDay, startGame, useTradingStore } from './store.ts'
 
 function startingJobLabel(job: JobDefinition): string {
@@ -116,6 +117,7 @@ export function Dashboard() {
       <LifestylePanel game={run?.game ?? null} />
       {run !== null ? <RunEnd seed={run.seed} game={run.game} /> : null}
       <BillBanner game={run?.game ?? null} />
+      <LoanPanel game={run?.game ?? null} />
       <FiMeter game={run?.game ?? null} />
 
       <section className="panel">
@@ -176,7 +178,11 @@ export function Dashboard() {
         lifestyle={run?.game.lifestyle ?? null}
         newsReads={run?.game.stats.newsReads ?? 0}
       />
-      <DaySummaryPanel summary={run?.summary ?? null} liquidations={run?.liquidations ?? []} />
+      <DaySummaryPanel
+        summary={run?.summary ?? null}
+        liquidations={run?.liquidations ?? []}
+        forcedSales={run?.forcedSales ?? []}
+      />
     </main>
   )
 }

@@ -499,6 +499,48 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
         `course=${formatToken(event.course, 'course')}`,
         `cost=${formatNumber(event.cost)}`,
       ].join(' ')
+    case 'loanTaken':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=loanTaken',
+        `amount=${formatNumber(event.amountCents)}`,
+        `balance=${formatNumber(event.balanceCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+        `limit=${formatNumber(event.limitCents)}`,
+      ].join(' ')
+    case 'loanRepaid':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=loanRepaid',
+        `amount=${formatNumber(event.amountCents)}`,
+        `balance=${formatNumber(event.balanceCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+      ].join(' ')
+    case 'loanInterestDue':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=loanInterestDue',
+        `amount=${formatNumber(event.amountCents)}`,
+        `balance=${formatNumber(event.balanceCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+        `policyRate=${formatNumber(event.policyRate)}`,
+        `annualRate=${formatNumber(event.annualRate)}`,
+      ].join(' ')
+    case 'loanInterestPaid':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=loanInterestPaid',
+        `amount=${formatNumber(event.amountCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+        `balance=${formatNumber(event.balanceCents)}`,
+      ].join(' ')
+    case 'forcedSale':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=forcedSale',
+        `source=${formatToken(event.source, 'source')}`,
+        `amount=${formatNumber(event.amountCents)}`,
+      ].join(' ')
     default: {
       const unknown: never = event
       throw new Error(`formatEvent cannot format ${describeValue(unknown)}`)

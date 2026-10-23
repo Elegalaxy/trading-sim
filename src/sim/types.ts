@@ -883,6 +883,60 @@ export type CoursePurchasedEvent = {
   cost: number
 }
 
+/** Cash received from a new loan. `balanceCents` is the balance after the draw. */
+export type LoanTakenEvent = {
+  kind: 'loanTaken'
+  day: number
+  amountCents: number
+  balanceCents: number
+  cashCents: number
+  limitCents: number
+}
+
+/** Principal repaid from cash. Early repayment has no fee. `balanceCents` is the balance after. */
+export type LoanRepaidEvent = {
+  kind: 'loanRepaid'
+  day: number
+  amountCents: number
+  balanceCents: number
+  cashCents: number
+}
+
+/**
+ * Loan interest assessed on a 30th day. `amountCents` is the monthly charge.
+ * `cashCents` is cash before it is paid. `annualRate` is the decimal rate.
+ */
+export type LoanInterestDueEvent = {
+  kind: 'loanInterestDue'
+  day: number
+  amountCents: number
+  balanceCents: number
+  cashCents: number
+  /** Policy rate in percent after the market step that opened this day. */
+  policyRate: number
+  annualRate: number
+}
+
+/** Loan interest paid from cash. The principal balance is unchanged. */
+export type LoanInterestPaidEvent = {
+  kind: 'loanInterestPaid'
+  day: number
+  amountCents: number
+  cashCents: number
+  balanceCents: number
+}
+
+/**
+ * Cents moved to cash to pay missed loan interest.
+ * `source` is an asset id or `savings`. Lifestyle is not a source.
+ */
+export type ForcedSaleEvent = {
+  kind: 'forcedSale'
+  day: number
+  source: string
+  amountCents: number
+}
+
 /** Player commands since the previous end of day, plus a bill payment or cover check from those commands. */
 export type CommandLogEvent =
   | TransferEvent
@@ -900,6 +954,8 @@ export type CommandLogEvent =
   | NewsReadEvent
   | LifestyleChangeEvent
   | CoursePurchasedEvent
+  | LoanTakenEvent
+  | LoanRepaidEvent
 
 export type MarginLogEvent =
   | MarginInterestEvent
@@ -921,6 +977,9 @@ export type AccountLogEvent =
   | BillDueEvent
   | BillPendingEvent
   | FiCheckEvent
+  | LoanInterestDueEvent
+  | LoanInterestPaidEvent
+  | ForcedSaleEvent
 
 export type LogEvent =
   | NoiseRollEvent
@@ -1085,6 +1144,17 @@ export type PlayerJob = {
   courses: CourseId[]
 }
 
+/**
+ * One bank loan. `balanceCents` is unpaid principal.
+ * `interestDueCents` is the charge from `interestDay` that cash did not cover.
+ * Both interest fields are clear when nothing is pending.
+ */
+export type BankLoan = {
+  balanceCents: number
+  interestDueCents: number
+  interestDay: number | null
+}
+
 /** Last end-of-day FI check. The meter reads this. It is not a second ledger. */
 export type FiStatus = {
   day: number
@@ -1122,6 +1192,7 @@ export type FiTracker = {
  * `stats` is energy and stress. `consumables` is the menu copied at the start.
  * End-of-day stat lines sit on `log` with the other account events. They are not on the market.
  * `lifestyle` is the Home and information-feed tiers. Courses stay on `job`.
+ * `loan` is the single bank loan. A balance above 0 blocks another draw.
  */
 export type GameState = {
   market: MarketState
@@ -1139,4 +1210,5 @@ export type GameState = {
   stats: PlayerStats
   consumables: ConsumableDefinition[]
   lifestyle: LifestyleState
+  loan: BankLoan
 }

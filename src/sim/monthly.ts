@@ -5,16 +5,17 @@
 // Staff discount cuts the bill that comes due while that job is active.
 // Cash that covers the bill pays it. Otherwise the bill stays pending and the
 // next endDay is blocked. The check never sells a position or moves savings.
+// Loan interest is assessed in this cycle, after salary and before the bill.
+// The cover total includes unused loan room. The bill itself is never paid
+// by a forced sale.
 // The amount is base expenses plus lifestyle tiers, then the staff discount.
 // A later downgrade does not change a bill that is already pending.
 
 import { assertPlayerAccounts, payAccruedSavings } from './accounts.ts'
+import { SAVINGS_PAY_INTERVAL_DAYS } from './constants.ts'
 import { initialFi, netWorthCents } from './fi.ts'
-import {
-  SAVINGS_PAY_INTERVAL_DAYS,
-  UNUSED_LOAN_LIMIT_CENTS,
-} from './constants.ts'
 import { billDueForJob, paySalary } from './jobs.ts'
+import { assessLoanInterest, unusedLoanLimitCents } from './loan.ts'
 import { lifestyleExpensesCents } from './lifestyle.ts'
 import { closeWholePosition } from './trading.ts'
 import type {
@@ -94,6 +95,11 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
     stats: state.stats,
     consumables: state.consumables,
     lifestyle: state.lifestyle,
+    loan: {
+      balanceCents: state.loan.balanceCents,
+      interestDueCents: state.loan.interestDueCents,
+      interestDay: state.loan.interestDay,
+    },
   }
   for (const id of ids) {
     const position = state.positions[id]
@@ -141,7 +147,9 @@ function measureCoverable(state: GameState, defs: MarketDefinitions, billCents: 
   }
   const cashCents = requireNonNegative(state.accounts.cashCents, 'coverable cash')
   const savingsCents = requireNonNegative(state.accounts.savingsCents, 'coverable savings')
-  const loanLimitCents = requireNonNegative(UNUSED_LOAN_LIMIT_CENTS, 'unused loan limit')
+  // Another draw is rejected while a balance remains, so leftover room cannot pay this bill.
+  const drawableLoanCents = state.loan.balanceCents > 0 ? 0 : unusedLoanLimitCents(state)
+  const loanLimitCents = requireNonNegative(drawableLoanCents, 'unused loan limit')
   if (!Number.isSafeInteger(tradingEquityCents)) {
     throw new Error(`coverable trading equity is not a safe integer, received ${describeValue(tradingEquityCents)}`)
   }
@@ -209,6 +217,7 @@ export function applyMonthlyCycle(state: GameState, defs: MarketDefinitions): Ac
   const events: AccountLogEvent[] = []
   for (const salaryPaid of paySalary(state, day)) events.push(salaryPaid)
   events.push(payAccruedSavings(state.accounts, day))
+  for (const interest of assessLoanInterest(state, defs)) events.push(interest)
   const priced = billDueForJob(state.job, day, lifestyleExpensesCents(state.lifestyle))
   if (priced.perk !== null) events.push(priced.perk)
   const amount = requirePositive(priced.amountCents, 'bill')

@@ -6,7 +6,7 @@ import { CONSUMABLE_DEFINITIONS, JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
-import type { GameState, LiquidationEvent } from '../sim/types.ts'
+import type { ForcedSaleEvent, GameState, LiquidationEvent } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 
 const SEED_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-'
@@ -26,6 +26,8 @@ export type TradingRun = {
   summary: DaySummary | null
   /** Liquidations from the game log for the summary day. The next command replaces that log. */
   liquidations: readonly LiquidationEvent[]
+  /** Forced sales from missed loan interest on the summary day. */
+  forcedSales: readonly ForcedSaleEvent[]
 }
 
 export type DispatchResult = {
@@ -149,7 +151,7 @@ export function startGame(seed: string, jobId = 'jobless'): string | null {
     console.error('[store] createGame failed', error)
     throw error
   }
-  run = { seed, game, closes: [], summary: null, liquidations: [] }
+  run = { seed, game, closes: [], summary: null, liquidations: [], forcedSales: [] }
   debugLog('[ui]', `seed=${seed}`)
   debugLog(
     '[store]',
@@ -279,6 +281,50 @@ function logLifestyle(cmd: unknown, game: GameState | null, accepted: boolean, r
   debugLog('[store]', `lifestyle buyCourse course=${event.course} cost=${event.cost}`)
 }
 
+/** `[store] loan takeLoan|repayLoan ...` and the interest events from the day log. */
+function logLoanCommand(cmd: unknown, game: GameState | null, accepted: boolean, reason: string): void {
+  const taking = isTypedCommand(cmd, 'takeLoan')
+  const repaying = isTypedCommand(cmd, 'repayLoan')
+  if (!taking && !repaying) return
+  const amount = commandToken((cmd as { amountCents?: unknown }).amountCents)
+  const type = taking ? 'takeLoan' : 'repayLoan'
+  if (!accepted || game === null) {
+    debugLog('[store]', `loan ${type} amount=${amount} rejected ${reason}`)
+    return
+  }
+  const kind = taking ? 'loanTaken' : 'loanRepaid'
+  const event = [...game.pending].reverse().find((entry) => entry.kind === kind)
+  if (event === undefined || (event.kind !== 'loanTaken' && event.kind !== 'loanRepaid')) {
+    console.error('[store] loan accepted without a loan event')
+    debugLog('[store]', `loan ${type} amount=${amount} accepted missing-event`)
+    return
+  }
+  debugLog(
+    '[store]',
+    `loan ${type} amount=${event.amountCents} balance=${event.balanceCents} cash=${event.cashCents} accepted`,
+  )
+}
+
+function logLoanDay(game: GameState): void {
+  for (const event of game.log) {
+    if (event.kind === 'loanInterestDue') {
+      debugLog(
+        '[store]',
+        `loan interestDue day=${event.day} amount=${event.amountCents} cash=${event.cashCents} balance=${event.balanceCents}`,
+      )
+    } else if (event.kind === 'loanInterestPaid') {
+      debugLog(
+        '[store]',
+        `loan interestPaid day=${event.day} amount=${event.amountCents} cash=${event.cashCents} balance=${event.balanceCents}`,
+      )
+    } else if (event.kind === 'forcedSale') {
+      debugLog('[store]', `loan forcedSale source=${event.source} amount=${event.amountCents} day=${event.day}`)
+    } else if (event.kind === 'runEnded' && event.reason === 'cannotPayLoanInterest') {
+      debugLog('[store]', `loan runEnded reason=${event.reason} day=${event.day}`)
+    }
+  }
+}
+
 /** `[store] readNews cost=... energy=...` when the read is accepted. */
 function logNewsRead(cmd: unknown, game: GameState | null, accepted: boolean, reason: string): void {
   if (!isTypedCommand(cmd, 'readNews')) return
@@ -361,6 +407,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logConsume(cmd, null, false, 'notStarted')
     logNewsRead(cmd, null, false, 'notStarted')
     logLifestyle(cmd, null, false, 'notStarted')
+    logLoanCommand(cmd, null, false, 'notStarted')
     return { accepted: false, reason: 'notStarted' }
   }
   if (run.game.runEnd !== null) {
@@ -372,6 +419,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logConsume(cmd, run.game, false, 'runEnded')
     logNewsRead(cmd, run.game, false, 'runEnded')
     logLifestyle(cmd, run.game, false, 'runEnded')
+    logLoanCommand(cmd, run.game, false, 'runEnded')
     return { accepted: false, reason: 'runEnded' }
   }
   const from = run.game.section
@@ -393,6 +441,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logConsume(cmd, run.game, false, rejection.reason)
     logNewsRead(cmd, run.game, false, rejection.reason)
     logLifestyle(cmd, run.game, false, rejection.reason)
+    logLoanCommand(cmd, run.game, false, rejection.reason)
     logBill(run.game)
     logRunEnd(run.game)
     publish()
@@ -405,6 +454,7 @@ export function dispatch(cmd: unknown): DispatchResult {
   logConsume(cmd, run.game, true, '')
   logNewsRead(cmd, run.game, true, '')
   logLifestyle(cmd, run.game, true, '')
+  logLoanCommand(cmd, run.game, true, '')
   logBill(run.game)
   logRunEnd(run.game)
   publish()
@@ -434,11 +484,20 @@ export function endDay(): void {
   logBill(run.game)
   logRunEnd(run.game)
   logJobDay(run.game)
+  logLoanDay(run.game)
   debugLog('[store]', `stats energy=${run.game.stats.energy} stress=${run.game.stats.stress}`)
   if (run.game.market.day === dayBefore) {
     const day = run.game.market.day
     const events = run.game.market.log.length
     const hash = stateHash(run.game.market)
+    run = {
+      seed: run.seed,
+      game: run.game,
+      closes: run.closes,
+      summary: run.summary,
+      liquidations: readLiquidations(run.game),
+      forcedSales: readForcedSales(run.game),
+    }
     debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
     publish()
     return
@@ -446,6 +505,7 @@ export function endDay(): void {
   const prices = readPrices(run.game)
   const summary = daySummary(run.game.market.log)
   const liquidations = readLiquidations(run.game)
+  const forcedSales = readForcedSales(run.game)
   const day = run.game.market.day
   const events = run.game.market.log.length
   const hash = stateHash(run.game.market)
@@ -455,6 +515,7 @@ export function endDay(): void {
     closes: [...run.closes, { day, prices }],
     summary,
     liquidations,
+    forcedSales,
   }
   debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
   debugLog(
@@ -529,6 +590,27 @@ function readLiquidations(game: GameState): LiquidationEvent[] {
       fill: event.fill,
       ratioAfter: event.ratioAfter,
     })
+  }
+  return found
+}
+
+/** Copy forced-sale rows off the game log before the next command replaces it. */
+function readForcedSales(game: GameState): ForcedSaleEvent[] {
+  const found: ForcedSaleEvent[] = []
+  for (const event of game.log) {
+    if (event.kind !== 'forcedSale') continue
+    if (!Number.isSafeInteger(event.day) || event.day < 0) {
+      throw new Error(`forced sale day must be a safe integer >= 0, received ${String(event.day)}`)
+    }
+    if (typeof event.source !== 'string' || !/^[A-Za-z][A-Za-z0-9]*$/.test(event.source)) {
+      throw new Error(`forced sale source is invalid, received ${JSON.stringify(event.source)}`)
+    }
+    if (!Number.isSafeInteger(event.amountCents) || event.amountCents < 0) {
+      throw new Error(
+        `forced sale amount for ${event.source} must be a safe integer >= 0, received ${String(event.amountCents)}`,
+      )
+    }
+    found.push({ kind: 'forcedSale', day: event.day, source: event.source, amountCents: event.amountCents })
   }
   return found
 }

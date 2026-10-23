@@ -1,5 +1,5 @@
 import { formatSummary, type DaySummary } from '../sim/summary.ts'
-import type { LiquidationEvent } from '../sim/types.ts'
+import type { ForcedSaleEvent, LiquidationEvent } from '../sim/types.ts'
 
 function formatMove(percent: number): string {
   if (typeof percent !== 'number' || !Number.isFinite(percent)) {
@@ -13,9 +13,11 @@ function formatMove(percent: number): string {
 export function DaySummaryPanel({
   summary,
   liquidations,
+  forcedSales,
 }: {
   summary: DaySummary | null
   liquidations: readonly LiquidationEvent[]
+  forcedSales: readonly ForcedSaleEvent[]
 }) {
   return (
     <section className="panel" aria-live="polite">
@@ -44,6 +46,15 @@ export function DaySummaryPanel({
               {liquidations.map((event, index) => (
                 <li key={`${event.day}-${event.asset}-${index}`}>
                   Liquidated {event.asset}: {event.quantity} shares.
+                </li>
+              ))}
+            </ul>
+          )}
+          {forcedSales.length === 0 ? null : (
+            <ul>
+              {forcedSales.map((event, index) => (
+                <li key={`${event.day}-${event.source}-${index}`}>
+                  Forced sale {event.source}: {event.amountCents} cents.
                 </li>
               ))}
             </ul>

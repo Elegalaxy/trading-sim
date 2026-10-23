@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { unusedLoanLimitCents } from '../sim/loan.ts'
 import type { GameState } from '../sim/types.ts'
 import { dispatch } from './store.ts'
 
@@ -28,7 +29,10 @@ export function BillBanner({ game }: { game: GameState | null }) {
     throw new Error(`bill shortfall is not a safe integer, received ${String(shortfall)}`)
   }
   const savings = game.accounts.savingsCents
-  const withdraw = Math.min(shortfall, savings)
+  const withdraw = Math.min(Math.max(shortfall, 0), savings)
+  const unused = unusedLoanLimitCents(game)
+  const loanOpen = game.loan.balanceCents > 0
+  const loanDraw = !loanOpen && shortfall > 0 ? Math.min(shortfall, unused) : 0
 
   function onWithdraw(): void {
     if (!Number.isSafeInteger(withdraw) || withdraw <= 0) {
@@ -43,6 +47,21 @@ export function BillBanner({ game }: { game: GameState | null }) {
       return
     }
     setMessage('Moved savings into cash.')
+  }
+
+  function onLoan(): void {
+    if (!Number.isSafeInteger(loanDraw) || loanDraw <= 0) {
+      console.error('[ui] rejected loan draw: no unused limit')
+      setMessage(loanOpen ? 'A loan is already open.' : 'No unused loan limit.')
+      return
+    }
+    const outcome = dispatch({ type: 'takeLoan', amountCents: loanDraw })
+    if (!outcome.accepted) {
+      console.error(`[ui] rejected take loan: ${outcome.reason ?? 'rejected'}`)
+      setMessage('Could not take a loan.')
+      return
+    }
+    setMessage('Loan added to cash. Press Pay bill to pay it.')
   }
 
   function onPay(): void {
@@ -74,10 +93,16 @@ export function BillBanner({ game }: { game: GameState | null }) {
           </button>
         </li>
         <li>
-          <button type="button" disabled>
+          <button type="button" onClick={onLoan} disabled={loanDraw <= 0}>
             Take a loan
           </button>
-          <span className="day-note">Not available yet.</span>
+          {loanOpen ? (
+            <span className="day-note">A loan is already open.</span>
+          ) : loanDraw > 0 ? (
+            <span className="day-note">Adds {cents(loanDraw, 'loan draw')} cents to cash. It does not pay the bill.</span>
+          ) : shortfall > 0 ? (
+            <span className="day-note">No unused loan limit.</span>
+          ) : null}
         </li>
       </ul>
       <p className="bill-actions">
@@ -86,7 +111,16 @@ export function BillBanner({ game }: { game: GameState | null }) {
         </button>
       </p>
       {message !== null ? (
-        <p className={message === 'Moved savings into cash.' || message === 'Bill paid.' ? 'trade-ok' : 'trade-alert'} role="status">
+        <p
+          className={
+            message === 'Moved savings into cash.' ||
+            message === 'Bill paid.' ||
+            message === 'Loan added to cash. Press Pay bill to pay it.'
+              ? 'trade-ok'
+              : 'trade-alert'
+          }
+          role="status"
+        >
           {message}
         </p>
       ) : null}

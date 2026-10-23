@@ -112,10 +112,21 @@ function rejected(day: number, command: string, reason: string, account?: string
 /**
  * Move an exact cent amount, or reject the command and leave every balance as it was.
  * The only accepted command is `transfer`.
+ * `loanBalanceCents` is outstanding principal. A transfer into trading is rejected
+ * when cash plus savings would fall below that balance. Moves between cash and
+ * savings do not change the sum, so they stay allowed.
  */
-export function interpretCommand(accounts: PlayerAccounts, day: number, cmd: unknown): CommandOutcome {
+export function interpretCommand(
+  accounts: PlayerAccounts,
+  day: number,
+  cmd: unknown,
+  loanBalanceCents = 0,
+): CommandOutcome {
   assertPlayerAccounts(accounts)
   assertOpenDay(day)
+  if (!Number.isSafeInteger(loanBalanceCents) || loanBalanceCents < 0) {
+    throw new Error(`loan balance must be a safe integer >= 0, received ${describeValue(loanBalanceCents)}`)
+  }
   const command = commandName(cmd)
   if (command !== 'transfer') {
     return { accepted: false, event: rejected(day, command, 'notTransfer') }
@@ -138,6 +149,20 @@ export function interpretCommand(accounts: PlayerAccounts, day: number, cmd: unk
   const source = balanceOf(accounts, record.from)
   if (amount > source) {
     return { accepted: false, event: rejected(day, 'transfer', 'insufficientFunds') }
+  }
+  if (record.to === 'trading') {
+    const nextCash = record.from === 'cash' ? accounts.cashCents - amount : accounts.cashCents
+    const nextSavings = record.from === 'savings' ? accounts.savingsCents - amount : accounts.savingsCents
+    if (!Number.isSafeInteger(nextCash) || !Number.isSafeInteger(nextSavings)) {
+      throw new Error(`loan transfer check overflowed for ${amount} cents`)
+    }
+    const liquid = nextCash + nextSavings
+    if (!Number.isSafeInteger(liquid)) {
+      throw new Error(`cash plus savings after a transfer is not a safe integer, received ${describeValue(liquid)}`)
+    }
+    if (liquid < loanBalanceCents) {
+      return { accepted: false, event: rejected(day, 'transfer', 'belowLoanBalance') }
+    }
   }
   const destination = balanceOf(accounts, record.to)
   const nextSource = source - amount

@@ -73,8 +73,8 @@ export const POLICY_RATE_ENTRY_ID = 'policyRate'
 /**
  * Section 7. Provisional trade fee: 0.1% of the fill notional (shares × fill price).
  * Fee cents = round half away from zero of notional × numerator / denominator.
- * There is no leverage, no margin interest, and no liquidation in this step.
- * The equity rule is documented on `interpretOrder` in trading.ts.
+ * The 5x equity rule is documented on `interpretOrder` in trading.ts.
+ * Margin interest, liquidation, and the backstop are in margin.ts.
  * Spreads and borrow rates live on each asset as parts per million of price.
  */
 export const TRADE_FEE_NUMERATOR = 1
@@ -90,3 +90,39 @@ export const SPREAD_PPM_MAX = 4000
 /** Section 7. Provisional daily short borrow fee: 0.01% to 0.03% of abs(shares) × price. */
 export const BORROW_FEE_PPM_MIN = 100
 export const BORROW_FEE_PPM_MAX = 300
+
+/**
+ * Section 7. Confirmed buying-power cap: 5x, a margin ratio of 20%.
+ * Ratio = equity / gross position value, after the order, at the quoted price.
+ * Reject when equity / gross would be below 20%. Exactly 20% is allowed.
+ * Integer test: equity × DENOMINATOR >= gross × NUMERATOR.
+ */
+export const MARGIN_MIN_RATIO_NUMERATOR = 1
+export const MARGIN_MIN_RATIO_DENOMINATOR = 5
+
+/** Section 7. Confirmed warning when the end-of-day ratio is 15% or lower and gross is positive. */
+export const MARGIN_WARNING_RATIO_NUMERATOR = 15
+export const MARGIN_WARNING_RATIO_DENOMINATOR = 100
+
+/** Section 7. Confirmed liquidation when the end-of-day ratio is 10% or lower and gross is positive. */
+export const MARGIN_LIQUIDATION_RATIO_NUMERATOR = 10
+export const MARGIN_LIQUIDATION_RATIO_DENOMINATOR = 100
+
+/**
+ * Section 7. Provisional margin interest.
+ * Annual rate = max(0, that day's policy rate percent + this spread) / 100.
+ * Borrowed amount = max(0, −trading cash). Daily interest = round half away
+ * from zero of borrowed × annual rate / MARGIN_DAYS_PER_YEAR.
+ * Charged once, after the market step, before the short borrow fee.
+ */
+export const MARGIN_INTEREST_SPREAD_PERCENT = 3
+export const MARGIN_DAYS_PER_YEAR = 365
+
+/**
+ * Section 7. Provisional wipe-out. After the end-of-day check, trading equity
+ * is below this fraction of its value at the start of the day (before the
+ * market step). The flag does not end the run and does not change stress.
+ * Integer test: end × DENOMINATOR < start × NUMERATOR.
+ */
+export const WIPE_OUT_RATIO_NUMERATOR = 10
+export const WIPE_OUT_RATIO_DENOMINATOR = 100

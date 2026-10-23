@@ -361,7 +361,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 11: Leverage, margin, liquidation, and the loss-cap backstop
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 10
 - Files to create or change: `src/sim/margin.ts`, `src/sim/margin.test.ts`, `src/sim/trading.ts`, `src/sim/game.ts`, `src/sim/constants.ts`, `src/sim/log.ts`
 - What changes:
@@ -383,7 +383,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: read the test output for the two-day −8% case and follow `marginCheck`, `liquidation`, then `marginCheck` again.
-- Progress:
+- Progress: 2026-10-23: Added the 5x cap, margin interest, end-of-day liquidation, the zero-equity backstop, and the wipe-out flag. Files: src/sim/margin.ts, src/sim/margin.test.ts, src/sim/trading.ts, src/sim/trading.test.ts, src/sim/game.ts, src/sim/constants.ts, src/sim/log.ts, src/sim/types.ts, src/sim/accounts.ts. An order is rejected below a 20% ratio; exactly 20% is allowed. Trading cash may be negative. End of day, after prices and before savings: interest at max(0, policy + 3)% / 365 on the loan, the existing short borrow fee, the margin check, liquidation of the worst unrealized loss until the ratio is above 15%, then the backstop. A wipe-out is only a log flag. One forced −8% long: equity=177339, ratio=0.13080876, no liquidation. Two forced −8% days: marginCheck equity=68742 ratio=0.05511083, liquidation NOVA quantity=307 fill=4055, marginCheck equity=65041 positionValue=0. Short +8%: equity=177094, ratio=0.11127574. 200 seeds × 120 days at the index cap: liquidationDays=0, maxWriteOff=0. The golden market log was not updated. Checks: npm test passed (11 files, 61 tests, architecture violations=0); npm run typecheck passed.
 
 ### Step 12: Batch harness and risk report
 

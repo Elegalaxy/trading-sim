@@ -3,14 +3,19 @@
 // interest, and no liquidation. Orders read the market and do not write it,
 // so they do not move a price, a fair value, or a random stream.
 //
-// Provisional equity rule (section 7, no leverage yet):
+// Equity and the 5x cap (section 7):
 //   equity = trading-account cents + sum(signedShares × current price cents)
 //   gross  = sum(abs(signedShares) × current price cents)
 // Both use the position after this order and the current quoted price, not the fill.
-// After the fill, gross must be <= equity, and the trading account must stay >= 0.
-// A buy pays shares × fill price + fee from the trading account.
-// A sell credits shares × fill price, then the fee is deducted from the trading account.
-// Wallet cash and savings are not used. The player transfers into trading first.
+// Trading cash may be negative. That negative balance is the margin loan.
+// Wallet cash and savings are not used and are not part of equity.
+// Margin ratio = equity / gross. An order that would push the ratio below 20%
+// is rejected. Exactly 20% is allowed, which is 5x. Equity below zero is rejected.
+// If gross is 0 there is no ratio. The order is accepted only when the fee can be
+// booked, so trading cash is not left negative with no position.
+// A buy pays shares × fill price + fee and may drive trading cash negative.
+// A sell credits shares × fill price, then the fee is deducted.
+// Margin interest, liquidation, and the backstop are in margin.ts.
 //
 // Fee: 0.1% of the fill notional, rounded half away from zero to cents.
 // Spread: the asset's spreadPpm (1000 ppm = 0.10% of price, up to 4000 ppm = 0.40%).
@@ -33,13 +38,17 @@
 // pays its borrowFeePpm (100 ppm = 0.01% a day, up to 300 ppm = 0.03%) of
 // abs(shares) × the post-step price, rounded half away from zero. The fee is
 // logged on the post-step day, same clock as savings accrual, and deducted from
-// the trading account. If cash is short, the rest is logged unpaid. It is not a
-// loan, and wallet cash and savings are not touched. The full assessed fee,
-// including the unpaid part, reduces that day's realized total.
+// the trading account. Only positive trading cash pays it. If cash is short, or
+// already negative, the rest is logged unpaid. Unpaid is not added to the margin
+// loan, and a negative balance is not zeroed. Wallet cash and savings are not
+// touched. The full assessed fee, including the unpaid part, reduces that day's
+// realized total.
 
 import {
   BORROW_FEE_PPM_MAX,
   BORROW_FEE_PPM_MIN,
+  MARGIN_MIN_RATIO_DENOMINATOR,
+  MARGIN_MIN_RATIO_NUMERATOR,
   RATE_PPM_SCALE,
   SPREAD_PPM_MAX,
   SPREAD_PPM_MIN,
@@ -201,7 +210,7 @@ function feeCents(notional: number): number {
   return roundDivHalfAway(numerator, TRADE_FEE_DENOMINATOR)
 }
 
-function addRealized(state: GameState, day: number, cents: number): void {
+export function recordRealized(state: GameState, day: number, cents: number): void {
   if (!Number.isSafeInteger(day) || day < 0) {
     throw new Error(`realized day must be a safe integer >= 0, received ${describeValue(day)}`)
   }
@@ -311,6 +320,117 @@ function exposure(
 }
 
 /**
+ * 5x gate. `cash` means the fee cannot be booked: equity would be negative,
+ * or the account would be flat with unpaid trading cash. `power` means the
+ * ratio would be below 20%. Exactly 20% (`equity × 5 === gross`) is allowed.
+ */
+function marginDecision(equity: number, gross: number): 'ok' | 'cash' | 'power' | 'overflow' {
+  if (gross === 0) return equity < 0 ? 'cash' : 'ok'
+  if (equity < 0) return 'cash'
+  const left = equity * MARGIN_MIN_RATIO_DENOMINATOR
+  const right = gross * MARGIN_MIN_RATIO_NUMERATOR
+  if (!Number.isSafeInteger(left) || !Number.isSafeInteger(right)) return 'overflow'
+  if (left < right) return 'power'
+  return 'ok'
+}
+
+/** Trading-account equity and gross position value at the current quoted prices. */
+export function tradingEquity(state: GameState, defs: MarketDefinitions): { equity: number; gross: number } {
+  if (!Number.isSafeInteger(state.accounts.tradingCents)) {
+    throw new Error(`trading cash must be a safe integer, received ${describeValue(state.accounts.tradingCents)}`)
+  }
+  const marked = exposure(state.market, defs, state.positions)
+  if (marked === 'overflow') throw new Error('trading equity overflowed a safe integer')
+  const equity = state.accounts.tradingCents + marked.marked
+  if (!Number.isSafeInteger(equity)) {
+    throw new Error(`trading equity is not a safe integer, received ${describeValue(equity)}`)
+  }
+  return { equity, gross: marked.gross }
+}
+
+type FillQuote = {
+  price: number
+  halfSpread: number
+  fillPrice: number
+  fee: number
+  cashMove: number
+}
+
+/** Step 10 fill. Buy pays notional + fee. Sell receives notional, then pays the fee. */
+function quoteFill(market: MarketState, def: AssetDefinition, side: OrderSide, quantity: number): FillQuote | 'overflow' {
+  const quoted = market.assets[def.id]
+  if (quoted === undefined || !Number.isSafeInteger(quoted.priceCents) || quoted.priceCents <= 0) {
+    throw new Error(`asset ${def.id} price must be a positive safe integer, received ${describeValue(quoted?.priceCents)}`)
+  }
+  const spreadPpm = requirePpm(def.spreadPpm, SPREAD_PPM_MIN, SPREAD_PPM_MAX, `asset ${def.id} spreadPpm`)
+  const widened = spreadWidens(market, def)
+  const halfSpread = halfSpreadCents(quoted.priceCents, spreadPpm, widened)
+  const fillPrice = side === 'buy' ? quoted.priceCents + halfSpread : quoted.priceCents - halfSpread
+  if (!Number.isSafeInteger(fillPrice) || fillPrice <= 0) {
+    throw new Error(`fill price for ${def.id} must be a positive safe integer, received ${describeValue(fillPrice)}`)
+  }
+  const notional = quantity * fillPrice
+  if (!Number.isSafeInteger(notional)) return 'overflow'
+  const fee = feeCents(notional)
+  const cashMove = side === 'buy' ? -(notional + fee) : notional - fee
+  if (!Number.isSafeInteger(cashMove)) return 'overflow'
+  return { price: quoted.priceCents, halfSpread, fillPrice, fee, cashMove }
+}
+
+export type PositionClose = {
+  asset: string
+  side: OrderSide
+  quantity: number
+  price: number
+  halfSpread: number
+  fillPrice: number
+  fee: number
+}
+
+/**
+ * Close one whole position at the Step 10 fill. Skips the 5x check so a
+ * liquidation can close a book that is already under 20%. Trading cash may
+ * go negative. The realized ledger takes the close P&L and the fee.
+ */
+export function closeWholePosition(state: GameState, defs: MarketDefinitions, assetId: string): PositionClose {
+  const position = state.positions[assetId]
+  if (position === undefined || position.signedShares === 0) {
+    throw new Error(`no open position to close for ${assetId}`)
+  }
+  const quantity = Math.abs(position.signedShares)
+  if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+    throw new Error(`close quantity for ${assetId} must be a positive safe integer, received ${describeValue(position.signedShares)}`)
+  }
+  const side: OrderSide = position.signedShares > 0 ? 'sell' : 'buy'
+  const def = findAsset(defs, assetId)
+  if (def === undefined) throw new Error(`position ${assetId} is not an asset`)
+  const quote = quoteFill(state.market, def, side, quantity)
+  if (quote === 'overflow') throw new Error(`close of ${assetId} overflowed a safe integer`)
+  const nextTrading = state.accounts.tradingCents + quote.cashMove
+  if (!Number.isSafeInteger(nextTrading)) {
+    throw new Error(`close of ${assetId} left trading cash outside a safe integer, received ${describeValue(nextTrading)}`)
+  }
+  const projection = projectPosition(position, side, quantity, quote.fillPrice)
+  if (projection === 'overflow') throw new Error(`close of ${assetId} overflowed a safe integer`)
+  if (projection.signedShares !== 0) {
+    throw new Error(`close of ${assetId} left ${projection.signedShares} shares`)
+  }
+  state.accounts.tradingCents = nextTrading
+  delete state.positions[assetId]
+  if (projection.closedShares > 0) recordRealized(state, state.market.day, projection.realizedCents)
+  recordRealized(state, state.market.day, -quote.fee)
+  return {
+    asset: assetId,
+    side,
+    quantity,
+    price: quote.price,
+    halfSpread: quote.halfSpread,
+    fillPrice: quote.fillPrice,
+    fee: quote.fee,
+  }
+}
+
+/**
  * Fill one market order, or reject it and leave positions, balances, and the
  * realized ledger unchanged. See the equity rule at the top of this file.
  */
@@ -332,28 +452,14 @@ export function interpretOrder(state: GameState, defs: MarketDefinitions, cmd: u
   const def = findAsset(defs, record.asset)
   if (def === undefined) return rejected(day, 'unknownAsset')
 
-  const quoted = state.market.assets[def.id]
-  if (quoted === undefined || !Number.isSafeInteger(quoted.priceCents) || quoted.priceCents <= 0) {
-    throw new Error(`asset ${def.id} price must be a positive safe integer, received ${describeValue(quoted?.priceCents)}`)
-  }
-  const spreadPpm = requirePpm(def.spreadPpm, SPREAD_PPM_MIN, SPREAD_PPM_MAX, `asset ${def.id} spreadPpm`)
-  const widened = spreadWidens(state.market, def)
-  const halfSpread = halfSpreadCents(quoted.priceCents, spreadPpm, widened)
-  const fillPrice = record.side === 'buy' ? quoted.priceCents + halfSpread : quoted.priceCents - halfSpread
-  if (!Number.isSafeInteger(fillPrice) || fillPrice <= 0) {
-    throw new Error(`fill price for ${def.id} must be a positive safe integer, received ${describeValue(fillPrice)}`)
-  }
-  const notional = quantity * fillPrice
-  if (!Number.isSafeInteger(notional)) return rejected(day, 'notionalNotSafeInteger')
-  const fee = feeCents(notional)
-  const cashMove = record.side === 'buy' ? -(notional + fee) : notional - fee
-  if (!Number.isSafeInteger(cashMove)) return rejected(day, 'notionalNotSafeInteger')
-  const nextTrading = state.accounts.tradingCents + cashMove
-  if (!Number.isSafeInteger(nextTrading) || nextTrading < 0) {
-    return rejected(day, 'insufficientTradingCash')
+  const quote = quoteFill(state.market, def, record.side, quantity)
+  if (quote === 'overflow') return rejected(day, 'notionalNotSafeInteger')
+  const nextTrading = state.accounts.tradingCents + quote.cashMove
+  if (!Number.isSafeInteger(nextTrading)) {
+    return rejected(day, 'notionalNotSafeInteger')
   }
 
-  const projection = projectPosition(state.positions[def.id], record.side, quantity, fillPrice)
+  const projection = projectPosition(state.positions[def.id], record.side, quantity, quote.fillPrice)
   if (projection === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   const nextPositions: Record<string, OpenPosition> = { ...state.positions }
   if (projection.signedShares === 0) delete nextPositions[def.id]
@@ -368,7 +474,10 @@ export function interpretOrder(state: GameState, defs: MarketDefinitions, cmd: u
   if (marked === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   const equity = nextTrading + marked.marked
   if (!Number.isSafeInteger(equity)) return rejected(day, 'notionalNotSafeInteger')
-  if (marked.gross > equity) return rejected(day, 'insufficientBuyingPower')
+  const margin = marginDecision(equity, marked.gross)
+  if (margin === 'overflow') return rejected(day, 'notionalNotSafeInteger')
+  if (margin === 'cash') return rejected(day, 'insufficientTradingCash')
+  if (margin === 'power') return rejected(day, 'insufficientBuyingPower')
 
   state.accounts.tradingCents = nextTrading
   if (projection.signedShares === 0) delete state.positions[def.id]
@@ -380,14 +489,14 @@ export function interpretOrder(state: GameState, defs: MarketDefinitions, cmd: u
     asset: def.id,
     side: record.side,
     quantity,
-    price: quoted.priceCents,
-    halfSpread,
-    fillPrice,
-    fee,
+    price: quote.price,
+    halfSpread: quote.halfSpread,
+    fillPrice: quote.fillPrice,
+    fee: quote.fee,
   }
   const events: Array<OrderFillEvent | RealizedEvent> = [fill]
   if (projection.closedShares > 0) {
-    addRealized(state, day, projection.realizedCents)
+    recordRealized(state, day, projection.realizedCents)
     events.push({
       kind: 'realized',
       day,
@@ -395,7 +504,7 @@ export function interpretOrder(state: GameState, defs: MarketDefinitions, cmd: u
       amount: projection.realizedCents,
     })
   }
-  addRealized(state, day, -fee)
+  recordRealized(state, day, -quote.fee)
   return { accepted: true, events }
 }
 
@@ -430,14 +539,22 @@ export function settleBorrowFees(state: GameState, defs: MarketDefinitions): Bor
     }
     const assessed = roundDivHalfAway(numerator, RATE_PPM_SCALE)
     if (assessed < 0) throw new Error(`borrow fee for ${def.id} must be >= 0, received ${assessed}`)
-    const available = state.accounts.tradingCents
-    const paid = assessed > available ? available : assessed
+    const cash = state.accounts.tradingCents
+    if (!Number.isSafeInteger(cash)) {
+      throw new Error(`trading cash must be a safe integer, received ${describeValue(cash)}`)
+    }
+    const payable = cash > 0 ? cash : 0
+    const paid = assessed > payable ? payable : assessed
     const unpaid = assessed - paid
     if (!Number.isSafeInteger(paid) || !Number.isSafeInteger(unpaid) || paid < 0 || unpaid < 0) {
       throw new Error(`borrow split for ${def.id} is not valid, assessed=${assessed} paid=${paid} unpaid=${unpaid}`)
     }
-    state.accounts.tradingCents = available - paid
-    addRealized(state, day, -assessed)
+    const nextCash = cash - paid
+    if (!Number.isSafeInteger(nextCash)) {
+      throw new Error(`trading cash after the borrow fee is not a safe integer, received ${describeValue(nextCash)}`)
+    }
+    state.accounts.tradingCents = nextCash
+    recordRealized(state, day, -assessed)
     events.push({
       kind: 'borrowFee',
       day,

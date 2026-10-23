@@ -32,15 +32,19 @@ export type CommandOutcome =
   | { accepted: true; event: TransferEvent }
   | { accepted: false; event: CommandRejectedEvent }
 
+/** Cash and savings stay >= 0. Trading may be negative: that is the margin loan. */
 export function assertPlayerAccounts(accounts: PlayerAccounts): void {
   if (typeof accounts !== 'object' || accounts === null || Array.isArray(accounts)) {
     throw new Error(`player accounts must be an object, received ${describeValue(accounts)}`)
   }
-  for (const key of ['cashCents', 'tradingCents', 'savingsCents', 'accruedSavingsCents'] as const) {
+  for (const key of ['cashCents', 'savingsCents', 'accruedSavingsCents'] as const) {
     const value = accounts[key]
     if (!Number.isSafeInteger(value) || value < 0) {
       throw new Error(`player ${key} must be a safe integer >= 0, received ${describeValue(value)}`)
     }
+  }
+  if (!Number.isSafeInteger(accounts.tradingCents)) {
+    throw new Error(`player tradingCents must be a safe integer, received ${describeValue(accounts.tradingCents)}`)
   }
 }
 
@@ -141,7 +145,11 @@ export function interpretCommand(accounts: PlayerAccounts, day: number, cmd: unk
   if (!Number.isSafeInteger(nextSource) || nextSource < 0) {
     throw new Error(`transfer left ${record.from} at ${nextSource} cents`)
   }
-  if (!Number.isSafeInteger(nextDestination) || nextDestination < 0) {
+  if (!Number.isSafeInteger(nextDestination)) {
+    throw new Error(`transfer left ${record.to} at ${nextDestination} cents`)
+  }
+  // Trading may stay negative while a margin loan is paid down. Cash and savings may not.
+  if (record.to !== 'trading' && nextDestination < 0) {
     throw new Error(`transfer left ${record.to} at ${nextDestination} cents`)
   }
   setBalance(accounts, record.from, nextSource)

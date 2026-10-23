@@ -566,8 +566,8 @@ export type OpenPosition = {
 
 /**
  * One market day's net realized result, in cents: closed-position P&L minus
- * trade fees and borrow fees. Kept for the Step 17 FI window. This step does
- * not check FI. A missing day means zero.
+ * trade fees, borrow fees, and margin interest. Kept for the Step 17 FI window.
+ * This step does not check FI. A missing day means zero.
  */
 export type RealizedDay = {
   day: number
@@ -590,7 +590,8 @@ export type OrderFillEvent = {
 /**
  * Daily borrow fee for a short, charged after the market step.
  * `ratePpm` is parts per million. `assessed`, `paid`, and `unpaid` are cents.
- * Unpaid is the part the trading account could not cover. It is not a loan.
+ * Unpaid is the part positive trading cash could not cover. It is not a loan.
+ * A negative trading balance is the margin loan and is not used to pay this fee.
  */
 export type BorrowFeeEvent = {
   kind: 'borrowFee'
@@ -612,12 +613,91 @@ export type RealizedEvent = {
   amount: number
 }
 
+/**
+ * One day of interest on the margin loan. `borrowed` is max(0, −trading cash)
+ * before the charge. `interest` is cents deducted from trading cash.
+ * `tradingCents` is the balance after the deduction.
+ */
+export type MarginInterestEvent = {
+  kind: 'marginInterest'
+  day: number
+  borrowed: number
+  /** Policy rate in percent after this day's market step. */
+  policyRate: number
+  annualRate: number
+  interest: number
+  tradingCents: number
+}
+
+/**
+ * End-of-day margin snapshot. `positionValue` is gross, the sum of
+ * abs(shares) × quoted price. `ratio` is equity / positionValue, or null
+ * when nothing is open.
+ */
+export type MarginCheckEvent = {
+  kind: 'marginCheck'
+  day: number
+  equity: number
+  positionValue: number
+  ratio: number | null
+}
+
+/** Logged when the ratio is 15% or lower and a position is open. */
+export type MarginWarningEvent = {
+  kind: 'marginWarning'
+  day: number
+  equity: number
+  positionValue: number
+  ratio: number
+}
+
+/**
+ * One whole position closed by the end-of-day liquidation.
+ * `quantity` is shares closed. `fill` is the fill price in cents.
+ * `ratioAfter` is the margin ratio after this close, or null when flat.
+ */
+export type LiquidationEvent = {
+  kind: 'liquidation'
+  day: number
+  asset: string
+  quantity: number
+  fill: number
+  ratioAfter: number | null
+}
+
+/** Cents added to trading cash so equity is no longer negative. */
+export type BackstopWriteOffEvent = {
+  kind: 'backstopWriteOff'
+  day: number
+  amount: number
+}
+
+/**
+ * Trading equity ended below 10% of its value at the start of the day.
+ * This does not end the run and does not change stress.
+ */
+export type WipeOutEvent = {
+  kind: 'wipeOut'
+  day: number
+  startEquity: number
+  endEquity: number
+}
+
 /** Player commands since the previous end of day. */
 export type CommandLogEvent = TransferEvent | CommandRejectedEvent | OrderFillEvent | RealizedEvent
+
+export type MarginLogEvent =
+  | MarginInterestEvent
+  | MarginCheckEvent
+  | MarginWarningEvent
+  | LiquidationEvent
+  | BackstopWriteOffEvent
+  | WipeOutEvent
 
 export type AccountLogEvent =
   | CommandLogEvent
   | BorrowFeeEvent
+  | MarginLogEvent
   | SavingsAccrualEvent
   | SavingsInterestPaidEvent
 
@@ -659,7 +739,11 @@ export type MarketState = {
   feed: DayFeed
 }
 
-/** Player balances in integer cents. The accumulator is unpaid savings interest. */
+/**
+ * Player balances in integer cents. The accumulator is unpaid savings interest.
+ * `tradingCents` may be negative. That negative balance is the margin loan.
+ * Cash and savings stay >= 0 and are not part of trading equity.
+ */
 export type PlayerAccounts = {
   cashCents: number
   tradingCents: number
@@ -671,9 +755,10 @@ export type PlayerAccounts = {
  * Market plus the player. Commands, fills, and interest live on `pending` and `log`.
  * They are not written onto `market`, so a command cannot change the market hash.
  * `pending` holds commands since the previous `endDay`. `log` is those commands
- * until `endDay` replaces it with the commands, that day's borrow fees, and savings.
- * `realized` is the per-day ledger (P&L minus fees and borrow fees). One row per day
- * that had a non-zero change. Days stay in increasing order.
+ * until `endDay` replaces it with the commands, that day's margin interest,
+ * borrow fees, margin check, and savings.
+ * `realized` is the per-day ledger (P&L minus fees, borrow fees, and margin interest).
+ * One row per day that had a non-zero change. Days stay in increasing order.
  */
 export type GameState = {
   market: MarketState

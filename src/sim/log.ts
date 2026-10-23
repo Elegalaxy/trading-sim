@@ -306,6 +306,54 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
         `asset=${formatAsset(event.asset)}`,
         `amount=${formatNumber(event.amount)}`,
       ].join(' ')
+    case 'marginInterest':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=marginInterest',
+        `borrowed=${formatNumber(event.borrowed)}`,
+        `policyRate=${formatNumber(event.policyRate)}`,
+        `annualRate=${formatNumber(event.annualRate)}`,
+        `interest=${formatNumber(event.interest)}`,
+        `trading=${formatNumber(event.tradingCents)}`,
+      ].join(' ')
+    case 'marginCheck':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=marginCheck',
+        `equity=${formatNumber(event.equity)}`,
+        `positionValue=${formatNumber(event.positionValue)}`,
+        `ratio=${formatOptionalNumber(event.ratio, 'ratio')}`,
+      ].join(' ')
+    case 'marginWarning':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=marginWarning',
+        `equity=${formatNumber(event.equity)}`,
+        `positionValue=${formatNumber(event.positionValue)}`,
+        `ratio=${formatNumber(event.ratio)}`,
+      ].join(' ')
+    case 'liquidation':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=liquidation',
+        `asset=${formatAsset(event.asset)}`,
+        `quantity=${formatNumber(event.quantity)}`,
+        `fill=${formatNumber(event.fill)}`,
+        `ratio=${formatOptionalNumber(event.ratioAfter, 'ratio')}`,
+      ].join(' ')
+    case 'backstopWriteOff':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=backstopWriteOff',
+        `amount=${formatNumber(event.amount)}`,
+      ].join(' ')
+    case 'wipeOut':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=wipeOut',
+        `startEquity=${formatNumber(event.startEquity)}`,
+        `endEquity=${formatNumber(event.endEquity)}`,
+      ].join(' ')
     default: {
       const unknown: never = event
       throw new Error(`formatEvent cannot format ${describeValue(unknown)}`)

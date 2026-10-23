@@ -1,7 +1,7 @@
 // Player time. `applyCommand` and `endDay` are the harness and UI entry points.
-// `endDay` steps the market once, charges short borrow fees, then accrues savings.
-// It does not draw a random stream of its own, and it does not write player lines
-// onto the market. Orders never change prices.
+// `endDay` steps the market once, then charges margin interest, short borrow,
+// the margin check, and savings. It does not draw a random stream of its own,
+// and it does not write player lines onto the market. Orders never change prices.
 
 import {
   assertPlayerAccounts,
@@ -11,9 +11,10 @@ import {
   settleSavings,
 } from './accounts.ts'
 import { STARTING_CASH_CENTS, STARTING_SAVINGS_CENTS, STARTING_TRADING_CENTS } from './constants.ts'
+import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
-import { interpretOrder, settleBorrowFees } from './trading.ts'
-import type { CommandLogEvent, GameState, MarketDefinitions, OpenPosition, RealizedDay } from './types.ts'
+import { interpretOrder, settleBorrowFees, tradingEquity } from './trading.ts'
+import type { AccountLogEvent, CommandLogEvent, GameState, MarketDefinitions, OpenPosition, RealizedDay } from './types.ts'
 
 function describeValue(value: unknown): string {
   if (typeof value === 'number' && Number.isNaN(value)) return 'NaN'
@@ -141,20 +142,42 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
 }
 
 /**
- * Advance one player day: the existing market step once, then short borrow fees,
- * then savings interest. Borrow uses the post-step prices. The policy rate is
- * read after the step. Player events stay off the market log.
+ * Margin interest, short borrow, the margin check, liquidation, the backstop,
+ * and the wipe-out flag. Call this after prices have moved and before savings.
+ * `equityAtDayStart` is trading equity from before the market step.
+ * This does not draw a random stream and does not clear the command log.
+ */
+export function settleTradingAccount(
+  state: GameState,
+  defs: MarketDefinitions,
+  equityAtDayStart: number,
+): AccountLogEvent[] {
+  assertDefinitionsObject(defs)
+  assertGame(state)
+  const policyRate = readPolicyRatePercent(state.market, defs)
+  const interest = settleMarginInterest(state, policyRate)
+  const borrow = settleBorrowFees(state, defs)
+  const margin = settleMargin(state, defs, equityAtDayStart)
+  return [interest, ...borrow, ...margin]
+}
+
+/**
+ * Advance one player day: the existing market step once, then margin interest,
+ * short borrow, the margin check, then savings interest. Interest and borrow
+ * use the post-step prices and that day's policy rate. Player events stay off
+ * the market log. A wipe-out does not end the run.
  */
 export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   assertDefinitionsObject(defs)
   assertGame(state)
   const commands = state.pending.slice()
+  const equityAtStart = tradingEquity(state, defs).equity
   assertPolicyRateEntry(state.market, defs)
   stepMarketDay(state.market, defs)
-  const borrow = settleBorrowFees(state, defs)
+  const traded = settleTradingAccount(state, defs, equityAtStart)
   const policyRate = readPolicyRatePercent(state.market, defs)
   const savings = settleSavings(state.accounts, state.market.day, policyRate)
   state.pending = []
-  state.log = [...commands, ...borrow, ...savings]
+  state.log = [...commands, ...traded, ...savings]
   return state
 }

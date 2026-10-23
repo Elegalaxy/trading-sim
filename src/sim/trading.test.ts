@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest'
 import { applyCommand, createGame, endDay } from './game.ts'
 import { stateHash } from './hash.ts'
 import { formatEvent } from './log.ts'
-import { RATE_PPM_SCALE, STARTING_CASH_CENTS, STARTING_TRADING_CENTS, TRADE_FEE_DENOMINATOR } from './constants.ts'
+import {
+  MARGIN_MIN_RATIO_DENOMINATOR,
+  MARGIN_MIN_RATIO_NUMERATOR,
+  RATE_PPM_SCALE,
+  STARTING_CASH_CENTS,
+  STARTING_TRADING_CENTS,
+  TRADE_FEE_DENOMINATOR,
+} from './constants.ts'
 import { settleBorrowFees } from './trading.ts'
 import type {
   BorrowFeeEvent,
@@ -309,45 +316,64 @@ describe('orders, fees, and borrow', () => {
     )
   })
 
-  it('rejects a bad quantity, an unknown asset, and too little buying power without changing anything', () => {
+  it('rejects a bad quantity, an unknown asset, and leverage past 5x without changing anything', () => {
     const defs = market()
     const probe = createGame(defs, 'power')
     const price = quote(probe, 'NOVA')
     const ppm = spreadOf('NOVA')
     const trading = probe.accounts.tradingCents
-    const judge = (side: OrderSide, quantity: number): 'ok' | 'cash' | 'power' => {
+    const preview = (side: OrderSide, quantity: number) => {
       const half = halfSpreadCents(price, ppm, false)
       const fill = side === 'buy' ? price + half : price - half
       const notional = quantity * fill
       const fee = feeCents(notional)
       const nextTrading = trading + (side === 'buy' ? -(notional + fee) : notional - fee)
-      if (nextTrading < 0) return 'cash'
       const shares = side === 'buy' ? quantity : -quantity
       const equity = nextTrading + shares * price
       const gross = Math.abs(shares) * price
-      if (gross > equity) return 'power'
+      return { nextTrading, equity, gross }
+    }
+    const judge = (side: OrderSide, quantity: number): 'ok' | 'cash' | 'power' => {
+      const row = preview(side, quantity)
+      if (!Number.isSafeInteger(row.nextTrading) || !Number.isSafeInteger(row.equity)) return 'power'
+      if (row.gross === 0) return row.nextTrading < 0 ? 'cash' : 'ok'
+      if (row.equity < 0) return 'cash'
+      if (row.equity * MARGIN_MIN_RATIO_DENOMINATOR < row.gross * MARGIN_MIN_RATIO_NUMERATOR) return 'power'
       return 'ok'
     }
-    let buyFail = 0
-    let sellFail = 0
-    for (let quantity = 1; quantity <= 80; quantity += 1) {
-      if (buyFail === 0 && judge('buy', quantity) === 'cash') buyFail = quantity
-      if (sellFail === 0 && judge('sell', quantity) === 'power') sellFail = quantity
+    let buyPower = 0
+    let sellPower = 0
+    let buyWasCash = 0
+    let sellWasOneX = 0
+    for (let quantity = 1; quantity <= 5000; quantity += 1) {
+      const bought = preview('buy', quantity)
+      const sold = preview('sell', quantity)
+      if (buyWasCash === 0 && bought.nextTrading < 0) buyWasCash = quantity
+      if (sellWasOneX === 0 && sold.equity >= 0 && sold.gross > sold.equity) sellWasOneX = quantity
+      if (buyPower === 0 && judge('buy', quantity) === 'power') buyPower = quantity
+      if (sellPower === 0 && judge('sell', quantity) === 'power') sellPower = quantity
     }
-    expect(buyFail).toBeGreaterThan(1)
-    expect(sellFail).toBeGreaterThan(1)
-    expect(judge('buy', buyFail - 1)).toBe('ok')
-    expect(judge('sell', sellFail - 1)).toBe('ok')
-    expect(judge('sell', sellFail)).toBe('power')
-    debugTrading(`buying-power boundary buyCash=${buyFail} shortPower=${sellFail} price=${price}`)
+    expect(buyWasCash).toBeGreaterThan(1)
+    expect(sellWasOneX).toBeGreaterThan(1)
+    expect(buyPower).toBeGreaterThan(buyWasCash)
+    expect(sellPower).toBeGreaterThan(sellWasOneX)
+    expect(judge('buy', buyWasCash)).toBe('ok')
+    expect(judge('sell', sellWasOneX)).toBe('ok')
+    expect(judge('buy', buyPower - 1)).toBe('ok')
+    expect(judge('sell', sellPower - 1)).toBe('ok')
+    expect(judge('buy', buyPower)).toBe('power')
+    expect(judge('sell', sellPower)).toBe('power')
+    debugTrading(
+      `5x boundary oldCashBuy=${buyWasCash} oldOneXShort=${sellWasOneX} buyPower=${buyPower} shortPower=${sellPower} price=${price}`,
+    )
 
     const cases: { cmd: unknown; reason: string; command: string }[] = [
       { cmd: order('NOVA', 'buy', 0), reason: 'quantityZero', command: 'order' },
       { cmd: order('NOVA', 'buy', -3), reason: 'quantityNegative', command: 'order' },
       { cmd: order('NOVA', 'sell', 1.5), reason: 'quantityNotInteger', command: 'order' },
       { cmd: order('NOPE', 'buy', 1), reason: 'unknownAsset', command: 'order' },
-      { cmd: order('NOVA', 'buy', buyFail), reason: 'insufficientTradingCash', command: 'order' },
-      { cmd: order('NOVA', 'sell', sellFail), reason: 'insufficientBuyingPower', command: 'order' },
+      { cmd: order('NOVA', 'buy', buyPower), reason: 'insufficientBuyingPower', command: 'order' },
+      { cmd: order('NOVA', 'sell', sellPower), reason: 'insufficientBuyingPower', command: 'order' },
       { cmd: { type: 'eat' }, reason: 'notTransfer', command: 'eat' },
     ]
     for (const entry of cases) {
@@ -365,16 +391,35 @@ describe('orders, fees, and borrow', () => {
       debugTrading(formatEvent(logged))
     }
 
-    const allowedBuy = createGame(defs, 'allow-buy')
-    applyCommand(allowedBuy, defs, order('NOVA', 'buy', buyFail - 1))
-    expect(allowedBuy.positions.NOVA?.signedShares).toBe(buyFail - 1)
-    expect(allowedBuy.accounts.tradingCents).toBeGreaterThanOrEqual(0)
-    const allowedSell = createGame(defs, 'allow-sell')
-    applyCommand(allowedSell, defs, order('NOVA', 'sell', sellFail - 1))
-    expect(allowedSell.positions.NOVA?.signedShares).toBe(-(sellFail - 1))
-    expect(allowedSell.accounts.tradingCents).toBeGreaterThanOrEqual(0)
+    const leveragedBuy = createGame(defs, 'allow-buy')
+    applyCommand(leveragedBuy, defs, order('NOVA', 'buy', buyWasCash))
+    expect(leveragedBuy.positions.NOVA?.signedShares).toBe(buyWasCash)
+    expect(leveragedBuy.accounts.tradingCents).toBeLessThan(0)
+    expect(leveragedBuy.accounts.cashCents).toBe(STARTING_CASH_CENTS)
+    const buyEquity = leveragedBuy.accounts.tradingCents + buyWasCash * price
+    const buyGross = buyWasCash * price
+    expect(buyEquity).toBeGreaterThanOrEqual(0)
+    expect(buyEquity * MARGIN_MIN_RATIO_DENOMINATOR).toBeGreaterThanOrEqual(buyGross * MARGIN_MIN_RATIO_NUMERATOR)
+    const oldShort = createGame(defs, 'allow-sell')
+    applyCommand(oldShort, defs, order('NOVA', 'sell', sellWasOneX))
+    expect(oldShort.positions.NOVA?.signedShares).toBe(-sellWasOneX)
+    const shortEquity = oldShort.accounts.tradingCents + -sellWasOneX * price
+    const shortGross = sellWasOneX * price
+    expect(shortGross).toBeGreaterThan(shortEquity)
+    expect(shortEquity).toBeGreaterThanOrEqual(0)
+    expect(shortEquity * MARGIN_MIN_RATIO_DENOMINATOR).toBeGreaterThanOrEqual(shortGross * MARGIN_MIN_RATIO_NUMERATOR)
+    const capBuy = createGame(defs, 'cap-buy')
+    applyCommand(capBuy, defs, order('NOVA', 'buy', buyPower - 1))
+    expect(capBuy.positions.NOVA?.signedShares).toBe(buyPower - 1)
+    const capEquity = capBuy.accounts.tradingCents + (buyPower - 1) * price
+    expect(capEquity).toBeGreaterThanOrEqual(0)
+    const capSell = createGame(defs, 'cap-sell')
+    applyCommand(capSell, defs, order('NOVA', 'sell', sellPower - 1))
+    expect(capSell.positions.NOVA?.signedShares).toBe(-(sellPower - 1))
+    const capShortEquity = capSell.accounts.tradingCents + -(sellPower - 1) * price
+    expect(capShortEquity).toBeGreaterThanOrEqual(0)
     debugTrading(
-      `accepted buy=${buyFail - 1} trading=${allowedBuy.accounts.tradingCents} short=${sellFail - 1} trading=${allowedSell.accounts.tradingCents}`,
+      `accepted oldCashBuy=${buyWasCash} trading=${leveragedBuy.accounts.tradingCents} equity=${buyEquity} oldOneXShort=${sellWasOneX} capBuy=${buyPower - 1} capShort=${sellPower - 1}`,
     )
   })
 

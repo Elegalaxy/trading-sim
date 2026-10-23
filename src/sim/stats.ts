@@ -5,6 +5,7 @@
 // Reading the news spends energy. Quiet breaks makes the first read that day free.
 // This module does not draw a random stream and does not write on the market.
 
+import { VERIFY_ENERGY_COST } from './constants.ts'
 import { activeJob } from './jobs.ts'
 import type {
   CommandRejectedEvent,
@@ -13,6 +14,7 @@ import type {
   GameState,
   JobDefinition,
   NewsReadEvent,
+  NewsVerifiedEvent,
   PlayerStats,
   StatChangeEvent,
   StatName,
@@ -47,6 +49,9 @@ export const WIPE_OUT_STRESS = 25
 
 /** Section 4 and 9. Energy spent to read the news. Quiet breaks waives the first read. */
 export const NEWS_READ_ENERGY_COST = 2
+
+/** Section 9. Energy spent to open the true feed. Same price as a news read. Quiet breaks does not waive it. */
+export { VERIFY_ENERGY_COST }
 
 /**
  * Section 6. Steady routine multiplies stress restored by a consumable by 1.1.
@@ -232,6 +237,14 @@ export function assertStatsCommand(event: unknown): void {
     if (cost < 0) throw new Error(`news read cost must be >= 0, received ${describeValue(row.cost)}`)
     return
   }
+  if (kind === 'newsVerified') {
+    const row = event as NewsVerifiedEvent
+    assertSafeInteger(row.day, 'verify day')
+    if (row.day < 0) throw new Error(`verify day must be >= 0, received ${describeValue(row.day)}`)
+    const cost = assertSafeInteger(row.cost, 'verify cost')
+    if (cost < 0) throw new Error(`verify cost must be >= 0, received ${describeValue(row.cost)}`)
+    return
+  }
   throw new Error(`stats event kind is unknown, received ${describeValue(kind)}`)
 }
 
@@ -370,6 +383,22 @@ export function interpretReadNews(state: GameState): Array<NewsReadEvent | StatC
   const spent = applyDelta(state, day, 'energy', 'newsRead', -cost)
   if (spent !== null) events.push(spent)
   events.push({ kind: 'newsRead', day, cost })
+  return events
+}
+
+/**
+ * Show today's true visible feed. The shown feed is left as it was.
+ * Cost is 2 energy. The first quiet-breaks news read stays free.
+ * Does not change the section, the market, or the stored feed.
+ */
+export function interpretVerify(state: GameState): Array<NewsVerifiedEvent | StatChangeEvent> {
+  const day = state.market.day
+  const cost = VERIFY_ENERGY_COST
+  const events: Array<NewsVerifiedEvent | StatChangeEvent> = []
+  const spent = applyDelta(state, day, 'energy', 'verify', -cost)
+  if (spent !== null) events.push(spent)
+  state.perception.verified = true
+  events.push({ kind: 'newsVerified', day, cost })
   return events
 }
 

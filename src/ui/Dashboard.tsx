@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../content/index.ts'
 import { activeJob } from '../sim/jobs.ts'
+import { viewedFeed } from '../sim/game.ts'
 import type { JobDefinition } from '../sim/types.ts'
 import { Accounts } from './Accounts.tsx'
 import { Consumables } from './Consumables.tsx'
@@ -172,10 +173,10 @@ export function Dashboard() {
 
       <CalendarPanel market={market} />
       <NewsFeed
-        key={market?.feed.day ?? 0}
-        feed={market?.feed ?? null}
+        key={`${market?.day ?? 'none'}-${market?.feed.day ?? 0}`}
+        feed={run === null ? null : viewedFeed(run.game)}
+        verified={run?.game.perception.verified ?? false}
         job={run === null ? null : activeJob(run.game.job)}
-        lifestyle={run?.game.lifestyle ?? null}
         newsReads={run?.game.stats.newsReads ?? 0}
       />
       <DaySummaryPanel

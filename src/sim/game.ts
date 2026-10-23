@@ -27,6 +27,7 @@ import {
   STARTING_TRADING_CENTS,
 } from './constants.ts'
 import { assertDayState, interpretSkip, isDaySection } from './day.ts'
+import { assertPerception, copySocialPosts, shownFeed, undistortedFeed } from './distortion.ts'
 import {
   activeJob,
   applyDueJobChange,
@@ -38,7 +39,14 @@ import {
   sectionForJob,
 } from './jobs.ts'
 import { applyFiCheck, finishAtDayLimit, initialFi } from './fi.ts'
-import { assertLifestyle, assertLifestyleCommand, initialLifestyle, interpretBuyCourse, interpretSetLifestyle } from './lifestyle.ts'
+import {
+  assertLifestyle,
+  assertLifestyleCommand,
+  initialLifestyle,
+  interpretBuyCourse,
+  interpretSetLifestyle,
+  playerVisibleFeed,
+} from './lifestyle.ts'
 import { assertLoan, initialLoan, interpretRepayLoan, interpretTakeLoan, settleMissedLoanInterest } from './loan.ts'
 import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
@@ -51,6 +59,7 @@ import {
   initialStats,
   interpretConsume,
   interpretReadNews,
+  interpretVerify,
 } from './stats.ts'
 import { interpretOrder, settleBorrowFees, tradingEquity } from './trading.ts'
 import {
@@ -63,6 +72,8 @@ import {
   type JobDefinition,
   type MarketDefinitions,
   type OpenPosition,
+  type ShownFeed,
+  type SocialPostDefinition,
   type PendingBill,
   type RealizedDay,
   type RunEnd,
@@ -109,6 +120,7 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'statChange' &&
       kind !== 'consume' &&
       kind !== 'newsRead' &&
+      kind !== 'newsVerified' &&
       kind !== 'lifestyleChange' &&
       kind !== 'coursePurchased' &&
       kind !== 'loanTaken' &&
@@ -116,7 +128,7 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
     ) {
       throw new Error(`pending account event must be a command, received ${describeValue(kind)}`)
     }
-    if (kind === 'statChange' || kind === 'consume' || kind === 'newsRead') {
+    if (kind === 'statChange' || kind === 'consume' || kind === 'newsRead' || kind === 'newsVerified') {
       assertStatsCommand(event)
     }
     if (kind === 'lifestyleChange' || kind === 'coursePurchased') {
@@ -353,11 +365,41 @@ function assertGame(state: GameState): void {
   assertLoan(state.loan)
 }
 
+/**
+ * Bias the visible feed once, from the positions and stress held now.
+ * Call this at day start. Later trades do not call it again.
+ * Only the distortion stream may advance. The stored feed is not written.
+ */
+export function refreshPerception(state: GameState): void {
+  const visible = playerVisibleFeed(state.market.feed, activeJob(state.job), state.lifestyle)
+  const built = shownFeed(
+    visible,
+    state.positions,
+    state.stats.stress,
+    state.market.streams.distortion,
+    state.socialPosts,
+    state.market.day,
+  )
+  state.perception = {
+    day: state.market.day,
+    shown: built.feed,
+    events: built.events,
+    verified: false,
+  }
+}
+
+/** The biased feed, or the true visible feed after verify. */
+export function viewedFeed(state: GameState): ShownFeed {
+  if (!state.perception.verified) return state.perception.shown
+  return undistortedFeed(playerVisibleFeed(state.market.feed, activeJob(state.job), state.lifestyle))
+}
+
 /** Optional menus and starting job. Omitted jobs means jobless. Omitted consumables means nothing is for sale. */
 export type GameStart = {
   jobs?: readonly JobDefinition[]
   jobId?: string
   consumables?: readonly ConsumableDefinition[]
+  socialPosts?: readonly SocialPostDefinition[]
 }
 
 /** Day 0 market plus 3E cash, 3E trading, and empty savings. The starting job applies immediately. */
@@ -365,7 +407,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
   assertDefinitionsObject(defs)
   const playerJob = initialPlayerJob(start?.jobs, start?.jobId)
   const job = activeJob(playerJob)
-  return {
+  const state: GameState = {
     market: createMarket(defs, seed),
     accounts: {
       cashCents: STARTING_CASH_CENTS,
@@ -385,9 +427,18 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     fi: initialFi(),
     stats: initialStats(),
     consumables: copyConsumables(start?.consumables),
+    socialPosts: copySocialPosts(start?.socialPosts),
+    perception: {
+      day: 0,
+      shown: { day: 1, items: [] },
+      events: [],
+      verified: false,
+    },
     lifestyle: initialLifestyle(),
     loan: initialLoan(),
   }
+  refreshPerception(state)
+  return state
 }
 
 /** Why `endDay` must not advance, or null when the day can end. */
@@ -407,6 +458,7 @@ function commandType(cmd: unknown): string | null {
 export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unknown): GameState {
   assertDefinitionsObject(defs)
   assertGame(state)
+  assertPerception(state.perception, state.market.day, state.market.feed.day)
   if (state.runEnd !== null) {
     const command = commandType(cmd) ?? 'invalid'
     state.pending.push({
@@ -452,6 +504,8 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
     }
   } else if (type === 'readNews') {
     for (const event of interpretReadNews(state)) state.pending.push(event)
+  } else if (type === 'verify') {
+    for (const event of interpretVerify(state)) state.pending.push(event)
   } else if (type === 'setLifestyle') {
     const outcome = interpretSetLifestyle(state, cmd)
     state.pending.push(outcome.event)
@@ -531,6 +585,7 @@ function savingsInterestReceived(events: readonly AccountLogEvent[]): number {
 export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   assertDefinitionsObject(defs)
   assertGame(state)
+  assertPerception(state.perception, state.market.day, state.market.feed.day)
   const block = endDayBlockReason(state)
   if (block !== null) throw new Error(`end day blocked: ${block}`)
   const loanEvents = settleMissedLoanInterest(state, defs)
@@ -565,5 +620,6 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const job = activeJob(state.job)
   state.section = sectionForJob(job)
   state.sleepHours = job.sleepHours
+  refreshPerception(state)
   return state
 }

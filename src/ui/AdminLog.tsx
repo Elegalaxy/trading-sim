@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { formatEvent } from '../sim/log.ts'
-import type { AccountLogEvent, LogEvent } from '../sim/types.ts'
+import type { AccountLogEvent, DistortionEvent, LogEvent } from '../sim/types.ts'
 
-type LoggedEvent = LogEvent | AccountLogEvent
+type LoggedEvent = LogEvent | AccountLogEvent | DistortionEvent
 
 export function AdminLog({ events }: { events: readonly LoggedEvent[] }) {
   const [kind, setKind] = useState('all')

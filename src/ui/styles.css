@@ -376,3 +376,16 @@ ul {
   flex: 1 0 100%;
   margin: 0;
 }
+
+.tell {
+  color: #e2b15a;
+  margin-right: 0.35em;
+  font-size: 0.85em;
+}
+
+.distorted {
+  background: rgba(226, 177, 90, 0.18);
+  box-shadow: inset 3px 0 0 #e2b15a;
+  border-radius: 4px;
+  padding: 2px 6px;
+}

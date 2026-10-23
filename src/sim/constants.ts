@@ -223,3 +223,14 @@ export const SLEEP_HOURS = 8
  * Jobless skip still runs from the end of sleep. A job's skip runs from the end of work.
  */
 export const PLAYER_IS_JOBLESS = true
+
+/**
+ * Section 9. Provisional bias. Stress at or below the floor does not change the feed.
+ * At the ceiling, at most this percent of the visible items are distorted.
+ * The share scales in a straight line between the two. The count is rounded down,
+ * so a small feed stays under the cap. Verify spends the same energy as reading the news.
+ */
+export const BIAS_STRESS_FLOOR = 60
+export const BIAS_STRESS_CEILING = 100
+export const BIAS_CAP_PERCENT = 25
+export const VERIFY_ENERGY_COST = 2

@@ -616,7 +616,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 22: Biased news, verify, and the tell
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 21, Q13, Q14
 - Files to create or change: `src/sim/distortion.ts`, `src/sim/distortion.test.ts`, `src/content/socialPosts.ts`, `src/sim/game.ts`, `src/ui/NewsFeed.tsx`, `src/ui/Tell.tsx`, `src/ui/AdminLog.tsx`, `src/ui/store.ts`
 - What changes:
@@ -638,7 +638,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: hold a long, push stress above 60 (night shift, no tea), read the news, spot tinted items, press Verify, and compare.
-- Progress:
+- Progress: 2026-10-23: Biased news is display-only. Files: src/sim/distortion.ts, src/sim/distortion.test.ts, src/sim/constants.ts, src/sim/types.ts, src/sim/game.ts, src/sim/stats.ts, src/sim/log.ts, src/sim/monthly.ts, src/content/socialPosts.ts, src/content/index.ts, src/ui/NewsFeed.tsx, src/ui/Tell.tsx, src/ui/AdminLog.tsx, src/ui/store.ts, src/ui/App.tsx, src/ui/Dashboard.tsx, src/ui/styles.css. Rule: at day start, after stats, shownFeed builds the view from the positions held then. Stress at or below 60 distorts nothing. From 61 to 100 the cap is floor(visibleCount * 25 * (stress - 60) / 4000), so at stress 100 it is 25% of the visible items, rounded down. A long promotes bullish items on that asset (event target, text says up) and hides bearish ones (text says down); a short does the reverse. Leftover cap slots append a generated social post with source streetFeed and tier low. The post is not a market event. The calendar is not passed through. Verify costs 2 energy, is not the free quiet-breaks read, and shows today's true visible feed. The day summary still reads the market log. Provisional: the 60–100 scale, the rounded-down 25% cap, the 2 energy verify cost, once-a-day timing, the promote-then-hide-then-generate order, and the post text. npm test passed (19 files, 105 tests). npm run typecheck passed. npm run lint passed.
 
 ### Step 23: Cosmetic effects and the accessibility toggle
 

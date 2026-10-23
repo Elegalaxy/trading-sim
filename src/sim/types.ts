@@ -468,6 +468,73 @@ export type DayFeed = {
   items: FeedItem[]
 }
 
+/** What a distortion did to one visible item. Generated posts were not in the true feed. */
+export const DISTORTION_ACTIONS = ['reweight', 'hide', 'generate'] as const
+
+export type DistortionAction = (typeof DISTORTION_ACTIONS)[number]
+
+/**
+ * One displayed social post. Passed in with the other definitions.
+ * `src/sim` does not import the content file. `{asset}` is the open position.
+ * The sim marks every post low reliability. A post is not a market event.
+ */
+export type SocialPostDefinition = {
+  id: string
+  /** Visible source tag. */
+  sourceId: string
+  direction: 'up' | 'down'
+  text: string
+}
+
+/** A headline or rumour in the shown feed. `distorted` is the tell. */
+export type ShownNewsItem = (HeadlineItem | RumourItem) & { distorted: boolean }
+
+/**
+ * Display-only post. `tier` is always low. It is never written onto the market feed.
+ */
+export type SocialPostItem = {
+  kind: 'social'
+  id: string
+  sourceId: string
+  tier: 'low'
+  text: string
+  asset: string
+  direction: 'up' | 'down'
+  distorted: true
+}
+
+export type ShownItem = ShownNewsItem | SocialPostItem
+
+/** What the player sees for one day. `day` matches the visible feed's day. */
+export type ShownFeed = {
+  day: number
+  items: ShownItem[]
+}
+
+/**
+ * Admin true-versus-shown record. Not a market log line, so it cannot move prices.
+ * `trueValue` is the unbiased text or index. `shownValue` is what the bias did.
+ */
+export type DistortionEvent = {
+  kind: 'distortion'
+  day: number
+  item: string
+  action: DistortionAction
+  trueValue: string
+  shownValue: string
+}
+
+/**
+ * The day's biased view, fixed at day start. `verified` switches the UI to the true feed.
+ * The stored market feed is not this object.
+ */
+export type PerceptionState = {
+  day: number
+  shown: ShownFeed
+  events: DistortionEvent[]
+  verified: boolean
+}
+
 export type HeadlineEvent = {
   kind: 'headline'
   /** Day the headline was generated. The event fired on this day. */
@@ -849,6 +916,13 @@ export type NewsReadEvent = {
   cost: number
 }
 
+/** The player opened today's true visible feed. `cost` is the energy price. Quiet breaks does not waive it. */
+export type NewsVerifiedEvent = {
+  kind: 'newsVerified'
+  day: number
+  cost: number
+}
+
 /** Home and the information feed. Tier 0 is the base lifestyle. */
 export const LIFESTYLE_CATEGORIES = ['home', 'infoFeed'] as const
 
@@ -952,6 +1026,7 @@ export type CommandLogEvent =
   | StatChangeEvent
   | ConsumeEvent
   | NewsReadEvent
+  | NewsVerifiedEvent
   | LifestyleChangeEvent
   | CoursePurchasedEvent
   | LoanTakenEvent
@@ -1193,6 +1268,8 @@ export type FiTracker = {
  * End-of-day stat lines sit on `log` with the other account events. They are not on the market.
  * `lifestyle` is the Home and information-feed tiers. Courses stay on `job`.
  * `loan` is the single bank loan. A balance above 0 blocks another draw.
+ * `socialPosts` is the display-only post menu. `perception` is the biased feed for this day.
+ * It is rebuilt at day start and is not part of the market log.
  */
 export type GameState = {
   market: MarketState
@@ -1209,6 +1286,8 @@ export type GameState = {
   fi: FiTracker
   stats: PlayerStats
   consumables: ConsumableDefinition[]
+  socialPosts: SocialPostDefinition[]
+  perception: PerceptionState
   lifestyle: LifestyleState
   loan: BankLoan
 }

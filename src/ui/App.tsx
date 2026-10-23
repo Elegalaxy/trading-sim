@@ -8,7 +8,8 @@ function App() {
   debugLog('[ui]', 'app mounted')
   const snapshot = useTradingStore()
   const run = snapshot.run
-  const events = run === null ? [] : [...run.game.market.log, ...run.game.log]
+  const events =
+    run === null ? [] : [...run.game.market.log, ...run.game.log, ...run.game.perception.events]
 
   return (
     <div className="app">

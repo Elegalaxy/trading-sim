@@ -2,7 +2,7 @@
 // MarketState.log is replaced on every endDay.
 
 import { useSyncExternalStore } from 'react'
-import { CONSUMABLE_DEFINITIONS, JOB_DEFINITIONS, MARKET_DEFINITIONS } from '../content/index.ts'
+import { CONSUMABLE_DEFINITIONS, JOB_DEFINITIONS, MARKET_DEFINITIONS, SOCIAL_POST_DEFINITIONS } from '../content/index.ts'
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
@@ -146,7 +146,12 @@ export function startGame(seed: string, jobId = 'jobless'): string | null {
   }
   let game: GameState
   try {
-    game = createGame(definitions, seed, { jobs: JOB_DEFINITIONS, jobId, consumables: CONSUMABLE_DEFINITIONS })
+    game = createGame(definitions, seed, {
+      jobs: JOB_DEFINITIONS,
+      jobId,
+      consumables: CONSUMABLE_DEFINITIONS,
+      socialPosts: SOCIAL_POST_DEFINITIONS,
+    })
   } catch (error) {
     console.error('[store] createGame failed', error)
     throw error
@@ -157,6 +162,7 @@ export function startGame(seed: string, jobId = 'jobless'): string | null {
     '[store]',
     `job start ${jobId} slots=${chosen.slots} sleepHours=${chosen.sleepHours} pay=${chosen.payCents}`,
   )
+  logDistortion(game)
   publish()
   return null
 }
@@ -341,6 +347,32 @@ function logNewsRead(cmd: unknown, game: GameState | null, accepted: boolean, re
   debugLog('[store]', `readNews cost=${event.cost} energy=${game.stats.energy}`)
 }
 
+/** `[store] verify cost=... energy=...` when verify is accepted. */
+function logVerify(cmd: unknown, game: GameState | null, accepted: boolean, reason: string): void {
+  if (!isTypedCommand(cmd, 'verify')) return
+  if (!accepted || game === null) {
+    debugLog('[store]', `verify rejected ${reason}`)
+    return
+  }
+  const event = [...game.pending].reverse().find((entry) => entry.kind === 'newsVerified')
+  if (event === undefined || event.kind !== 'newsVerified') {
+    console.error('[store] verify accepted without a newsVerified event')
+    debugLog('[store]', 'verify accepted missing-event')
+    return
+  }
+  debugLog('[store]', `verify cost=${event.cost} energy=${game.stats.energy}`)
+}
+
+/** `[store] distortion item=... action=... true=... shown=...` for each biased item. */
+function logDistortion(game: GameState): void {
+  for (const event of game.perception.events) {
+    debugLog(
+      '[store]',
+      `distortion item=${event.item} action=${event.action} true=${event.trueValue} shown=${event.shownValue}`,
+    )
+  }
+}
+
 /** `[store] job setJob ... accepted|rejected`. */
 function logJobCommand(cmd: unknown, accepted: boolean, reason: string, effectiveDay: number | null): void {
   if (!isSetJobCommand(cmd)) return
@@ -406,6 +438,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logJobCommand(cmd, false, 'notStarted', null)
     logConsume(cmd, null, false, 'notStarted')
     logNewsRead(cmd, null, false, 'notStarted')
+    logVerify(cmd, null, false, 'notStarted')
     logLifestyle(cmd, null, false, 'notStarted')
     logLoanCommand(cmd, null, false, 'notStarted')
     return { accepted: false, reason: 'notStarted' }
@@ -418,6 +451,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logJobCommand(cmd, false, 'runEnded', null)
     logConsume(cmd, run.game, false, 'runEnded')
     logNewsRead(cmd, run.game, false, 'runEnded')
+    logVerify(cmd, run.game, false, 'runEnded')
     logLifestyle(cmd, run.game, false, 'runEnded')
     logLoanCommand(cmd, run.game, false, 'runEnded')
     return { accepted: false, reason: 'runEnded' }
@@ -440,6 +474,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logJobCommand(cmd, false, rejection.reason, null)
     logConsume(cmd, run.game, false, rejection.reason)
     logNewsRead(cmd, run.game, false, rejection.reason)
+    logVerify(cmd, run.game, false, rejection.reason)
     logLifestyle(cmd, run.game, false, rejection.reason)
     logLoanCommand(cmd, run.game, false, rejection.reason)
     logBill(run.game)
@@ -453,6 +488,7 @@ export function dispatch(cmd: unknown): DispatchResult {
   logJobCommand(cmd, true, '', run.game.job.pending?.effectiveDay ?? null)
   logConsume(cmd, run.game, true, '')
   logNewsRead(cmd, run.game, true, '')
+  logVerify(cmd, run.game, true, '')
   logLifestyle(cmd, run.game, true, '')
   logLoanCommand(cmd, run.game, true, '')
   logBill(run.game)
@@ -486,6 +522,7 @@ export function endDay(): void {
   logJobDay(run.game)
   logLoanDay(run.game)
   debugLog('[store]', `stats energy=${run.game.stats.energy} stress=${run.game.stats.stress}`)
+  logDistortion(run.game)
   if (run.game.market.day === dayBefore) {
     const day = run.game.market.day
     const events = run.game.market.log.length

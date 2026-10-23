@@ -94,6 +94,8 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
     fi: initialFi(),
     stats: state.stats,
     consumables: state.consumables,
+    socialPosts: state.socialPosts,
+    perception: state.perception,
     lifestyle: state.lifestyle,
     loan: {
       balanceCents: state.loan.balanceCents,

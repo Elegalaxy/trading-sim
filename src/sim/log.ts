@@ -1,6 +1,6 @@
 // One text line per log event. The simulation does not print; tests and the harness do.
 
-import type { AccountLogEvent, EnvironmentView, LogEvent } from './types.ts'
+import type { AccountLogEvent, DistortionEvent, EnvironmentView, LogEvent } from './types.ts'
 
 function describeValue(value: unknown): string {
   if (typeof value === 'number' && Number.isNaN(value)) return 'NaN'
@@ -111,7 +111,7 @@ function formatEnvironmentChange(before: readonly EnvironmentView[], after: read
 }
 
 /** One line. Prices and gaps are cents. `gapAfter` is fair (or the index quote) minus the new price. */
-export function formatEvent(event: LogEvent | AccountLogEvent): string {
+export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent): string {
   switch (event.kind) {
     case 'noiseRoll':
       return `day=${formatNumber(event.day)} kind=noiseRoll asset=${formatAsset(event.asset)} z=${formatNumber(event.z)}`
@@ -481,6 +481,21 @@ export function formatEvent(event: LogEvent | AccountLogEvent): string {
         `day=${formatNumber(event.day)}`,
         'kind=newsRead',
         `cost=${formatNumber(event.cost)}`,
+      ].join(' ')
+    case 'newsVerified':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=newsVerified',
+        `cost=${formatNumber(event.cost)}`,
+      ].join(' ')
+    case 'distortion':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=distortion',
+        `item=${formatJsonString(event.item, 'item')}`,
+        `action=${formatToken(event.action, 'action')}`,
+        `true=${formatJsonString(event.trueValue, 'true value')}`,
+        `shown=${formatJsonString(event.shownValue, 'shown value')}`,
       ].join(' ')
     case 'lifestyleChange':
       return [

@@ -17,6 +17,7 @@ import { PriceChart, type ChartPoint } from './PriceChart.tsx'
 import { RunEnd } from './RunEnd.tsx'
 import { StatMeters } from './StatMeters.tsx'
 import { JobPanel } from './JobPanel.tsx'
+import { LifestylePanel } from './LifestylePanel.tsx'
 import { defaultSeed, endDay, startGame, useTradingStore } from './store.ts'
 
 function startingJobLabel(job: JobDefinition): string {
@@ -112,6 +113,7 @@ export function Dashboard() {
       <StatMeters game={run?.game ?? null} />
       <DayTimeline game={run?.game ?? null} />
       <JobPanel game={run?.game ?? null} />
+      <LifestylePanel game={run?.game ?? null} />
       {run !== null ? <RunEnd seed={run.seed} game={run.game} /> : null}
       <BillBanner game={run?.game ?? null} />
       <FiMeter game={run?.game ?? null} />
@@ -171,6 +173,7 @@ export function Dashboard() {
         key={market?.feed.day ?? 0}
         feed={market?.feed ?? null}
         job={run === null ? null : activeJob(run.game.job)}
+        lifestyle={run?.game.lifestyle ?? null}
         newsReads={run?.game.stats.newsReads ?? 0}
       />
       <DaySummaryPanel summary={run?.summary ?? null} liquidations={run?.liquidations ?? []} />

@@ -569,7 +569,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 20: Lifestyle upgrades, downgrades, and courses
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 19, Q8
 - Files to create or change: `src/content/lifestyle.ts`, `src/sim/lifestyle.ts`, `src/sim/lifestyle.test.ts`, `src/sim/monthly.ts`, `src/sim/game.ts`, `src/ui/LifestylePanel.tsx`, `src/ui/store.ts`
 - What changes:
@@ -588,7 +588,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: buy Home tier 1, see the projected bill rise, downgrade, and see that cash did not come back.
-- Progress:
+- Progress: 2026-10-23: Added lifestyle tiers and one-time courses. Files: src/content/lifestyle.ts, src/content/index.ts, src/content/jobs.ts, src/sim/lifestyle.ts, src/sim/lifestyle.test.ts, src/sim/constants.ts, src/sim/types.ts, src/sim/log.ts, src/sim/jobs.ts, src/sim/monthly.ts, src/sim/fi.ts, src/sim/game.ts, src/ui/LifestylePanel.tsx, src/ui/store.ts, src/ui/Dashboard.tsx, src/ui/NewsFeed.tsx, src/ui/JobPanel.tsx, src/ui/FiMeter.tsx, src/ui/styles.css. Home tiers 0–3 add 15000 cents a month each. Information feed tiers 0–2 add 10000. Upfront cost is 2× the added monthly cost. A downgrade refunds nothing and leaves a pending bill unchanged. Basic and Finance cost 50000 once and do not change the monthly bill. Finance unlocks Trading-floor assistant and Freelance analyst. Basic unlocks Office clerk. Tier 1 shows sectorNote. Tier 2 shows cityDesk and hides noise. The stored feed is not changed. Home recovery is not applied. The FI bar uses base plus tiers before the staff discount; the bill applies that discount when the job is active. npm run typecheck passed; npm test passed (17 files, 92 tests); npm run lint passed. Browser, seed demo: Home tier 1 paid 30000 and the next bill rose from 100000 to 115000; the downgrade left cash at 270000 and the next bill at 100000. Information feed tier 2 paid 40000, showed cityDesk and sectorNote, and hid noise while the admin log still listed every rumour. Finance then Basic unlocked those jobs. The monthly bill stayed at the tier cost.
 
 ### Step 21: Bank loan
 

@@ -38,6 +38,7 @@ import {
   sectionForJob,
 } from './jobs.ts'
 import { applyFiCheck, finishAtDayLimit, initialFi } from './fi.ts'
+import { assertLifestyle, assertLifestyleCommand, initialLifestyle, interpretBuyCourse, interpretSetLifestyle } from './lifestyle.ts'
 import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
 import { applyMonthlyCycle, interpretPayBill, isMonthlyCycleDay, reviewCoverable } from './monthly.ts'
@@ -106,12 +107,17 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'runEnded' &&
       kind !== 'statChange' &&
       kind !== 'consume' &&
-      kind !== 'newsRead'
+      kind !== 'newsRead' &&
+      kind !== 'lifestyleChange' &&
+      kind !== 'coursePurchased'
     ) {
       throw new Error(`pending account event must be a command, received ${describeValue(kind)}`)
     }
     if (kind === 'statChange' || kind === 'consume' || kind === 'newsRead') {
       assertStatsCommand(event)
+    }
+    if (kind === 'lifestyleChange' || kind === 'coursePurchased') {
+      assertLifestyleCommand(event)
     }
     if (kind === 'skip' || kind === 'sectionChange') {
       const from = (event as { from?: unknown }).from
@@ -321,6 +327,7 @@ function assertGame(state: GameState): void {
   assertRunEnd(state.runEnd)
   assertFi(state.fi)
   assertPlayerStats(state.stats, state.consumables)
+  assertLifestyle(state.lifestyle)
 }
 
 /** Optional menus and starting job. Omitted jobs means jobless. Omitted consumables means nothing is for sale. */
@@ -355,6 +362,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     fi: initialFi(),
     stats: initialStats(),
     consumables: copyConsumables(start?.consumables),
+    lifestyle: initialLifestyle(),
   }
 }
 
@@ -420,6 +428,12 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
     }
   } else if (type === 'readNews') {
     for (const event of interpretReadNews(state)) state.pending.push(event)
+  } else if (type === 'setLifestyle') {
+    const outcome = interpretSetLifestyle(state, cmd)
+    state.pending.push(outcome.event)
+  } else if (type === 'buyCourse') {
+    const outcome = interpretBuyCourse(state, cmd)
+    state.pending.push(outcome.event)
   } else {
     const outcome = interpretCommand(state.accounts, state.market.day, cmd)
     state.pending.push(outcome.event)

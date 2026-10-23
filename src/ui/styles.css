@@ -356,3 +356,23 @@ ul {
   gap: 8px;
   align-items: center;
 }
+
+.lifestyle-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.lifestyle-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.lifestyle-list p {
+  flex: 1 0 100%;
+  margin: 0;
+}

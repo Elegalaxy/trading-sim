@@ -20,6 +20,7 @@ export { EVENT_DEFINITIONS } from './events.ts'
 export { SOURCE_DEFINITIONS } from './sources.ts'
 export { CONSUMABLE_DEFINITIONS } from './consumables.ts'
 export { JOB_DEFINITIONS } from './jobs.ts'
+export { COURSE_OFFERS, INFO_TIER1_SOURCE_ID, INFO_TIER2_SOURCE_ID, LIFESTYLE_OFFERS } from './lifestyle.ts'
 export type {
   AssetDefinition,
   AssetKind,

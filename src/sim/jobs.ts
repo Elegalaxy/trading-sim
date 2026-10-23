@@ -344,13 +344,18 @@ export function paySalary(state: GameState, day: number): SalaryPaidEvent[] {
 
 /**
  * Bill for the job that is active when the bill comes due.
+ * `expensesCents` is the lifestyle monthly cost. Omitted, it is the 1E base.
  * Staff discount is 5% off that bill. A pending bill is left alone by the caller.
  */
-export function billDueForJob(player: PlayerJob, day: number): { amountCents: number; perk: PerkAppliedEvent | null } {
+export function billDueForJob(
+  player: PlayerJob,
+  day: number,
+  expensesCents: number = BASE_MONTHLY_EXPENSES_CENTS,
+): { amountCents: number; perk: PerkAppliedEvent | null } {
   const job = activeJob(player)
-  const base = BASE_MONTHLY_EXPENSES_CENTS
+  const base = expensesCents
   if (!Number.isSafeInteger(base) || base <= 0) {
-    throw new Error(`base expenses must be a positive safe integer, received ${describeValue(base)}`)
+    throw new Error(`expenses must be a positive safe integer, received ${describeValue(base)}`)
   }
   if (job.perk !== 'staffDiscount') return { amountCents: base, perk: null }
   const discount = roundHalfAwayFromZero((base * STAFF_DISCOUNT_NUMERATOR) / STAFF_DISCOUNT_DENOMINATOR)

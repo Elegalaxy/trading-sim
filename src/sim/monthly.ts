@@ -5,6 +5,8 @@
 // Staff discount cuts the bill that comes due while that job is active.
 // Cash that covers the bill pays it. Otherwise the bill stays pending and the
 // next endDay is blocked. The check never sells a position or moves savings.
+// The amount is base expenses plus lifestyle tiers, then the staff discount.
+// A later downgrade does not change a bill that is already pending.
 
 import { assertPlayerAccounts, payAccruedSavings } from './accounts.ts'
 import { initialFi, netWorthCents } from './fi.ts'
@@ -13,6 +15,7 @@ import {
   UNUSED_LOAN_LIMIT_CENTS,
 } from './constants.ts'
 import { billDueForJob, paySalary } from './jobs.ts'
+import { lifestyleExpensesCents } from './lifestyle.ts'
 import { closeWholePosition } from './trading.ts'
 import type {
   AccountLogEvent,
@@ -90,6 +93,7 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
     fi: initialFi(),
     stats: state.stats,
     consumables: state.consumables,
+    lifestyle: state.lifestyle,
   }
   for (const id of ids) {
     const position = state.positions[id]
@@ -205,7 +209,7 @@ export function applyMonthlyCycle(state: GameState, defs: MarketDefinitions): Ac
   const events: AccountLogEvent[] = []
   for (const salaryPaid of paySalary(state, day)) events.push(salaryPaid)
   events.push(payAccruedSavings(state.accounts, day))
-  const priced = billDueForJob(state.job, day)
+  const priced = billDueForJob(state.job, day, lifestyleExpensesCents(state.lifestyle))
   if (priced.perk !== null) events.push(priced.perk)
   const amount = requirePositive(priced.amountCents, 'bill')
   const cashCents = state.accounts.cashCents

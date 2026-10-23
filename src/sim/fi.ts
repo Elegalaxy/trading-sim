@@ -7,10 +7,11 @@
 // day becomes 1. The hold counts only from FI_STREAK_FROM_DAY.
 // Day 120 is sealed by `finishAtDayLimit` without another price step. The bill
 // still has to be paid, or the existing cover check ends the run, before that.
+// The bar is the lifestyle monthly cost. The staff discount is not subtracted.
 
+import { lifestyleExpensesCents } from './lifestyle.ts'
 import { tradingEquity } from './trading.ts'
 import {
-  BASE_MONTHLY_EXPENSES_CENTS,
   CENTS_PER_E,
   FI_HOLD_DAYS,
   FI_STREAK_FROM_DAY,
@@ -24,6 +25,7 @@ import type {
   FiCheckEvent,
   FiTracker,
   GameState,
+  LifestyleState,
   MarketDefinitions,
   RunEndedEvent,
   RunOutcome,
@@ -112,9 +114,9 @@ export function scoreFor(outcome: RunOutcome, worthCents: number, day: number): 
   return requireSafe(total, 'score')
 }
 
-/** Monthly expenses the window must cover. Base 1E until lifestyle exists. */
-export function monthlyExpensesCents(): number {
-  return requireSafe(BASE_MONTHLY_EXPENSES_CENTS, 'monthly expenses')
+/** Monthly expenses the window must cover. Base plus lifestyle tiers, before the staff discount. */
+export function monthlyExpensesCents(lifestyle: LifestyleState): number {
+  return requireSafe(lifestyleExpensesCents(lifestyle), 'monthly expenses')
 }
 
 function realizedOn(state: GameState, day: number): number {
@@ -192,7 +194,7 @@ export function applyFiCheck(
     throw new Error(`savings interest must be >= 0, received ${describeValue(interest)}`)
   }
   rememberInterest(state, day, interest)
-  const expensesCents = monthlyExpensesCents()
+  const expensesCents = monthlyExpensesCents(state.lifestyle)
   if (expensesCents <= 0) {
     throw new Error(`monthly expenses must be > 0, received ${describeValue(expensesCents)}`)
   }

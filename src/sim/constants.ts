@@ -86,10 +86,24 @@ export const STAFF_DISCOUNT_DENOMINATOR = 100
 
 /**
  * Section 6. Provisional base monthly expenses: 1E.
- * The bill copies this amount when it comes due and does not change after that.
- * The FI check uses this as monthly expenses until lifestyle exists.
+ * The bill copies base plus lifestyle tier costs when it comes due, then the
+ * staff discount. A pending bill keeps that copied amount.
  */
 export const BASE_MONTHLY_EXPENSES_CENTS = CENTS_PER_E
+
+/**
+ * Section 6. Provisional lifestyle.
+ * Home has 3 tiers above the base. Each adds 0.15E a month. Recovery is not applied.
+ * Information feed has 2 tiers above the base. Each adds 0.1E a month.
+ * An upgrade's upfront cost is 2 × the monthly cost that tier adds. A downgrade pays 0.
+ * Courses cost 0.5E once and do not change the monthly bill.
+ */
+export const HOME_MAX_TIER = 3
+export const HOME_TIER_COST_CENTS = 15_000
+export const INFO_FEED_MAX_TIER = 2
+export const INFO_FEED_TIER_COST_CENTS = 10_000
+export const LIFESTYLE_UPFRONT_MULTIPLIER = 2
+export const COURSE_COST_CENTS = 50_000
 
 /**
  * Section 8. Provisional FI window and hold.

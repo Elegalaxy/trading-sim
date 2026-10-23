@@ -242,6 +242,43 @@ function logConsume(cmd: unknown, game: GameState | null, accepted: boolean, rea
   )
 }
 
+/** `[store] lifestyle ...` for a tier change or a course purchase. */
+function logLifestyle(cmd: unknown, game: GameState | null, accepted: boolean, reason: string): void {
+  if (isTypedCommand(cmd, 'setLifestyle')) {
+    const record = cmd as { category?: unknown; tier?: unknown }
+    const category = commandToken(record.category)
+    const tier = commandToken(record.tier)
+    if (!accepted || game === null) {
+      debugLog('[store]', `lifestyle setLifestyle ${category} tier=${tier} rejected ${reason}`)
+      return
+    }
+    const event = [...game.pending].reverse().find((entry) => entry.kind === 'lifestyleChange')
+    if (event === undefined || event.kind !== 'lifestyleChange') {
+      console.error('[store] lifestyle accepted without a lifestyleChange event')
+      debugLog('[store]', `lifestyle setLifestyle ${category} tier=${tier} accepted missing-event`)
+      return
+    }
+    debugLog(
+      '[store]',
+      `lifestyle category=${event.category} from=${event.from} to=${event.to} upfront=${event.upfront} expenses=${event.expensesCents}`,
+    )
+    return
+  }
+  if (!isTypedCommand(cmd, 'buyCourse')) return
+  const course = commandToken((cmd as { course?: unknown }).course)
+  if (!accepted || game === null) {
+    debugLog('[store]', `lifestyle buyCourse ${course} rejected ${reason}`)
+    return
+  }
+  const event = [...game.pending].reverse().find((entry) => entry.kind === 'coursePurchased')
+  if (event === undefined || event.kind !== 'coursePurchased') {
+    console.error('[store] course accepted without a coursePurchased event')
+    debugLog('[store]', `lifestyle buyCourse ${course} accepted missing-event`)
+    return
+  }
+  debugLog('[store]', `lifestyle buyCourse course=${event.course} cost=${event.cost}`)
+}
+
 /** `[store] readNews cost=... energy=...` when the read is accepted. */
 function logNewsRead(cmd: unknown, game: GameState | null, accepted: boolean, reason: string): void {
   if (!isTypedCommand(cmd, 'readNews')) return
@@ -323,6 +360,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logJobCommand(cmd, false, 'notStarted', null)
     logConsume(cmd, null, false, 'notStarted')
     logNewsRead(cmd, null, false, 'notStarted')
+    logLifestyle(cmd, null, false, 'notStarted')
     return { accepted: false, reason: 'notStarted' }
   }
   if (run.game.runEnd !== null) {
@@ -333,6 +371,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logJobCommand(cmd, false, 'runEnded', null)
     logConsume(cmd, run.game, false, 'runEnded')
     logNewsRead(cmd, run.game, false, 'runEnded')
+    logLifestyle(cmd, run.game, false, 'runEnded')
     return { accepted: false, reason: 'runEnded' }
   }
   const from = run.game.section
@@ -353,6 +392,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logJobCommand(cmd, false, rejection.reason, null)
     logConsume(cmd, run.game, false, rejection.reason)
     logNewsRead(cmd, run.game, false, rejection.reason)
+    logLifestyle(cmd, run.game, false, rejection.reason)
     logBill(run.game)
     logRunEnd(run.game)
     publish()
@@ -364,6 +404,7 @@ export function dispatch(cmd: unknown): DispatchResult {
   logJobCommand(cmd, true, '', run.game.job.pending?.effectiveDay ?? null)
   logConsume(cmd, run.game, true, '')
   logNewsRead(cmd, run.game, true, '')
+  logLifestyle(cmd, run.game, true, '')
   logBill(run.game)
   logRunEnd(run.game)
   publish()

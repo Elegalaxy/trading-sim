@@ -849,6 +849,40 @@ export type NewsReadEvent = {
   cost: number
 }
 
+/** Home and the information feed. Tier 0 is the base lifestyle. */
+export const LIFESTYLE_CATEGORIES = ['home', 'infoFeed'] as const
+
+export type LifestyleCategory = (typeof LIFESTYLE_CATEGORIES)[number]
+
+/** Tiers above the base. Home recovery is not stored here and is not applied. */
+export type LifestyleState = {
+  home: number
+  infoFeed: number
+}
+
+/**
+ * A lifestyle tier changed. `upfront` is cents paid now, 0 on a downgrade.
+ * `expensesCents` is the new monthly cost before the staff discount.
+ * A pending bill is not part of this event and is not rewritten.
+ */
+export type LifestyleChangeEvent = {
+  kind: 'lifestyleChange'
+  day: number
+  category: LifestyleCategory
+  from: number
+  to: number
+  upfront: number
+  expensesCents: number
+}
+
+/** A one-time course. It unlocks jobs and does not change monthly expenses. */
+export type CoursePurchasedEvent = {
+  kind: 'coursePurchased'
+  day: number
+  course: CourseId
+  cost: number
+}
+
 /** Player commands since the previous end of day, plus a bill payment or cover check from those commands. */
 export type CommandLogEvent =
   | TransferEvent
@@ -864,6 +898,8 @@ export type CommandLogEvent =
   | StatChangeEvent
   | ConsumeEvent
   | NewsReadEvent
+  | LifestyleChangeEvent
+  | CoursePurchasedEvent
 
 export type MarginLogEvent =
   | MarginInterestEvent
@@ -965,7 +1001,7 @@ export type FiInterest = {
   cents: number
 }
 
-/** Course that gates a job. None means the job is open. Purchases arrive in a later step. */
+/** Course that gates a job. None means the job is open. `buyCourse` adds one to the player. */
 export const COURSE_IDS = ['basic', 'finance'] as const
 
 export type CourseId = (typeof COURSE_IDS)[number]
@@ -1038,8 +1074,8 @@ export type PlayerStats = {
 
 /**
  * Employment for this run. `catalog` is the menu copied at the start.
- * `courses` stays empty until a later step sells courses. A required course
- * that is missing keeps that job locked.
+ * `courses` lists Basic and Finance once each, after `buyCourse`.
+ * A required course that is missing keeps that job locked.
  */
 export type PlayerJob = {
   catalog: JobDefinition[]
@@ -1085,6 +1121,7 @@ export type FiTracker = {
  * `fi` holds the interest rows and the last FI check. It does not copy the realized ledger.
  * `stats` is energy and stress. `consumables` is the menu copied at the start.
  * End-of-day stat lines sit on `log` with the other account events. They are not on the market.
+ * `lifestyle` is the Home and information-feed tiers. Courses stay on `job`.
  */
 export type GameState = {
   market: MarketState
@@ -1101,4 +1138,5 @@ export type GameState = {
   fi: FiTracker
   stats: PlayerStats
   consumables: ConsumableDefinition[]
+  lifestyle: LifestyleState
 }

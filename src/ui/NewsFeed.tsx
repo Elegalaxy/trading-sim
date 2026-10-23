@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { visibleFeed } from '../sim/feed.ts'
-import { jobVisibleFeed } from '../sim/jobs.ts'
+import { playerVisibleFeed } from '../sim/lifestyle.ts'
 import { NEWS_READ_ENERGY_COST } from '../sim/stats.ts'
-import type { DayFeed, FeedItem, HeadlineItem, JobDefinition } from '../sim/types.ts'
+import type { DayFeed, FeedItem, HeadlineItem, JobDefinition, LifestyleState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { dispatch } from './store.ts'
 
@@ -14,10 +13,12 @@ function itemText(item: FeedItem): string {
 export function NewsFeed({
   feed,
   job,
+  lifestyle,
   newsReads,
 }: {
   feed: DayFeed | null
   job: JobDefinition | null
+  lifestyle: LifestyleState | null
   newsReads: number
 }) {
   const [open, setOpen] = useState(false)
@@ -31,7 +32,7 @@ export function NewsFeed({
     )
   }
 
-  const visible = job === null ? visibleFeed(feed, ['base']) : jobVisibleFeed(feed, job)
+  const visible = playerVisibleFeed(feed, job, lifestyle ?? { home: 0, infoFeed: 0 })
   const top = visible.items.find((item): item is HeadlineItem => item.kind === 'headline' && item.top)
   const free = job?.perk === 'quietBreaks' && newsReads === 0
 

@@ -1,4 +1,5 @@
-import { BASE_MONTHLY_EXPENSES_CENTS, FI_HOLD_DAYS } from '../sim/constants.ts'
+import { FI_HOLD_DAYS } from '../sim/constants.ts'
+import { lifestyleExpensesCents } from '../sim/lifestyle.ts'
 import type { GameState } from '../sim/types.ts'
 
 function cents(value: number, label: string): string {
@@ -21,7 +22,7 @@ export function FiMeter({ game }: { game: GameState | null }) {
   const status = game.fi.status
   const windowDays = status?.windowDays ?? 0
   const passiveCents = status?.passiveCents ?? 0
-  const expensesCents = status?.expensesCents ?? BASE_MONTHLY_EXPENSES_CENTS
+  const expensesCents = status?.expensesCents ?? lifestyleExpensesCents(game.lifestyle)
   const streak = status?.streak ?? 0
   if (expensesCents <= 0) {
     throw new Error(`FI expenses must be > 0, received ${String(expensesCents)}`)

@@ -5,8 +5,8 @@ import type { GameState, JobDefinition } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { dispatch } from './store.ts'
 
-function jobOptionLabel(job: JobDefinition): string {
-  if (job.requirement === 'none') return job.name
+function jobOptionLabel(job: JobDefinition, locked: boolean): string {
+  if (!locked) return job.name
   const course = job.requirement === 'basic' ? 'Basic' : 'Finance'
   return `${job.name} (locked, needs ${course})`
 }
@@ -103,11 +103,14 @@ export function JobPanel({ game }: { game: GameState | null }) {
       <label htmlFor="job-choice">
         Change job{' '}
         <select id="job-choice" value={choice} onChange={(event) => onChoice(event.target.value)}>
-          {game.job.catalog.map((item) => (
-            <option key={item.id} value={item.id} disabled={jobLocked(item, game)}>
-              {jobOptionLabel(item)}
-            </option>
-          ))}
+          {game.job.catalog.map((item) => {
+            const locked = jobLocked(item, game)
+            return (
+              <option key={item.id} value={item.id} disabled={locked}>
+                {jobOptionLabel(item, locked)}
+              </option>
+            )
+          })}
         </select>
       </label>
       <button type="button" onClick={onRequest} disabled={game.runEnd !== null}>

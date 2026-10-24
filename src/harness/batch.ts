@@ -175,7 +175,9 @@ function runOne(defs: MarketDefinitions, seed: string, days: number, strategy: S
     wipeOuts: 0,
     backstopWriteOffCents: 0,
   }
+  let played = 0
   for (let step = 0; step < days; step += 1) {
+    if (game.runEnd !== null || game.bill !== null) break
     const before = marketPicture(game, defs)
     const action = actDay(strategy, game, defs, randomStream)
     const after = marketPicture(game, defs)
@@ -193,10 +195,21 @@ function runOne(defs: MarketDefinitions, seed: string, days: number, strategy: S
       readPriceMove(event, run, stats, dayCapped)
       readFairValueClip(event, stats)
     }
-    if (!sawMove) throw new Error(`[DEBUG batch] day ${game.market.day} seed=${seed} has no price step`)
+    if (!sawMove) {
+      if (game.runEnd !== null) break
+      throw new Error(`[DEBUG batch] day ${game.market.day} seed=${seed} has no price step`)
+    }
     if (dayCapped.value) stats.cappedDays += 1
     stats.runDays += 1
+    played += 1
     readAccountDay(game, totals)
+  }
+  if (played < days) {
+    stats.endedEarly += 1
+    const reason = game.runEnd?.reason ?? (game.bill !== null ? 'billPending' : 'stopped')
+    console.log(
+      `[DEBUG batch] run ended early seed=${seed} day=${game.market.day} played=${played} reason=${reason}`,
+    )
   }
   const equity = tradingEquity(game, defs).equity
   if (!Number.isSafeInteger(equity)) {
@@ -234,6 +247,7 @@ export function runBatch(request: BatchRequest): void {
     largestMove: null,
     cappedDays: 0,
     runDays: 0,
+    endedEarly: 0,
     gapAbsPercentSum: 0,
     gapSamples: 0,
     largestGapAbsPercent: 0,

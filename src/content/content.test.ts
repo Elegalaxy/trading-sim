@@ -59,7 +59,24 @@ describe('provisional content', () => {
     expect(ENVIRONMENT_DEFINITIONS.map((entry) => entry.id)).toEqual(['growth', 'inflation', 'policyRate'])
     const policy = ENVIRONMENT_DEFINITIONS.find((entry) => entry.id === 'policyRate')
     expect(policy?.driftSpeed).toBe(0)
-    expect(EVENT_DEFINITIONS).toHaveLength(8)
+    expect(EVENT_DEFINITIONS.map((eventType) => eventType.id)).toEqual([
+      'earningsBeat',
+      'productLaunch',
+      'scandal',
+      'managementChange',
+      'regulation',
+      'supplyShock',
+      'demandShift',
+      'sentimentSwing',
+      'guidanceUpdate',
+      'lawsuit',
+      'contractAward',
+      'buyback',
+      'dividendChange',
+      'inflationDataShock',
+      'growthDataShock',
+      'inputCostShock',
+    ])
     const environmentIds = new Set(ENVIRONMENT_DEFINITIONS.map((entry) => entry.id))
     for (const eventType of EVENT_DEFINITIONS) {
       expect(eventType.chance).toBeGreaterThanOrEqual(0)

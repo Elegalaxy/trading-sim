@@ -31,6 +31,7 @@ export type BatchStats = {
   largestMove: LargestMove | null
   cappedDays: number
   runDays: number
+  endedEarly: number
   gapAbsPercentSum: number
   gapSamples: number
   largestGapAbsPercent: number
@@ -102,8 +103,12 @@ export function reportLines(stats: BatchStats): string[] {
   if (stats.records.length !== stats.runs) {
     throw new Error(`[DEBUG batch] expected ${stats.runs} records, received ${stats.records.length}`)
   }
-  if (stats.runDays !== stats.runs * stats.days) {
-    throw new Error(`[DEBUG batch] run days ${stats.runDays} are not ${stats.runs} * ${stats.days}`)
+  requireCount(stats.endedEarly, 'ended early')
+  if (stats.runDays > stats.runs * stats.days) {
+    throw new Error(`[DEBUG batch] run days ${stats.runDays} are above ${stats.runs} * ${stats.days}`)
+  }
+  if (stats.endedEarly > stats.runs) {
+    throw new Error(`[DEBUG batch] ended early ${stats.endedEarly} is above runs ${stats.runs}`)
   }
   if (stats.largestMove === null) throw new Error('[DEBUG batch] the batch log has no price step')
   if (stats.gapSamples === 0) throw new Error('[DEBUG batch] the batch log has no price-to-fair gap')
@@ -141,7 +146,7 @@ export function reportLines(stats: BatchStats): string[] {
       `largestDailyMovePercent=${formatMovePercent(move.absCents, move.previousCents)} asset=${move.asset} day=${move.day} run=${move.run}`,
     ),
     reportLine(
-      `cappedDayShare=${formatFixed(stats.cappedDays / stats.runDays, 6, 'capped day share')} cappedDays=${stats.cappedDays} runDays=${stats.runDays}`,
+      `cappedDayShare=${formatFixed(stats.cappedDays / stats.runDays, 6, 'capped day share')} cappedDays=${stats.cappedDays} runDays=${stats.runDays} endedEarly=${stats.endedEarly}`,
     ),
     reportLine(
       `priceToFairGapAbsPercent average=${formatFixed(averageGap, 6, 'average gap')} largest=${formatFixed(stats.largestGapAbsPercent, 6, 'largest gap')} samples=${stats.gapSamples}`,

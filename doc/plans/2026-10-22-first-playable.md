@@ -680,7 +680,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 
 ### Step 25: Local save, end-of-run screen, and separate scores
 
-- Status: `todo`
+- Status: `done`
 - Depends on: 24
 - Files to create or change: `src/persist/save.ts`, `src/persist/save.test.ts`, `src/persist/scores.ts`, `src/ui/RunEnd.tsx`, `src/ui/StartScreen.tsx`, `src/ui/store.ts`
 - What changes:
@@ -698,7 +698,7 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Verification:
   - Run: `npm test`.
   - User: play to day 12, reload the page, press Continue, and see day 12. Finish a seeded and a normal run and check that both score lists are separate.
-- Progress:
+- Progress: 2026-10-23: Autosave at the start of each day, Continue, and separate scores. Files: src/persist/save.ts, src/persist/scores.ts, src/persist/save.test.ts, src/ui/store.ts, src/ui/StartScreen.tsx, src/ui/Dashboard.tsx, src/ui/RunEnd.tsx, doc/plans/2026-10-22-first-playable.md. Save envelope is version, savedAt, mode, seed, and state under trading-sim.save.v1. Seed is on the envelope because GameState does not store it. Scores are version, seeded (best per seed), and normal (top 10) under trading-sim.scores.v1. A bad save shows "This save is damaged and was not used." Continue is the button label. The day-120 hash test is in src/persist/save.test.ts (persist tests may import sim; content imports are forbidden, so the fixture is inline). Uninterrupted and resumed hashes matched: 70dd4383687c3aaf. src/sim was not modified. Checks: npm test passed (20 files, 110 tests, architecture violations=0); npm run typecheck passed (tsc -b, exit 0); npm run lint passed (oxlint, exit 0).
 
 ### Step 26: Event content fill and the first full playtest
 

@@ -1,4 +1,6 @@
+import type { RunMode } from '../persist/save.ts'
 import type { GameState, RunOutcome } from '../sim/types.ts'
+import { leaveRun } from './store.ts'
 
 function whole(value: number, label: string): string {
   if (!Number.isSafeInteger(value)) {
@@ -22,13 +24,17 @@ function reasonText(reason: string): string {
   return reason
 }
 
-export function RunEnd({ seed, game }: { seed: string; game: GameState }) {
+export function RunEnd({ seed, mode, game }: { seed: string; mode: RunMode; game: GameState }) {
   const end = game.runEnd
   if (end === null) return null
   if (typeof seed !== 'string' || seed.length === 0 || /[\r\n]/.test(seed)) {
     throw new Error(`run end seed must be one non-empty line, received ${JSON.stringify(seed)}`)
   }
+  if (mode !== 'seeded' && mode !== 'normal') {
+    throw new Error(`run end mode is invalid, received ${JSON.stringify(mode)}`)
+  }
   const tone = end.outcome === 'won' ? 'run-won' : end.outcome === 'lost' ? 'run-lost' : 'run-finished'
+  const modeLabel = mode === 'seeded' ? 'Seeded' : 'Normal'
 
   return (
     <section className={`panel run-end ${tone}`} role="alert" aria-label="Run ended">
@@ -41,6 +47,10 @@ export function RunEnd({ seed, game }: { seed: string; game: GameState }) {
       <p>Net worth {whole(end.netWorthCents, 'net worth')} cents.</p>
       <p>Score {whole(end.score, 'score')}.</p>
       <p>Seed {seed}.</p>
+      <p>Mode {modeLabel}.</p>
+      <button type="button" onClick={() => leaveRun()}>
+        New run
+      </button>
     </section>
   )
 }

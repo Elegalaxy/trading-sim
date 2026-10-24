@@ -3,6 +3,9 @@
 
 import { useSyncExternalStore } from 'react'
 import { CONSUMABLE_DEFINITIONS, JOB_DEFINITIONS, MARKET_DEFINITIONS, SOCIAL_POST_DEFINITIONS } from '../content/index.ts'
+import { DAMAGED_SAVE_MESSAGE, inspectSave, isRunMode, isSeed, writeSave } from '../persist/save.ts'
+import type { RunMode, SaveFile } from '../persist/save.ts'
+import { recordScore } from '../persist/scores.ts'
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
@@ -10,7 +13,6 @@ import type { ForcedSaleEvent, GameState, LiquidationEvent } from '../sim/types.
 import { debugLog } from './debug.ts'
 
 const SEED_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-'
-const SEED_PATTERN = /^[A-Za-z0-9-]{1,32}$/
 const DEFAULT_SEED_LENGTH = 8
 const definitions = MARKET_DEFINITIONS
 
@@ -21,6 +23,9 @@ export type CloseRow = {
 
 export type TradingRun = {
   seed: string
+  mode: RunMode
+  /** True after this session has stored the score for the current ending. */
+  scoreStored: boolean
   game: GameState
   closes: readonly CloseRow[]
   summary: DaySummary | null
@@ -52,6 +57,48 @@ function publish(): void {
   for (const listener of listeners) listener()
 }
 
+function autosaveCurrent(): void {
+  if (run === null) return
+  try {
+    const written = writeSave({ mode: run.mode, seed: run.seed, state: run.game })
+    debugLog('[save]', `saved day=${written.day} bytes=${written.bytes}`)
+  } catch (error) {
+    console.error('[save] failed to save', error)
+  }
+}
+
+function storeScore(): void {
+  if (run === null || run.game.runEnd === null || run.scoreStored) return
+  const end = run.game.runEnd
+  const mode = run.mode
+  const seed = run.seed
+  try {
+    const recorded = recordScore(mode, {
+      seed,
+      score: end.score,
+      day: end.day,
+      outcome: end.outcome,
+    })
+    if (recorded.rejectedReason !== null) {
+      console.error(`[save] rejected reason=${recorded.rejectedReason}`)
+      debugLog('[save]', `rejected reason=${recorded.rejectedReason}`)
+    }
+  } catch (error) {
+    console.error('[save] failed to record score', error)
+    return
+  }
+  run = { ...run, scoreStored: true }
+  debugLog('[save]', `score mode=${mode} seed=${seed} score=${end.score}`)
+}
+
+/** Save at the start of a day, and again when a run ends so Continue keeps that ending. */
+function persistIfNeeded(saveDay: boolean): void {
+  if (run === null) return
+  const endedNow = run.game.runEnd !== null && !run.scoreStored
+  if (saveDay || endedNow) autosaveCurrent()
+  if (run.game.runEnd !== null) storeScore()
+}
+
 export function subscribe(listener: Listener): () => void {
   listeners.add(listener)
   return () => {
@@ -67,11 +114,7 @@ export function useTradingStore(): TradingSnapshot {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
 
-export type RunMode = 'seeded' | 'normal'
-
-function isRunMode(mode: string): mode is RunMode {
-  return mode === 'seeded' || mode === 'normal'
-}
+export type { RunMode }
 
 /** 8 characters from the harness seed alphabet. Rejects bytes that would bias the draw. */
 export function randomSeed(): string {
@@ -93,7 +136,7 @@ export function randomSeed(): string {
     }
   }
   const seed = chars.join('')
-  if (!SEED_PATTERN.test(seed)) throw new Error(`generated seed failed validation, received ${JSON.stringify(seed)}`)
+  if (!isSeed(seed)) throw new Error(`generated seed failed validation, received ${JSON.stringify(seed)}`)
   return seed
 }
 
@@ -133,7 +176,7 @@ export function startGame(seed: string, jobId = 'jobless', mode: string = 'seede
     console.error(`[ui] rejected mode ${JSON.stringify(mode)}: ${reason}`)
     return reason
   }
-  if (mode === 'seeded' && (typeof seed !== 'string' || !SEED_PATTERN.test(seed))) {
+  if (mode === 'seeded' && !isSeed(seed)) {
     const reason = 'Seed must be 1 to 32 characters from A-Z, a-z, 0-9, and hyphen.'
     console.error(`[ui] rejected seed ${JSON.stringify(seed)}: ${reason}`)
     return reason
@@ -170,8 +213,18 @@ export function startGame(seed: string, jobId = 'jobless', mode: string = 'seede
     console.error('[store] createGame failed', error)
     throw error
   }
-  run = { seed: chosenSeed, game, closes: [], summary: null, liquidations: [], forcedSales: [] }
+  run = {
+    seed: chosenSeed,
+    mode,
+    scoreStored: false,
+    game,
+    closes: [],
+    summary: null,
+    liquidations: [],
+    forcedSales: [],
+  }
   debugLog('[ui]', `newRun mode=${mode} seed=${chosenSeed} job=${jobId}`)
+  persistIfNeeded(true)
   debugLog(
     '[store]',
     `job start ${jobId} slots=${chosen.slots} sleepHours=${chosen.sleepHours} pay=${chosen.payCents}`,
@@ -179,6 +232,80 @@ export function startGame(seed: string, jobId = 'jobless', mode: string = 'seede
   logDistortion(game)
   publish()
   return null
+}
+
+function cloneGame(state: GameState): GameState {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(JSON.stringify(state))
+  } catch (error) {
+    throw new Error(`saved game could not be copied: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('saved game copy was not an object')
+  }
+  return parsed as GameState
+}
+
+/**
+ * Restore a validated save. The header keeps that save's mode and seed.
+ * Returns the damaged-save message when the save is not used.
+ */
+export function continueGame(save: SaveFile): string | null {
+  const checked = inspectSave(save)
+  if (!checked.ok) {
+    if (checked.cause === null || checked.cause === undefined) {
+      console.error(`[save] rejected reason=${checked.reason}`)
+    } else {
+      console.error(`[save] rejected reason=${checked.reason}`, checked.cause)
+    }
+    debugLog('[save]', `rejected reason=${checked.reason}`)
+    return DAMAGED_SAVE_MESSAGE
+  }
+  let game: GameState
+  try {
+    game = cloneGame(checked.save.state)
+  } catch (error) {
+    console.error('[save] rejected reason=shape', error)
+    debugLog('[save]', 'rejected reason=shape')
+    return DAMAGED_SAVE_MESSAGE
+  }
+  let summary: DaySummary | null = null
+  let closes: CloseRow[] = []
+  let liquidations: LiquidationEvent[] = []
+  let forcedSales: ForcedSaleEvent[] = []
+  try {
+    if (game.market.day > 0) {
+      summary = daySummary(game.market.log)
+      closes = [{ day: game.market.day, prices: readPrices(game) }]
+    }
+    liquidations = readLiquidations(game)
+    forcedSales = readForcedSales(game)
+  } catch (error) {
+    console.error('[save] rejected reason=shape', error)
+    debugLog('[save]', 'rejected reason=shape')
+    return DAMAGED_SAVE_MESSAGE
+  }
+  run = {
+    seed: checked.save.seed,
+    mode: checked.save.mode,
+    scoreStored: game.runEnd !== null,
+    game,
+    closes,
+    summary,
+    liquidations,
+    forcedSales,
+  }
+  debugLog('[save]', `loaded day=${game.market.day}`)
+  debugLog('[ui]', `continue mode=${checked.save.mode} seed=${checked.save.seed} day=${game.market.day}`)
+  publish()
+  return null
+}
+
+/** Leave the dashboard for the start screen. The saved day stays in localStorage. */
+export function leaveRun(): void {
+  run = null
+  publish()
 }
 
 function commandToken(value: unknown): string {
@@ -493,6 +620,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     logLoanCommand(cmd, run.game, false, rejection.reason)
     logBill(run.game)
     logRunEnd(run.game)
+    persistIfNeeded(false)
     publish()
     return { accepted: false, reason: rejection.reason }
   }
@@ -507,6 +635,7 @@ export function dispatch(cmd: unknown): DispatchResult {
   logLoanCommand(cmd, run.game, true, '')
   logBill(run.game)
   logRunEnd(run.game)
+  persistIfNeeded(false)
   publish()
   return { accepted: true, reason: null }
 }
@@ -543,6 +672,8 @@ export function endDay(): void {
     const hash = stateHash(run.game.market)
     run = {
       seed: run.seed,
+      mode: run.mode,
+      scoreStored: run.scoreStored,
       game: run.game,
       closes: run.closes,
       summary: run.summary,
@@ -550,6 +681,7 @@ export function endDay(): void {
       forcedSales: readForcedSales(run.game),
     }
     debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
+    persistIfNeeded(true)
     publish()
     return
   }
@@ -562,6 +694,8 @@ export function endDay(): void {
   const hash = stateHash(run.game.market)
   run = {
     seed: run.seed,
+    mode: run.mode,
+    scoreStored: run.scoreStored,
     game: run.game,
     closes: [...run.closes, { day, prices }],
     summary,
@@ -577,6 +711,7 @@ export function endDay(): void {
         : liquidations.map((event) => `${event.asset} quantity=${event.quantity}`).join(', ')
     }`,
   )
+  persistIfNeeded(true)
   publish()
 }
 

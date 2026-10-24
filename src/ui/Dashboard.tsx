@@ -50,14 +50,18 @@ export function Dashboard() {
     <main className="dashboard">
       <header>
         <h1>Trading Sim</h1>
-        <p>{run === null ? 'No run yet.' : `Seed ${run.seed}. Day ${run.game.market.day}.`}</p>
+        <p>
+          {run === null
+            ? 'No run yet.'
+            : `Mode ${run.mode === 'seeded' ? 'Seeded' : 'Normal'}. Seed ${run.seed}. Day ${run.game.market.day}.`}
+        </p>
       </header>
 
       <StatMeters game={run?.game ?? null} />
       <DayTimeline game={run?.game ?? null} />
       <JobPanel game={run?.game ?? null} />
       <LifestylePanel game={run?.game ?? null} />
-      {run !== null ? <RunEnd seed={run.seed} game={run.game} /> : null}
+      {run !== null ? <RunEnd seed={run.seed} mode={run.mode} game={run.game} /> : null}
       <BillBanner game={run?.game ?? null} />
       <LoanPanel game={run?.game ?? null} />
       <FiMeter game={run?.game ?? null} />

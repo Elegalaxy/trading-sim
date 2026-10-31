@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { sessionPrice } from '../sim/session.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatSignedUsd, formatUsd } from './money.ts'
+import { dispatch } from './store.ts'
 
 type PositionRow = {
   asset: string
@@ -77,7 +78,36 @@ function positionRows(game: GameState): PositionRow[] {
   return rows
 }
 
-export function Positions({ game }: { game: GameState | null }) {
+type Action = 'close' | 'half' | 'flip'
+
+/** The order that closes, halves or reverses a position. Null when it makes no sense. */
+function actionOrder(row: PositionRow, action: Action): { side: 'buy' | 'sell'; quantity: number } | null {
+  const side = row.side === 'long' ? 'sell' : 'buy'
+  if (action === 'close') return { side, quantity: row.shares }
+  if (action === 'half') {
+    const quantity = Math.floor(row.shares / 2)
+    return quantity < 1 ? null : { side, quantity }
+  }
+  return { side, quantity: row.shares * 2 }
+}
+
+function reasonText(reason: string): string {
+  if (reason === 'insufficientBuyingPower') return 'too little buying power'
+  if (reason === 'insufficientTradingCash') return 'too little trading cash'
+  if (reason === 'marketClosed') return 'the market is not open'
+  return reason
+}
+
+export function Positions({
+  game,
+  onSelect,
+  selected,
+}: {
+  game: GameState | null
+  onSelect?: (asset: string) => void
+  selected?: string
+}) {
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const rows = game === null ? [] : positionRows(game)
   const signature =
     game === null ? 'none' : rows.map((row) => `${row.asset} ${row.side} ${row.shares} pnl=${row.pnl}`).join(', ')
@@ -86,9 +116,43 @@ export function Positions({ game }: { game: GameState | null }) {
     debugLog('[ui]', `positions ${signature === '' ? 'flat' : signature}`)
   }, [signature])
 
+  const canTrade = game !== null && game.runEnd === null && game.section === 'market'
+
+  function run(row: PositionRow, action: Action): boolean {
+    const order = actionOrder(row, action)
+    if (order === null) return false
+    const outcome = dispatch({ type: 'order', asset: row.asset, side: order.side, quantity: order.quantity })
+    if (!outcome.accepted) {
+      setMessage({ ok: false, text: `${row.asset}: ${reasonText(outcome.reason ?? 'rejected')}.` })
+      return false
+    }
+    return true
+  }
+
+  function onAction(row: PositionRow, action: Action): void {
+    if (run(row, action)) {
+      const label = action === 'close' ? 'closed' : action === 'half' ? 'halved' : 'reversed'
+      setMessage({ ok: true, text: `${row.asset} ${label}.` })
+    }
+  }
+
+  function onCloseAll(): void {
+    let failed = 0
+    for (const row of rows) if (!run(row, 'close')) failed += 1
+    if (failed === 0) setMessage({ ok: true, text: 'All positions closed.' })
+  }
+
   return (
     <section className="panel">
-      <h2>Positions</h2>
+      <h2>
+        Positions
+        {rows.length > 0 ? (
+          <button type="button" className="close-all" onClick={onCloseAll} disabled={!canTrade}>
+            Close all
+          </button>
+        ) : null}
+      </h2>
+      {!canTrade && rows.length > 0 ? <p className="day-note">Open the market to close or change a position.</p> : null}
       {game === null ? (
         <p>Start a game to see positions.</p>
       ) : rows.length === 0 ? (
@@ -104,12 +168,21 @@ export function Positions({ game }: { game: GameState | null }) {
                 <th>Entry average</th>
                 <th>Price</th>
                 <th>Unrealized</th>
+                <th>Manage</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.asset}>
-                  <td>{row.asset}</td>
+                <tr key={row.asset} aria-selected={row.asset === selected}>
+                  <td>
+                    {onSelect === undefined ? (
+                      row.asset
+                    ) : (
+                      <button type="button" className="link-button" onClick={() => onSelect(row.asset)} title="Show this chart">
+                        {row.asset}
+                      </button>
+                    )}
+                  </td>
                   <td>{row.side}</td>
                   <td>{row.shares}</td>
                   <td>{formatAverage(row.costCents, row.shares)}</td>
@@ -117,12 +190,28 @@ export function Positions({ game }: { game: GameState | null }) {
                   <td className={row.pnl > 0 ? 'pnl-gain' : row.pnl < 0 ? 'pnl-loss' : undefined}>
                     {formatSignedUsd(row.pnl, 'unrealized')}
                   </td>
+                  <td className="manage">
+                    <button type="button" onClick={() => onAction(row, 'close')} disabled={!canTrade}>
+                      Close
+                    </button>
+                    <button type="button" onClick={() => onAction(row, 'half')} disabled={!canTrade || row.shares < 2} title="Close half">
+                      1/2
+                    </button>
+                    <button type="button" onClick={() => onAction(row, 'flip')} disabled={!canTrade} title="Reverse to the other side">
+                      Flip
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      {message !== null ? (
+        <p className={message.ok ? 'trade-ok' : 'trade-alert'} role={message.ok ? 'status' : 'alert'}>
+          {message.text}
+        </p>
+      ) : null}
     </section>
   )
 }

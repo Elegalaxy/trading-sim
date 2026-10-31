@@ -11,6 +11,7 @@ import { DaySummaryPanel } from './DaySummary.tsx'
 import { DayTimeline } from './DayTimeline.tsx'
 import { FiMeter } from './FiMeter.tsx'
 import { MarginMeter } from './MarginMeter.tsx'
+import { MarketList } from './MarketList.tsx'
 import { NewsFeed } from './NewsFeed.tsx'
 import { OrderPanel } from './OrderPanel.tsx'
 import { Positions } from './Positions.tsx'
@@ -89,15 +90,7 @@ export function Dashboard() {
     <main className="dashboard exchange">
       <header className="symbol-bar">
         <div className="symbol-id">
-          <label htmlFor="asset">
-            <select id="asset" value={asset} onChange={(event) => onAsset(event.target.value)}>
-              {assets.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.id}
-                </option>
-              ))}
-            </select>
-          </label>
+          <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} />
           {lastPrice === undefined ? (
             <strong className="last-price">—</strong>
           ) : (
@@ -167,7 +160,7 @@ export function Dashboard() {
               ) : null}
             </nav>
             <div className="subpanel-body">
-              {desk === 'positions' ? <Positions game={run?.game ?? null} /> : null}
+              {desk === 'positions' ? <Positions game={run?.game ?? null} onSelect={onAsset} selected={asset} /> : null}
               {desk === 'life' ? (
                 <div className="desk">
                   <JobPanel game={run?.game ?? null} />
@@ -202,7 +195,7 @@ export function Dashboard() {
           </section>
         </div>
         <aside className="ticket-rail">
-          <OrderPanel game={run?.game ?? null} />
+          <OrderPanel game={run?.game ?? null} asset={asset} />
           <MarginMeter game={run?.game ?? null} />
         </aside>
       </div>

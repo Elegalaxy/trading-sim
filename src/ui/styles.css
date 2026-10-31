@@ -97,6 +97,11 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
+select option {
+  background: #1e2329;
+  color: #eaecef;
+}
+
 select option:disabled {
   color: #8b93a7;
 }
@@ -816,4 +821,145 @@ ul {
   display: flex;
   gap: 6px;
   align-items: flex-start;
+}
+
+.market-list {
+  position: relative;
+}
+
+.exchange .market-toggle {
+  font-size: 1.05rem;
+  background: #1e2329;
+  border: 1px solid #2b3139;
+  color: #eaecef;
+}
+
+.market-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 260px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #1e2329;
+  border: 1px solid #2b3139;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 50%);
+}
+
+.exchange .market-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: #eaecef;
+  font-variant-numeric: tabular-nums;
+}
+
+.exchange .market-row:hover {
+  background: #2b3139;
+}
+
+.exchange .market-row[aria-pressed='true'] {
+  background: #2b3139;
+  box-shadow: inset 2px 0 0 #f7a600;
+}
+
+.market-name {
+  font-weight: 650;
+}
+
+.market-change {
+  min-width: 60px;
+  text-align: right;
+}
+
+.order-asset {
+  margin: 0;
+}
+
+.side-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.exchange .side-toggle button {
+  border-radius: 0;
+  background: #1e2329;
+  border: 1px solid #2b3139;
+  color: #848e9c;
+}
+
+.exchange .side-toggle button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.exchange .side-toggle button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.exchange .side-toggle .side-buy[aria-pressed='true'] {
+  background: #0ecb81;
+  border-color: #0ecb81;
+  color: #0b0e11;
+  font-weight: 650;
+}
+
+.exchange .side-toggle .side-sell[aria-pressed='true'] {
+  background: #f6465d;
+  border-color: #f6465d;
+  color: #fff;
+  font-weight: 650;
+}
+
+.exchange button[type='submit'].submit-buy {
+  background: #0ecb81;
+  border-color: #0ecb81;
+  color: #0b0e11;
+}
+
+.exchange button[type='submit'].submit-sell {
+  background: #f6465d;
+  border-color: #f6465d;
+  color: #fff;
+}
+
+.exchange button[type='submit']:disabled.submit-buy,
+.exchange button[type='submit']:disabled.submit-sell {
+  background: #1e2329;
+  border-color: #2b3139;
+  color: #5e6673;
+}
+
+.positions-table .manage {
+  display: flex;
+  gap: 4px;
+}
+
+.positions-table .manage button,
+.close-all {
+  padding: 2px 8px;
+}
+
+.close-all {
+  margin-left: 12px;
+  font-size: 0.8rem;
+}
+
+.exchange .link-button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: #f7a600;
+  text-decoration: underline;
+}
+
+.positions-table tr[aria-selected='true'] td:first-child {
+  box-shadow: inset 2px 0 0 #f7a600;
 }

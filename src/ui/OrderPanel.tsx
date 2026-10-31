@@ -84,10 +84,7 @@ function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: n
   }
 }
 
-export function OrderPanel({ game }: { game: GameState | null }) {
-  const assets = MARKET_DEFINITIONS.assets
-  const first = assets[0]?.id ?? 'NOVA'
-  const [asset, setAsset] = useState(first)
+export function OrderPanel({ game, asset }: { game: GameState | null; asset: string }) {
   const [side, setSide] = useState<OrderSide>('buy')
   const [quantityText, setQuantityText] = useState('')
   const [attempted, setAttempted] = useState(false)
@@ -95,9 +92,11 @@ export function OrderPanel({ game }: { game: GameState | null }) {
   const section = game?.section ?? null
   const [trackedGame, setTrackedGame] = useState(game)
   const [trackedSection, setTrackedSection] = useState(section)
-  if (trackedGame !== game || trackedSection !== section) {
+  const [trackedAsset, setTrackedAsset] = useState(asset)
+  if (trackedGame !== game || trackedSection !== section || trackedAsset !== asset) {
     setTrackedGame(game)
     setTrackedSection(section)
+    setTrackedAsset(asset)
     setResultMessage(null)
   }
 
@@ -120,15 +119,6 @@ export function OrderPanel({ game }: { game: GameState | null }) {
     if (quoteKey === '') return
     debugLog('[ui]', `order estimate ${quoteKey}`)
   }, [quoteKey])
-
-  function onAsset(value: string): void {
-    if (!assets.some((item) => item.id === value)) {
-      console.error(`[ui] rejected asset ${JSON.stringify(value)}`)
-      return
-    }
-    setAsset(value)
-    setResultMessage(null)
-  }
 
   function onSide(value: string): void {
     if (!isOrderSide(value)) {
@@ -172,26 +162,22 @@ export function OrderPanel({ game }: { game: GameState | null }) {
     <section className="panel">
       <h2>Order</h2>
       <form className="trade-form" onSubmit={onSubmit}>
-        <label htmlFor="order-asset">
-          Asset{' '}
-          <select id="order-asset" value={asset} onChange={(event) => onAsset(event.target.value)}>
-            {assets.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.id}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label htmlFor="order-side">
-          Side{' '}
-          <select id="order-side" value={side} onChange={(event) => onSide(event.target.value)}>
-            {ORDER_SIDES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
+        <p className="order-asset">
+          Trading <strong>{asset}</strong>
+        </p>
+        <div className="side-toggle" role="group" aria-label="Side">
+          {ORDER_SIDES.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={item === 'buy' ? 'side-buy' : 'side-sell'}
+              aria-pressed={side === item}
+              onClick={() => onSide(item)}
+            >
+              {item === 'buy' ? 'Buy' : 'Sell'}
+            </button>
+          ))}
+        </div>
         <label htmlFor="order-quantity">
           Quantity{' '}
           <input
@@ -206,8 +192,12 @@ export function OrderPanel({ game }: { game: GameState | null }) {
             }}
           />
         </label>
-        <button type="submit" disabled={game?.runEnd != null || (quote !== null && !quote.accepted)}>
-          Place order
+        <button
+          type="submit"
+          className={side === 'buy' ? 'submit-buy' : 'submit-sell'}
+          disabled={game?.runEnd != null || (quote !== null && !quote.accepted)}
+        >
+          {side === 'buy' ? 'Buy' : 'Sell'} {asset}
         </button>
         {game !== null ? (
           <p className="day-note">

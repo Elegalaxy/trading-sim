@@ -3,7 +3,8 @@ import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { sessionPrice } from '../sim/session.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
-import { formatSignedUsd, formatUsd } from './money.ts'
+import { formatSignedUsd, formatUsd, parseUsdToCents } from './money.ts'
+import { reasonText } from './reasons.ts'
 import { dispatch } from './store.ts'
 
 type PositionRow = {
@@ -91,11 +92,69 @@ function actionOrder(row: PositionRow, action: Action): { side: 'buy' | 'sell'; 
   return { side, quantity: row.shares * 2 }
 }
 
-function reasonText(reason: string): string {
-  if (reason === 'insufficientBuyingPower') return 'too little buying power'
-  if (reason === 'insufficientTradingCash') return 'too little trading cash'
-  if (reason === 'marketClosed') return 'the market is not open'
-  return reason
+
+function dollarsText(cents: number | null): string {
+  return cents === null ? '' : (cents / 100).toFixed(2)
+}
+
+type Message = { ok: boolean; text: string }
+type ExitCents = { ok: true; cents: number | null } | { ok: false; reason: string }
+
+function parseExit(text: string, label: string): ExitCents {
+  if (text.trim().length === 0) return { ok: true, cents: null }
+  const parsed = parseUsdToCents(text, label)
+  return parsed.ok ? { ok: true, cents: parsed.cents } : { ok: false, reason: parsed.reason }
+}
+
+/** Inline take profit and stop loss editor for one position. An empty box clears that exit. */
+function ExitsEditor({
+  asset,
+  tp,
+  sl,
+  onDone,
+}: {
+  asset: string
+  tp: number | null
+  sl: number | null
+  onDone: (message: Message) => void
+}) {
+  const [tpText, setTpText] = useState(dollarsText(tp))
+  const [slText, setSlText] = useState(dollarsText(sl))
+
+  function onSet(): void {
+    const nextTp = parseExit(tpText, 'Take profit')
+    const nextSl = parseExit(slText, 'Stop loss')
+    if (!nextTp.ok) return onDone({ ok: false, text: nextTp.reason })
+    if (!nextSl.ok) return onDone({ ok: false, text: nextSl.reason })
+    const cmd: { type: 'setExits'; asset: string; tpCents?: number | null; slCents?: number | null } = {
+      type: 'setExits',
+      asset,
+    }
+    if (nextTp.cents !== tp) cmd.tpCents = nextTp.cents
+    if (nextSl.cents !== sl) cmd.slCents = nextSl.cents
+    const outcome = dispatch(cmd)
+    onDone(
+      outcome.accepted
+        ? { ok: true, text: `${asset} exits updated.` }
+        : { ok: false, text: `${asset}: ${reasonText(outcome.reason ?? 'rejected')}.` },
+    )
+  }
+
+  return (
+    <div className="exits-editor">
+      <label>
+        Take profit ${' '}
+        <input value={tpText} onChange={(event) => setTpText(event.target.value)} inputMode="decimal" autoComplete="off" />
+      </label>
+      <label>
+        Stop loss ${' '}
+        <input value={slText} onChange={(event) => setSlText(event.target.value)} inputMode="decimal" autoComplete="off" />
+      </label>
+      <button type="button" onClick={onSet}>
+        Set
+      </button>
+    </div>
+  )
 }
 
 export function Positions({
@@ -107,7 +166,8 @@ export function Positions({
   onSelect?: (asset: string) => void
   selected?: string
 }) {
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [message, setMessage] = useState<Message | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
   const rows = game === null ? [] : positionRows(game)
   const signature =
     game === null ? 'none' : rows.map((row) => `${row.asset} ${row.side} ${row.shares} pnl=${row.pnl}`).join(', ')
@@ -152,6 +212,36 @@ export function Positions({
           </button>
         ) : null}
       </h2>
+      {game !== null && game.resting.orders.length > 0 ? (
+        <div className="open-orders">
+          <h3>Open orders</h3>
+          <ul>
+            {game.resting.orders.map((order) => (
+              <li key={order.id}>
+                <span>
+                  {order.side === 'buy' ? 'Buy' : 'Sell'} {order.quantity} {order.asset} limit{' '}
+                  {formatUsd(order.limitCents, 'limit')}
+                  {order.tpCents === null ? '' : ` · TP ${formatUsd(order.tpCents, 'take profit')}`}
+                  {order.slCents === null ? '' : ` · SL ${formatUsd(order.slCents, 'stop loss')}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const outcome = dispatch({ type: 'cancelOrder', id: order.id })
+                    setMessage(
+                      outcome.accepted
+                        ? { ok: true, text: 'Order cancelled.' }
+                        : { ok: false, text: reasonText(outcome.reason ?? 'rejected') },
+                    )
+                  }}
+                >
+                  Cancel
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {!canTrade && rows.length > 0 ? <p className="day-note">Open the market to close or change a position.</p> : null}
       {game === null ? (
         <p>Start a game to see positions.</p>
@@ -168,11 +258,18 @@ export function Positions({
                 <th>Entry average</th>
                 <th>Price</th>
                 <th>Unrealized</th>
+                <th>TP / SL</th>
                 <th>Manage</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {rows.flatMap((row) => {
+                const exit = game?.resting.exits[row.asset]
+                const tp = exit?.tpCents ?? null
+                const sl = exit?.slCents ?? null
+                const tpText = tp === null ? '—' : formatUsd(tp, 'take profit')
+                const slText = sl === null ? '—' : formatUsd(sl, 'stop loss')
+                return [
                 <tr key={row.asset} aria-selected={row.asset === selected}>
                   <td>
                     {onSelect === undefined ? (
@@ -190,6 +287,7 @@ export function Positions({
                   <td className={row.pnl > 0 ? 'pnl-gain' : row.pnl < 0 ? 'pnl-loss' : undefined}>
                     {formatSignedUsd(row.pnl, 'unrealized')}
                   </td>
+                  <td>{tp === null && sl === null ? '—' : `${tpText} / ${slText}`}</td>
                   <td className="manage">
                     <button type="button" onClick={() => onAction(row, 'close')} disabled={!canTrade}>
                       Close
@@ -200,9 +298,37 @@ export function Positions({
                     <button type="button" onClick={() => onAction(row, 'flip')} disabled={!canTrade} title="Reverse to the other side">
                       Flip
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(editing === row.asset ? null : row.asset)}
+                      disabled={!canTrade}
+                      aria-expanded={editing === row.asset}
+                      title="Set take profit and stop loss"
+                    >
+                      TP/SL
+                    </button>
                   </td>
-                </tr>
-              ))}
+                </tr>,
+                ...(editing === row.asset
+                  ? [
+                      <tr key={`${row.asset}-exits`}>
+                        <td colSpan={9}>
+                          <ExitsEditor
+                            key={`${tp ?? ''}-${sl ?? ''}`}
+                            asset={row.asset}
+                            tp={tp}
+                            sl={sl}
+                            onDone={(result) => {
+                              setMessage(result)
+                              if (result.ok) setEditing(null)
+                            }}
+                          />
+                        </td>
+                      </tr>,
+                    ]
+                  : []),
+                ]
+              })}
             </tbody>
           </table>
         </div>

@@ -117,6 +117,18 @@ Added 2026-10-31 at the user's request: the player can trade at intraday prices,
 - `[OPEN]` Whether the 15-minute clock step costs anything (energy, stress). Default: no cost.
 - `[PROVISIONAL]` As built: the path is made by previewing the next market step on a copy, so End day prints exactly the close the session ended on. At End day, the drawdown and wipe-out measures start from the price at the clock, so only the move still to come counts. Day 120 has no next step and its session is flat. The two session streams are kept off the market, so a session never changes a market hash or a daily fixture.
 
+### Limit orders and exits `[PROVISIONAL]`
+
+Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are placeholders.
+
+- `[PROVISIONAL]` Besides market orders there are limit orders and, for an open position, a take profit and a stop loss. All of them rest on the game state and are checked against the 15-minute bars as the clock moves, and against the rest of the day's bars when End day is pressed. They carry over to the next day. Nothing about them is random and nothing moves a price.
+- `[PROVISIONAL]` A limit buy must sit below the price at the clock and a limit sell above it. A bar fills it when the bar's low (buy) or high (sell) reaches the limit. The fill is at the limit, or at the bar's open if the bar opened past it. There is no spread. The 0.1% fee and the 5x check apply at fill time. An order that fails the check then is dropped and logged. At most 8 limit orders at once.
+- `[PROVISIONAL]` A take profit or stop loss belongs to one position and closes all of it. For a long the take profit is above the price and the stop below, for a short the other way round. A stop fills at the stop, or at the bar's open if that is worse. A take profit fills at the target, or at a better open. If one bar touches both, the stop wins. Exits are not margin-checked, like any close. The fee applies, the spread does not. Closing or flipping the position removes its exits.
+- `[PROVISIONAL]` A limit order can carry a take profit and a stop loss. They are set when it fills and are live from the next bar. A market order can set them right after it fills.
+- `[PROVISIONAL]` Orders are placed in the market section. Cancelling works at any time. Limit orders do not reserve buying power. The 5x check is made when placing (as a hint) and again when filling.
+- `[PROVISIONAL]` Bars are the only price path, so an exit can trigger on a bar's wick, which the player sees on the chart. Margin and liquidation are still checked once a day at the close.
+- `[OPEN]` Whether open orders and exits should be drawn as lines on the chart. Default: not yet.
+
 ### Events
 
 - `[CONFIRMED]` Every event type has a per-day chance.
@@ -481,6 +493,7 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 
 ## 19. Changelog
 
+- 2026-11-01: Added limit orders, take profit and stop loss (plan Step 32), and order sizing by quantity, cost or value in the order panel. Old saves are rejected as damaged again.
 - 2026-10-31: Built the intraday session (plan Step 28). Added `tick`, 15m and 1H candles, a volume panel and per-bar volume. Orders fill at the clock quote. Old saves are rejected as damaged.
 - 2026-10-31: Intraday session and volume added to the design at the user's request. Orders become tradable intraday on a 15-minute clock over 17:00 to 21:00, with a hidden path ending at the day's existing close. Volume is cosmetic. Margin and liquidation stay end-of-day. 4H is dropped. Provisional values; no code changed yet.
 - 2026-10-24: The trade screen uses a chart, an order rail, and a bottom subpanel. Chart open, high, low, and close come from the daily closes already stored. 1W and 1M group those days. Intraday timeframes and volume are not printed.

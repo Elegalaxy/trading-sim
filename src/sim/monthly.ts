@@ -82,6 +82,7 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
   const scratch: GameState = {
     market: state.market,
     session: state.session,
+    resting: state.resting,
     accounts: { ...state.accounts },
     section: state.section,
     sleepHours: state.sleepHours,

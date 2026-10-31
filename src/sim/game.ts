@@ -22,6 +22,7 @@ import {
 import {
   RUN_LENGTH_DAYS,
   SAVINGS_PAY_INTERVAL_DAYS,
+  SESSION_STEPS,
   STARTING_CASH_CENTS,
   STARTING_SAVINGS_CENTS,
   STARTING_TRADING_CENTS,
@@ -48,6 +49,15 @@ import {
   playerVisibleFeed,
 } from './lifestyle.ts'
 import { assertLoan, initialLoan, interpretRepayLoan, interpretTakeLoan, settleMissedLoanInterest } from './loan.ts'
+import {
+  advanceClock,
+  assertResting,
+  initialResting,
+  interpretCancelOrder,
+  interpretLimitOrder,
+  interpretSetExits,
+  pruneExits,
+} from './resting.ts'
 import { buildSession, assertSession, createSessionStreams, interpretTick } from './session.ts'
 import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
@@ -115,6 +125,7 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'skip' &&
       kind !== 'sectionChange' &&
       kind !== 'clockStep' &&
+      kind !== 'resting' &&
       kind !== 'jobChangeRequested' &&
       kind !== 'billPaid' &&
       kind !== 'coverableCheck' &&
@@ -356,6 +367,7 @@ function assertGame(state: GameState, defs?: MarketDefinitions): void {
     )
   }
   assertPositions(state.positions)
+  assertResting(state.resting)
   assertRealized(state.realized)
   if (!Array.isArray(state.pending)) {
     throw new Error(`game pending log must be an array, received ${describeValue(state.pending)}`)
@@ -418,6 +430,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
   const state: GameState = {
     market,
     session: buildSession(market, defs, createSessionStreams(seed)),
+    resting: initialResting(),
     accounts: {
       cashCents: STARTING_CASH_CENTS,
       tradingCents: STARTING_TRADING_CENTS,
@@ -491,7 +504,17 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
     } else {
       const outcome = interpretOrder(state, defs, cmd)
       for (const event of outcome.events) state.pending.push(event)
+      for (const event of pruneExits(state)) state.pending.push(event)
     }
+  } else if (type === 'limitOrder' || type === 'setExits') {
+    if (state.section !== 'market') {
+      state.pending.push({ kind: 'commandRejected', day: state.market.day, command: type, reason: 'marketClosed' })
+    } else {
+      const events = type === 'limitOrder' ? interpretLimitOrder(state, defs, cmd) : interpretSetExits(state, defs, cmd)
+      for (const event of events) state.pending.push(event)
+    }
+  } else if (type === 'cancelOrder') {
+    for (const event of interpretCancelOrder(state, cmd)) state.pending.push(event)
   } else if (type === 'skip') {
     const outcome = interpretSkip(state.section, state.market.day, playerIsJobless(state.job))
     if (outcome.accepted) state.section = outcome.section
@@ -501,6 +524,7 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
     const outcome = interpretTick(state, cmd)
     if (outcome.accepted) {
       state.pending.push(outcome.event)
+      for (const event of advanceClock(state, defs, outcome.event.from, outcome.event.to)) state.pending.push(event)
     } else {
       state.pending.push({ kind: 'commandRejected', day: state.market.day, command: 'tick', reason: outcome.reason })
     }
@@ -621,10 +645,13 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const workedJob = activeJob(state.job)
   const sleptHours = state.sleepHours
   const equityAtStart = tradingEquity(state, defs).equity
+  // Limits and exits keep working through the rest of today's session.
+  const resting = advanceClock(state, defs, state.session.clock, SESSION_STEPS)
   assertPolicyRateEntry(state.market, defs)
   stepMarketDay(state.market, defs)
   state.session = buildSession(state.market, defs, state.session.streams)
   const traded = settleTradingAccount(state, defs, equityAtStart)
+  const pruned = pruneExits(state)
   const policyRate = readPolicyRatePercent(state.market, defs)
   const savings = settleSavings(state.accounts, state.market.day, policyRate)
   const endEquity = tradingEquity(state, defs).equity
@@ -633,7 +660,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const monthly = isMonthlyCycleDay(state.market.day) ? applyMonthlyCycle(state, defs) : []
   const fi = applyFiCheck(state, defs, savingsInterestReceived(monthly))
   state.pending = []
-  state.log = [...commands, ...loanEvents, ...traded, ...savings, ...statEvents, ...jobEvents, ...monthly, ...fi]
+  state.log = [...commands, ...resting, ...loanEvents, ...traded, ...pruned, ...savings, ...statEvents, ...jobEvents, ...monthly, ...fi]
   const job = activeJob(state.job)
   state.section = sectionForJob(job)
   state.sleepHours = job.sleepHours

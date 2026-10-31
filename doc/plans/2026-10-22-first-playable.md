@@ -728,6 +728,15 @@ Working folder for all commands: `D:\Coding\project\trading-sim`.
 - Must not change: market, events, info and distortion draws. Daily closes, margin, liquidation and the loss cap.
 - Progress: 2026-10-31: Session state lives on `GameState.session`, with its own two streams derived from `seed#session`, so `stateHash(market)` and the golden fixtures did not change. End day rebuilds the session right after the market step. Equity at the start of End day is valued at the quote at the clock, so a player who ends the day early still sees the remaining move count toward drawdown and wipe-out. Day 120 has no next step, so its session is flat. Saves written before this step fail the shape check and show the damaged-save message. Checks: npm test 126 passed (23 files), typecheck and lint passed, `npm run sim -- --batch 100 --strategy random` largest move 8%, write-off 0. Browser: opened a seeded demo run, stepped the clock, saw 15m, 1H, 1D and 1W legends with volume.
 
+### Step 32: Limit orders, take profit and stop loss
+
+- Status: `done`
+- Depends on: 28
+- Files to create or change: `src/sim/resting.ts`, `src/sim/resting.test.ts`, `src/sim/game.ts`, `src/sim/trading.ts` (an optional fixed fill price), `src/sim/types.ts`, `src/sim/log.ts`, `src/sim/monthly.ts`, `src/persist/save.ts`, `src/ui/OrderPanel.tsx`, `src/ui/Positions.tsx`, `src/ui/reasons.ts`, `src/ui/styles.css`, `doc/GAME_DESIGN.md`
+- What changes: GAME_DESIGN section 5, Limit orders and exits. New commands `limitOrder`, `cancelOrder` and `setExits`. `GameState.resting` holds the orders and exits. `tick` and End day check them against the session bars. The order panel gets a Market/Limit toggle and optional TP and SL boxes. Positions shows TP/SL, a TP/SL editor and an open-orders list with Cancel.
+- Must not change: market, events, info and distortion draws. Daily closes, margin, liquidation and the loss cap.
+- Progress: 2026-11-01: 14 tests in `resting.test.ts` (touch fill, gap fill at the open, stop beats target in one bar, shorts, margin drop at fill, carry over, End day fills, exits pruned, market hash unchanged). npm test 147 passed (25 files), typecheck and lint passed. Browser: placed a limit with TP and SL, saw it carry over a day, set exits on a market position, saw a wrong-side stop rejected. Saves from before this step show the damaged-save message. Not drawn on the chart yet.
+
 ## 5. Risks, and what would reveal them early
 
 - **Plan size.** 26 steps is a lot for a solo developer. *Reveal:* the review after Step 14. If the market alone is not interesting there, fix the price model before building the life layer.

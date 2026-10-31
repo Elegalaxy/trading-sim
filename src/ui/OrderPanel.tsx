@@ -7,6 +7,7 @@ import { ORDER_SIDES, type GameState, type OrderSide } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd, parseUsdToCents } from './money.ts'
 import { liquidationPrice, sharesForAmount, SIZE_MODES, SIZING_LEVERAGE, type SizeMode } from './sizing.ts'
+import { reasonText } from './reasons.ts'
 import { dispatch, parsePositiveInteger } from './store.ts'
 
 type OrderQuote =
@@ -22,6 +23,8 @@ type OrderQuote =
       netShares: number
     }
   | { accepted: false; reason: string }
+
+type OrderType = 'market' | 'limit'
 
 const MODE_LABEL: Record<SizeMode, string> = { quantity: 'Quantity', cost: 'Cost', value: 'Value' }
 
@@ -43,13 +46,15 @@ function orderReasonText(reason: string): string {
       return 'The market is closed.'
     case 'underOneShare':
       return 'That amount is under one share.'
-    default:
-      return reason
+    default: {
+      const text = reasonText(reason)
+      return text === reason ? reason : `${text.charAt(0).toUpperCase()}${text.slice(1)}.`
+    }
   }
 }
 
 /** Fill, fee, spread, and the book after the trade. The clone is not the live game. */
-function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: number): OrderQuote {
+function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: number, fixedFill?: number): OrderQuote {
   if (game.section !== 'market') return { accepted: false, reason: 'marketClosed' }
   let clone: GameState
   try {
@@ -59,7 +64,7 @@ function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: n
     throw error
   }
   if (clone === game) throw new Error('order estimate must not use the live game')
-  const outcome = interpretOrder(clone, MARKET_DEFINITIONS, { type: 'order', asset, side, quantity })
+  const outcome = interpretOrder(clone, MARKET_DEFINITIONS, { type: 'order', asset, side, quantity }, fixedFill)
   if (!outcome.accepted) {
     const rejection = outcome.events.find((event) => event.kind === 'commandRejected')
     const reason = rejection !== undefined && rejection.kind === 'commandRejected' ? rejection.reason : 'rejected'
@@ -102,6 +107,7 @@ function sizeOrder(
   mode: SizeMode,
   amountText: string,
   leverage: number,
+  limitCents: number | null,
 ): Sizing {
   if (mode === 'quantity') {
     const parsed = parsePositiveInteger(amountText, 'Quantity')
@@ -110,8 +116,17 @@ function sizeOrder(
   const parsed = parseUsdToCents(amountText, MODE_LABEL[mode])
   if (!parsed.ok) return { ok: false, reason: parsed.reason }
   if (game === null) return { ok: false, reason: 'notStarted' }
-  const quantity = sharesForAmount(mode, parsed.cents, leverage, probeFillPrice(game, asset, side))
+  const fill = limitCents ?? probeFillPrice(game, asset, side)
+  const quantity = sharesForAmount(mode, parsed.cents, leverage, fill)
   return quantity < 1 ? { ok: false, reason: 'underOneShare' } : { ok: true, quantity }
+}
+
+type OptionalUsd = { ok: true; cents: number | null } | { ok: false; reason: string }
+
+function parseOptionalUsd(text: string, label: string): OptionalUsd {
+  if (text.trim().length === 0) return { ok: true, cents: null }
+  const parsed = parseUsdToCents(text, label)
+  return parsed.ok ? { ok: true, cents: parsed.cents } : { ok: false, reason: parsed.reason }
 }
 
 function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: true }>; leverage: number }) {
@@ -173,6 +188,10 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
   const [side, setSide] = useState<OrderSide>('buy')
   const [mode, setMode] = useState<SizeMode>('quantity')
   const [leverage, setLeverage] = useState<number>(1)
+  const [orderType, setOrderType] = useState<OrderType>('market')
+  const [limitText, setLimitText] = useState('')
+  const [tpText, setTpText] = useState('')
+  const [slText, setSlText] = useState('')
   const [amountText, setAmountText] = useState('')
   const [attempted, setAttempted] = useState(false)
   const [resultMessage, setResultMessage] = useState<string | null>(null)
@@ -185,13 +204,32 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
     setTrackedSection(section)
     setTrackedAsset(asset)
     setResultMessage(null)
+    setLimitText('')
+    setTpText('')
+    setSlText('')
   }
 
   const typed = amountText.trim().length > 0
-  const sizing = sizeOrder(game, asset, side, mode, amountText, leverage)
+  const limitParsed = orderType === 'limit' ? parseUsdToCents(limitText, 'Limit price') : null
+  const limitCents = limitParsed !== null && limitParsed.ok ? limitParsed.cents : null
+  const tpParsed = parseOptionalUsd(tpText, 'Take profit')
+  const slParsed = parseOptionalUsd(slText, 'Stop loss')
+  const sizing = sizeOrder(game, asset, side, mode, amountText, leverage, limitCents)
+  const priceError =
+    limitParsed !== null && !limitParsed.ok
+      ? limitParsed.reason
+      : !tpParsed.ok
+        ? tpParsed.reason
+        : !slParsed.ok
+          ? slParsed.reason
+          : null
+  const showPriceError = priceError !== null && (attempted || limitText.length > 0 || tpText.length > 0 || slText.length > 0)
   const amountError = !sizing.ok && (attempted || typed) ? orderReasonText(sizing.reason) : null
   const quantity = sizing.ok ? sizing.quantity : 0
-  const quote = game !== null && sizing.ok ? quoteOrder(game, asset, side, sizing.quantity) : null
+  const quote =
+    game !== null && sizing.ok && (orderType === 'market' || limitCents !== null)
+      ? quoteOrder(game, asset, side, sizing.quantity, limitCents ?? undefined)
+      : null
   const quoteKey =
     quote === null
       ? ''
@@ -228,6 +266,10 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
   function onSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
     setAttempted(true)
+    if (priceError !== null) {
+      setResultMessage(null)
+      return
+    }
     if (!sizing.ok) {
       setResultMessage(null)
       console.error(`[ui] rejected order size ${JSON.stringify(amountText)}: ${sizing.reason}`)
@@ -246,13 +288,29 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
       setResultMessage('The run has ended.')
       return
     }
+    const tpCents = tpParsed.ok ? tpParsed.cents : null
+    const slCents = slParsed.ok ? slParsed.cents : null
+    if (orderType === 'limit') {
+      const placed = dispatch({ type: 'limitOrder', asset, side, quantity: sizing.quantity, limitCents, tpCents, slCents })
+      setResultMessage(placed.accepted ? 'Limit order placed.' : orderReasonText(placed.reason ?? 'rejected'))
+      return
+    }
     const outcome = dispatch({ type: 'order', asset, side, quantity: sizing.quantity })
     if (outcome.accepted) {
+      if (tpCents !== null || slCents !== null) {
+        const exits = dispatch({ type: 'setExits', asset, tpCents, slCents })
+        setResultMessage(
+          exits.accepted ? 'Order accepted.' : `Order filled, but the exits were not set: ${orderReasonText(exits.reason ?? 'rejected')}`,
+        )
+        return
+      }
       setResultMessage('Order accepted.')
       return
     }
     setResultMessage(orderReasonText(outcome.reason ?? 'rejected'))
   }
+
+  const resultSucceeded = resultMessage === 'Order accepted.' || resultMessage === 'Limit order placed.'
 
   return (
     <section className="panel">
@@ -274,6 +332,37 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
             </button>
           ))}
         </div>
+        <div className="size-modes" role="group" aria-label="Order type">
+          {(['market', 'limit'] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={orderType === item}
+              onClick={() => {
+                setOrderType(item)
+                setResultMessage(null)
+              }}
+            >
+              {item === 'market' ? 'Market' : 'Limit'}
+            </button>
+          ))}
+        </div>
+        {orderType === 'limit' ? (
+          <label htmlFor="order-limit">
+            Limit price ${' '}
+            <input
+              id="order-limit"
+              value={limitText}
+              inputMode="decimal"
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => {
+                setLimitText(event.target.value)
+                setResultMessage(null)
+              }}
+            />
+          </label>
+        ) : null}
         <div className="size-modes" role="group" aria-label="Size by">
           {SIZE_MODES.map((item) => (
             <button key={item} type="button" aria-pressed={mode === item} onClick={() => onMode(item)}>
@@ -302,12 +391,39 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
             }}
           />
         </label>
+        <div className="exit-inputs">
+          <label htmlFor="order-tp">
+            Take profit ${' '}
+            <input
+              id="order-tp"
+              value={tpText}
+              placeholder="optional"
+              inputMode="decimal"
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setTpText(event.target.value)}
+            />
+          </label>
+          <label htmlFor="order-sl">
+            Stop loss ${' '}
+            <input
+              id="order-sl"
+              value={slText}
+              placeholder="optional"
+              inputMode="decimal"
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setSlText(event.target.value)}
+            />
+          </label>
+        </div>
         <button
           type="submit"
           className={side === 'buy' ? 'submit-buy' : 'submit-sell'}
           disabled={game?.runEnd != null || (quote !== null && !quote.accepted)}
         >
           {side === 'buy' ? 'Buy' : 'Sell'} {asset}
+          {orderType === 'limit' ? ' limit' : ''}
         </button>
         {game !== null ? (
           <p className="day-note">
@@ -315,7 +431,11 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
             here only sizes the order. The real limit is 5x across the account.
           </p>
         ) : null}
-        {amountError !== null ? (
+        {showPriceError ? (
+          <p className="trade-alert" role="alert">
+            {priceError}
+          </p>
+        ) : amountError !== null ? (
           <p className="trade-alert" role="alert">
             {amountError}
           </p>
@@ -330,8 +450,8 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
         )}
         {resultMessage !== null ? (
           <p
-            className={resultMessage === 'Order accepted.' ? 'trade-ok' : 'trade-alert'}
-            role={resultMessage === 'Order accepted.' ? 'status' : 'alert'}
+            className={resultSucceeded ? 'trade-ok' : 'trade-alert'}
+            role={resultSucceeded ? 'status' : 'alert'}
           >
             {resultMessage}
           </p>

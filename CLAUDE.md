@@ -40,6 +40,8 @@ Player time goes through two entry points in `src/sim/game.ts`: `applyCommand` (
 
 Intraday: `src/sim/session.ts` builds 16 fifteen-minute bars per asset at the start of each day by previewing the next market step on a copy of the market. `applyCommand({type:'tick'})` moves the clock, and orders fill at the quote at the clock (`quoteMarket`). The close, margin check and liquidation are still once a day in `endDay`. Session streams live on `GameState.session`, not on the market, so market hashes and fixtures do not depend on them.
 
+Resting orders: `src/sim/resting.ts` holds limit orders and per-position take profit and stop loss on `GameState.resting`. They are checked bar by bar on `tick` and for the rest of the day in `endDay`, fill at their own price with no spread, and never touch the market.
+
 Perception layer: energy/stress distort what the player sees (`distortion.ts`, `feed.ts`), never the market itself.
 
 ### Determinism and fixtures

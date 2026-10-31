@@ -288,6 +288,18 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `to=${formatNumber(event.to)}`,
         `time=${formatClock(event.time)}`,
       ].join(' ')
+    case 'resting': {
+      const side = event.side === null ? '' : ` side=${formatToken(event.side, 'side')}`
+      const time = event.time === null ? '' : ` time=${formatClock(event.time)}`
+      const reason = event.reason === null ? '' : ` reason=${formatToken(event.reason, 'reason')}`
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=resting',
+        `action=${formatToken(event.action, 'action')}`,
+        `asset=${formatToken(event.asset, 'asset')}`,
+        `detail=${formatToken(event.detail, 'detail')}`,
+      ].join(' ') + `${side} quantity=${formatNumber(event.quantity)} price=${formatNumber(event.priceCents)} fee=${formatNumber(event.fee)}${time}${reason}`
+    }
     case 'savingsAccrual':
       return [
         `day=${formatNumber(event.day)}`,

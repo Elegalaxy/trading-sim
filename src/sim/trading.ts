@@ -358,15 +358,24 @@ type FillQuote = {
 }
 
 /** Step 10 fill. Buy pays notional + fee. Sell receives notional, then pays the fee. */
-function quoteFill(market: MarketState, def: AssetDefinition, side: OrderSide, quantity: number): FillQuote | 'overflow' {
+function quoteFill(
+  market: MarketState,
+  def: AssetDefinition,
+  side: OrderSide,
+  quantity: number,
+  fixedFill?: number,
+): FillQuote | 'overflow' {
   const quoted = market.assets[def.id]
   if (quoted === undefined || !Number.isSafeInteger(quoted.priceCents) || quoted.priceCents <= 0) {
     throw new Error(`asset ${def.id} price must be a positive safe integer, received ${describeValue(quoted?.priceCents)}`)
   }
-  const spreadPpm = requirePpm(def.spreadPpm, SPREAD_PPM_MIN, SPREAD_PPM_MAX, `asset ${def.id} spreadPpm`)
-  const widened = spreadWidens(market, def)
-  const halfSpread = halfSpreadCents(quoted.priceCents, spreadPpm, widened)
-  const fillPrice = side === 'buy' ? quoted.priceCents + halfSpread : quoted.priceCents - halfSpread
+  // A limit, take profit or stop loss fills at its own price, so there is no spread.
+  let halfSpread = 0
+  if (fixedFill === undefined) {
+    const spreadPpm = requirePpm(def.spreadPpm, SPREAD_PPM_MIN, SPREAD_PPM_MAX, `asset ${def.id} spreadPpm`)
+    halfSpread = halfSpreadCents(quoted.priceCents, spreadPpm, spreadWidens(market, def))
+  }
+  const fillPrice = fixedFill ?? (side === 'buy' ? quoted.priceCents + halfSpread : quoted.priceCents - halfSpread)
   if (!Number.isSafeInteger(fillPrice) || fillPrice <= 0) {
     throw new Error(`fill price for ${def.id} must be a positive safe integer, received ${describeValue(fillPrice)}`)
   }
@@ -393,7 +402,12 @@ export type PositionClose = {
  * liquidation can close a book that is already under 20%. Trading cash may
  * go negative. The realized ledger takes the close P&L and the fee.
  */
-export function closeWholePosition(state: GameState, defs: MarketDefinitions, assetId: string): PositionClose {
+export function closeWholePosition(
+  state: GameState,
+  defs: MarketDefinitions,
+  assetId: string,
+  fixedFill?: number,
+): PositionClose {
   const position = state.positions[assetId]
   if (position === undefined || position.signedShares === 0) {
     throw new Error(`no open position to close for ${assetId}`)
@@ -405,7 +419,7 @@ export function closeWholePosition(state: GameState, defs: MarketDefinitions, as
   const side: OrderSide = position.signedShares > 0 ? 'sell' : 'buy'
   const def = findAsset(defs, assetId)
   if (def === undefined) throw new Error(`position ${assetId} is not an asset`)
-  const quote = quoteFill(quoteMarket(state), def, side, quantity)
+  const quote = quoteFill(quoteMarket(state), def, side, quantity, fixedFill)
   if (quote === 'overflow') throw new Error(`close of ${assetId} overflowed a safe integer`)
   const nextTrading = state.accounts.tradingCents + quote.cashMove
   if (!Number.isSafeInteger(nextTrading)) {
@@ -435,7 +449,12 @@ export function closeWholePosition(state: GameState, defs: MarketDefinitions, as
  * Fill one market order, or reject it and leave positions, balances, and the
  * realized ledger unchanged. See the equity rule at the top of this file.
  */
-export function interpretOrder(state: GameState, defs: MarketDefinitions, cmd: unknown): OrderOutcome {
+export function interpretOrder(
+  state: GameState,
+  defs: MarketDefinitions,
+  cmd: unknown,
+  fixedFill?: number,
+): OrderOutcome {
   const day = state.market.day
   if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) {
     return rejected(day, 'quantityNotInteger')
@@ -454,7 +473,7 @@ export function interpretOrder(state: GameState, defs: MarketDefinitions, cmd: u
   if (def === undefined) return rejected(day, 'unknownAsset')
 
   const market = quoteMarket(state)
-  const quote = quoteFill(market, def, record.side, quantity)
+  const quote = quoteFill(market, def, record.side, quantity, fixedFill)
   if (quote === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   const nextTrading = state.accounts.tradingCents + quote.cashMove
   if (!Number.isSafeInteger(nextTrading)) {

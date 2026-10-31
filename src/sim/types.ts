@@ -783,6 +783,52 @@ export type ClockStepEvent = {
   time: string
 }
 
+export const RESTING_KINDS = ['limit', 'takeProfit', 'stopLoss'] as const
+export type RestingKind = (typeof RESTING_KINDS)[number]
+
+/** A limit order waiting for the price. Fills when a bar touches `limitCents`. */
+export type RestingOrder = {
+  id: number
+  asset: string
+  side: OrderSide
+  quantity: number
+  limitCents: number
+  /** Exits set on the position once this order fills. Null means none. */
+  tpCents: number | null
+  slCents: number | null
+}
+
+/** Take profit and stop loss for one open position. A hit closes the whole position. */
+export type PositionExit = {
+  side: 'long' | 'short'
+  tpCents: number | null
+  slCents: number | null
+}
+
+export type RestingState = {
+  nextId: number
+  orders: RestingOrder[]
+  exits: Record<string, PositionExit>
+}
+
+/**
+ * Something happened to a limit order or an exit. Fills carry the bar time. Cents are
+ * prices. `reason` is set when an order is dropped or an exit is removed by the sim.
+ */
+export type RestingEvent = {
+  kind: 'resting'
+  day: number
+  action: 'placed' | 'filled' | 'cancelled' | 'dropped'
+  asset: string
+  detail: RestingKind
+  side: OrderSide | null
+  quantity: number
+  priceCents: number
+  fee: number
+  time: string | null
+  reason: string | null
+}
+
 /**
  * Salary added to cash. One event per job worked in that month.
  * `days` is how many days of the 30-day month that job was active.
@@ -1030,6 +1076,7 @@ export type CommandLogEvent =
   | SkipEvent
   | SectionChangeEvent
   | ClockStepEvent
+  | RestingEvent
   | JobChangeRequestedEvent
   | BillPaidEvent
   | CoverableCheckEvent
@@ -1312,6 +1359,8 @@ export type GameState = {
   market: MarketState
   /** Today's intraday path and the market clock. See session.ts. */
   session: SessionState
+  /** Limit orders and take profit or stop loss. Checked against each bar as the clock moves. */
+  resting: RestingState
   accounts: PlayerAccounts
   section: DaySection
   sleepHours: number

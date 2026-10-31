@@ -17,6 +17,7 @@ const ENVELOPE_KEYS = ['version', 'savedAt', 'mode', 'seed', 'state'] as const
 const STATE_KEYS = [
   'market',
   'session',
+  'resting',
   'accounts',
   'section',
   'sleepHours',
@@ -49,6 +50,7 @@ const MARKET_KEYS = [
 ] as const
 const STREAM_NAMES = ['market', 'events', 'info', 'distortion'] as const
 const STREAM_KEYS = ['a', 'b', 'c', 'd'] as const
+const RESTING_KEYS = ['nextId', 'orders', 'exits'] as const
 const SESSION_KEYS = ['day', 'clock', 'bars', 'streams'] as const
 const ACCOUNT_KEYS = ['cashCents', 'tradingCents', 'savingsCents', 'accruedSavingsCents'] as const
 const JOB_KEYS = ['catalog', 'jobId', 'pending', 'worked', 'courses'] as const
@@ -231,6 +233,10 @@ function checkState(value: unknown): string | null {
   const sessionClock = finiteNumber(value.session.clock, 'state.session.clock')
   if (sessionClock !== null) return sessionClock
   if (!isRecord(value.session.bars) || !isRecord(value.session.streams)) return 'shape:state.session.bars'
+  if (!isRecord(value.resting) || !sameKeys(value.resting, RESTING_KEYS)) return 'shape:state.resting'
+  const nextId = finiteNumber(value.resting.nextId, 'state.resting.nextId')
+  if (nextId !== null) return nextId
+  if (!Array.isArray(value.resting.orders) || !isRecord(value.resting.exits)) return 'shape:state.resting.orders'
   const accounts = checkAccounts(value.accounts)
   if (accounts !== null) return accounts
   if (!(SECTIONS as readonly string[]).includes(String(value.section))) return 'shape:state.section'

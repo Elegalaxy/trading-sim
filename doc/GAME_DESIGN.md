@@ -127,7 +127,7 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 - `[PROVISIONAL]` A limit order can carry a take profit and a stop loss. They are set when it fills and are live from the next bar. A market order can set them right after it fills.
 - `[PROVISIONAL]` Orders are placed in the market section. Cancelling works at any time. Limit orders do not reserve buying power. The 5x check is made when placing (as a hint) and again when filling.
 - `[PROVISIONAL]` Bars are the only price path, so an exit can trigger on a bar's wick, which the player sees on the chart. Margin and liquidation are still checked once a day at the close.
-- `[OPEN]` Whether open orders and exits should be drawn as lines on the chart. Default: not yet.
+- `[PROVISIONAL]` Open orders and exits of the charted asset are drawn as dashed lines with a price tag on the right axis: gold for a limit, green for a take profit, red for a stop loss. A level outside the visible range sits at the chart edge with an arrow.
 
 ### Events
 

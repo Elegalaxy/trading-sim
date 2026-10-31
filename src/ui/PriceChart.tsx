@@ -31,6 +31,19 @@ const CROSS = '#758696'
 
 export type ChartPoint = DaySource
 
+/** A resting order or an exit, drawn as a dashed line across the chart. */
+export type ChartLevel = {
+  kind: 'limit' | 'takeProfit' | 'stopLoss'
+  label: string
+  cents: number
+}
+
+const LEVEL_COLOR: Record<ChartLevel['kind'], string> = {
+  limit: '#f7a600',
+  takeProfit: UP,
+  stopLoss: DOWN,
+}
+
 type Hover = {
   index: number
   y: number
@@ -68,7 +81,15 @@ function priceY(price: number, low: number, span: number, top: number, height: n
   return top + (1 - (price - low) / span) * height
 }
 
-export function PriceChart({ asset, points }: { asset: string; points: readonly ChartPoint[] }) {
+export function PriceChart({
+  asset,
+  points,
+  levels = [],
+}: {
+  asset: string
+  points: readonly ChartPoint[]
+  levels?: readonly ChartLevel[]
+}) {
   const energy = useTradingStore().run?.game.stats.energy ?? null
   const fx = useCosmeticFx(energy)
   const view = useDelayedValue('price-chart', { asset, points }, fx.delayMs, chartSignature(asset, points))
@@ -236,6 +257,22 @@ export function PriceChart({ asset, points }: { asset: string; points: readonly 
                   </text>
                 </>
               ) : null}
+              {levels.map((level) => {
+                const raw = priceY(level.cents, yLow, ySpan, plotTop, priceH)
+                const y = Math.min(plotTop + priceH, Math.max(plotTop, raw))
+                const arrow = raw < plotTop ? '▲ ' : raw > plotTop + priceH ? '▼ ' : ''
+                const color = LEVEL_COLOR[level.kind]
+                return (
+                  <g key={`${level.kind}-${level.cents}-${level.label}`}>
+                    <line x1={plotLeft} x2={plotRight} y1={y} y2={y} stroke={color} strokeDasharray="5 4" opacity="0.9" />
+                    <rect x={plotRight} y={y - 8} width={AXIS_RIGHT - 2} height={16} fill={color} rx="2" />
+                    <text x={plotRight + 4} y={y + 4} fill="#0b0e11" fontSize="10" fontWeight="650">
+                      {arrow}
+                      {level.label} {formatUsd(level.cents, 'level')}
+                    </text>
+                  </g>
+                )
+              })}
               {hover !== null && bars[hover.index] !== undefined ? (
                 <g>
                   <line

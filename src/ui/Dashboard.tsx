@@ -15,7 +15,7 @@ import { MarketList } from './MarketList.tsx'
 import { NewsFeed } from './NewsFeed.tsx'
 import { OrderPanel } from './OrderPanel.tsx'
 import { Positions } from './Positions.tsx'
-import { PriceChart, type ChartPoint } from './PriceChart.tsx'
+import { PriceChart, type ChartLevel, type ChartPoint } from './PriceChart.tsx'
 import { RunEnd } from './RunEnd.tsx'
 import { StatMeters } from './StatMeters.tsx'
 import { JobPanel } from './JobPanel.tsx'
@@ -72,6 +72,17 @@ export function Dashboard() {
     dayHigh = played.reduce((best, bar) => Math.max(best, bar.high), open)
     dayLow = played.reduce((best, bar) => Math.min(best, bar.low), open)
     if (played.length > 0) points.push({ day: session.day, open, close: lastPrice, bars: played })
+  }
+  const levels: ChartLevel[] = []
+  if (run !== null) {
+    for (const order of run.game.resting.orders) {
+      if (order.asset === asset) {
+        levels.push({ kind: 'limit', label: order.side === 'buy' ? 'Buy' : 'Sell', cents: order.limitCents })
+      }
+    }
+    const exit = run.game.resting.exits[asset]
+    if (exit?.tpCents != null) levels.push({ kind: 'takeProfit', label: 'TP', cents: exit.tpCents })
+    if (exit?.slCents != null) levels.push({ kind: 'stopLoss', label: 'SL', cents: exit.slCents })
   }
   const events = run === null ? [] : [...run.game.market.log, ...run.game.log, ...run.game.perception.events]
   const cash = run?.game.accounts.cashCents
@@ -139,7 +150,7 @@ export function Dashboard() {
       <div className="exchange-body">
         <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} />
         <div className="chart-column">
-          <PriceChart asset={asset} points={points} />
+          <PriceChart asset={asset} points={points} levels={levels} />
           <section className="subpanel" aria-label="Subpanel">
             <nav className="subpanel-tabs" aria-label="Subpanel sections">
               <button type="button" aria-pressed={desk === 'positions'} onClick={() => setDesk('positions')}>

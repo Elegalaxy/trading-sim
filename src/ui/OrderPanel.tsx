@@ -1,21 +1,29 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
+import { MARGIN_MIN_RATIO_DENOMINATOR, MARGIN_MIN_RATIO_NUMERATOR } from '../sim/constants.ts'
+import { sessionPrice } from '../sim/session.ts'
 import { interpretOrder, tradingEquity } from '../sim/trading.ts'
 import { ORDER_SIDES, type GameState, type OrderSide } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
-import { formatUsd } from './money.ts'
+import { formatUsd, parseUsdToCents } from './money.ts'
+import { liquidationPrice, sharesForAmount, SIZE_MODES, SIZING_LEVERAGE, type SizeMode } from './sizing.ts'
 import { dispatch, parsePositiveInteger } from './store.ts'
 
 type OrderQuote =
   | {
       accepted: true
+      quantity: number
+      price: number
       fillPrice: number
       fee: number
       spreadCost: number
       equity: number
       gross: number
+      netShares: number
     }
   | { accepted: false; reason: string }
+
+const MODE_LABEL: Record<SizeMode, string> = { quantity: 'Quantity', cost: 'Cost', value: 'Value' }
 
 function isOrderSide(value: string): value is OrderSide {
   return (ORDER_SIDES as readonly string[]).includes(value)
@@ -33,22 +41,14 @@ function orderReasonText(reason: string): string {
       return 'Start a game first.'
     case 'marketClosed':
       return 'The market is closed.'
+    case 'underOneShare':
+      return 'That amount is under one share.'
     default:
       return reason
   }
 }
 
-function ratioAfterText(equity: number, gross: number): string {
-  if (gross === 0) return 'There is no margin ratio after this trade.'
-  if (!Number.isSafeInteger(equity) || !Number.isSafeInteger(gross) || gross < 0) {
-    throw new Error(`margin ratio after the trade needs safe equity and gross, received ${equity} / ${gross}`)
-  }
-  const percent = (equity / gross) * 100
-  if (!Number.isFinite(percent)) throw new Error('margin ratio after the trade is not finite')
-  return `Margin ratio after the trade: ${percent.toFixed(2)}%.`
-}
-
-/** Fill, fee, spread, and the ratio after the trade. The clone is not the live game. */
+/** Fill, fee, spread, and the book after the trade. The clone is not the live game. */
 function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: number): OrderQuote {
   if (game.section !== 'market') return { accepted: false, reason: 'marketClosed' }
   let clone: GameState
@@ -76,17 +76,104 @@ function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: n
   const book = tradingEquity(clone, MARKET_DEFINITIONS)
   return {
     accepted: true,
+    quantity,
+    price: fill.price,
     fillPrice: fill.fillPrice,
     fee: fill.fee,
     spreadCost,
     equity: book.equity,
     gross: book.gross,
+    netShares: clone.positions[asset]?.signedShares ?? 0,
   }
+}
+
+/** The fill price one share would get, used to turn dollars into shares. Falls back to the quote. */
+function probeFillPrice(game: GameState, asset: string, side: OrderSide): number {
+  const probe = quoteOrder(game, asset, side, 1)
+  return probe.accepted ? probe.fillPrice : sessionPrice(game, asset)
+}
+
+type Sizing = { ok: true; quantity: number } | { ok: false; reason: string }
+
+function sizeOrder(
+  game: GameState | null,
+  asset: string,
+  side: OrderSide,
+  mode: SizeMode,
+  amountText: string,
+  leverage: number,
+): Sizing {
+  if (mode === 'quantity') {
+    const parsed = parsePositiveInteger(amountText, 'Quantity')
+    return parsed.ok ? { ok: true, quantity: parsed.value } : { ok: false, reason: parsed.reason }
+  }
+  const parsed = parseUsdToCents(amountText, MODE_LABEL[mode])
+  if (!parsed.ok) return { ok: false, reason: parsed.reason }
+  if (game === null) return { ok: false, reason: 'notStarted' }
+  const quantity = sharesForAmount(mode, parsed.cents, leverage, probeFillPrice(game, asset, side))
+  return quantity < 1 ? { ok: false, reason: 'underOneShare' } : { ok: true, quantity }
+}
+
+function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: true }>; leverage: number }) {
+  const value = quote.quantity * quote.fillPrice
+  const cost = Math.ceil(value / leverage)
+  const buyingPower = Math.max(
+    0,
+    quote.equity * MARGIN_MIN_RATIO_DENOMINATOR - quote.gross * MARGIN_MIN_RATIO_NUMERATOR,
+  ) / MARGIN_MIN_RATIO_NUMERATOR
+  const accountLeverage = quote.equity > 0 ? quote.gross / quote.equity : null
+  const liq = liquidationPrice(quote.equity, quote.gross, quote.netShares, quote.price)
+  return (
+    <dl className="estimate">
+      <div>
+        <dt>Quantity</dt>
+        <dd>{quote.quantity}</dd>
+      </div>
+      <div>
+        <dt>Value (after leverage)</dt>
+        <dd>{formatUsd(value, 'value')}</dd>
+      </div>
+      <div>
+        <dt>Cost at {leverage}x (before leverage)</dt>
+        <dd>{formatUsd(cost, 'cost')}</dd>
+      </div>
+      <div>
+        <dt>Fill price</dt>
+        <dd>{formatUsd(quote.fillPrice, 'fill price')}</dd>
+      </div>
+      <div>
+        <dt>Fee</dt>
+        <dd>{formatUsd(quote.fee, 'fee')}</dd>
+      </div>
+      <div>
+        <dt>Spread cost</dt>
+        <dd>{formatUsd(quote.spreadCost, 'spread')}</dd>
+      </div>
+      <div>
+        <dt>Account leverage after</dt>
+        <dd>{accountLeverage === null ? '—' : `${accountLeverage.toFixed(2)}x of 5x`}</dd>
+      </div>
+      <div>
+        <dt>Margin ratio after</dt>
+        <dd>{quote.gross === 0 ? '—' : `${((quote.equity / quote.gross) * 100).toFixed(2)}%`}</dd>
+      </div>
+      <div>
+        <dt>Buying power left</dt>
+        <dd>{formatUsd(Math.floor(buyingPower), 'buying power')}</dd>
+      </div>
+      <div>
+        <dt>Est. liquidation price</dt>
+        <dd>{liq === null ? '—' : formatUsd(liq, 'liquidation price')}</dd>
+      </div>
+    </dl>
+  )
 }
 
 export function OrderPanel({ game, asset }: { game: GameState | null; asset: string }) {
   const [side, setSide] = useState<OrderSide>('buy')
-  const [quantityText, setQuantityText] = useState('')
+  const [mode, setMode] = useState<SizeMode>('quantity')
+  const [leverage, setLeverage] = useState<number>(1)
+  const [amountText, setAmountText] = useState('')
   const [attempted, setAttempted] = useState(false)
   const [resultMessage, setResultMessage] = useState<string | null>(null)
   const section = game?.section ?? null
@@ -100,20 +187,22 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
     setResultMessage(null)
   }
 
-  const parsed = parsePositiveInteger(quantityText, 'Quantity')
-  const quantityError = !parsed.ok && (attempted || quantityText.trim().length > 0) ? parsed.reason : null
-  const quote = game !== null && parsed.ok ? quoteOrder(game, asset, side, parsed.value) : null
+  const typed = amountText.trim().length > 0
+  const sizing = sizeOrder(game, asset, side, mode, amountText, leverage)
+  const amountError = !sizing.ok && (attempted || typed) ? orderReasonText(sizing.reason) : null
+  const quantity = sizing.ok ? sizing.quantity : 0
+  const quote = game !== null && sizing.ok ? quoteOrder(game, asset, side, sizing.quantity) : null
   const quoteKey =
     quote === null
       ? ''
       : quote.accepted
-        ? `accepted ${asset} ${side} ${parsed.ok ? parsed.value : 0} fill=${quote.fillPrice} fee=${quote.fee} spreadCost=${quote.spreadCost} equity=${quote.equity} gross=${quote.gross}`
-        : `rejected ${asset} ${side} ${parsed.ok ? parsed.value : 0} ${quote.reason}`
+        ? `accepted ${asset} ${side} ${quantity} fill=${quote.fillPrice} fee=${quote.fee} spreadCost=${quote.spreadCost} equity=${quote.equity} gross=${quote.gross}`
+        : `rejected ${asset} ${side} ${quantity} ${quote.reason}`
 
   useEffect(() => {
-    if (quantityError === null) return
-    debugLog('[ui]', `order input rejected: ${quantityError}`)
-  }, [quantityError])
+    if (amountError === null) return
+    debugLog('[ui]', `order input rejected: ${amountError}`)
+  }, [amountError])
 
   useEffect(() => {
     if (quoteKey === '') return
@@ -129,13 +218,20 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
     setResultMessage(null)
   }
 
+  function onMode(value: SizeMode): void {
+    setMode(value)
+    setAmountText('')
+    setAttempted(false)
+    setResultMessage(null)
+  }
+
   function onSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
     setAttempted(true)
-    if (!parsed.ok) {
+    if (!sizing.ok) {
       setResultMessage(null)
-      console.error(`[ui] rejected quantity ${JSON.stringify(quantityText)}: ${parsed.reason}`)
-      debugLog('[ui]', `order rejected before dispatch: ${parsed.reason}`)
+      console.error(`[ui] rejected order size ${JSON.stringify(amountText)}: ${sizing.reason}`)
+      debugLog('[ui]', `order rejected before dispatch: ${sizing.reason}`)
       return
     }
     if (game === null) {
@@ -150,7 +246,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
       setResultMessage('The run has ended.')
       return
     }
-    const outcome = dispatch({ type: 'order', asset, side, quantity: parsed.value })
+    const outcome = dispatch({ type: 'order', asset, side, quantity: sizing.quantity })
     if (outcome.accepted) {
       setResultMessage('Order accepted.')
       return
@@ -178,16 +274,30 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
             </button>
           ))}
         </div>
-        <label htmlFor="order-quantity">
-          Quantity{' '}
+        <div className="size-modes" role="group" aria-label="Size by">
+          {SIZE_MODES.map((item) => (
+            <button key={item} type="button" aria-pressed={mode === item} onClick={() => onMode(item)}>
+              {MODE_LABEL[item]}
+            </button>
+          ))}
+        </div>
+        <div className="size-modes" role="group" aria-label="Leverage for cost and value">
+          {SIZING_LEVERAGE.map((item) => (
+            <button key={item} type="button" aria-pressed={leverage === item} onClick={() => setLeverage(item)}>
+              {item}x
+            </button>
+          ))}
+        </div>
+        <label htmlFor="order-amount">
+          {mode === 'quantity' ? 'Quantity (shares)' : mode === 'cost' ? `Cost in $ (x${leverage})` : 'Value in $'}{' '}
           <input
-            id="order-quantity"
-            value={quantityText}
-            inputMode="numeric"
+            id="order-amount"
+            value={amountText}
+            inputMode={mode === 'quantity' ? 'numeric' : 'decimal'}
             autoComplete="off"
             spellCheck={false}
             onChange={(event) => {
-              setQuantityText(event.target.value)
+              setAmountText(event.target.value)
               setResultMessage(null)
             }}
           />
@@ -201,22 +311,18 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
         </button>
         {game !== null ? (
           <p className="day-note">
-            Orders use the trading account ({formatUsd(game.accounts.tradingCents, 'trading')}), not cash.
+            Orders use the trading account ({formatUsd(game.accounts.tradingCents, 'trading')}), not cash. Leverage
+            here only sizes the order. The real limit is 5x across the account.
           </p>
         ) : null}
-        {quantityError !== null ? (
+        {amountError !== null ? (
           <p className="trade-alert" role="alert">
-            {quantityError}
+            {amountError}
           </p>
         ) : game === null ? (
           <p>Start a game to estimate an order.</p>
         ) : quote === null ? null : quote.accepted ? (
-          <div className="estimate">
-            <p>Estimated fill price: {formatUsd(quote.fillPrice, 'fill price')}</p>
-            <p>Fee: {formatUsd(quote.fee, 'fee')}</p>
-            <p>Spread cost: {formatUsd(quote.spreadCost, 'spread')}</p>
-            <p>{ratioAfterText(quote.equity, quote.gross)}</p>
-          </div>
+          <Estimate quote={quote} leverage={leverage} />
         ) : (
           <p className="trade-alert" role="alert">
             {orderReasonText(quote.reason)}

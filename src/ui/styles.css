@@ -975,3 +975,43 @@ ul {
 .positions-table tr[aria-selected='true'] td:first-child {
   box-shadow: inset 2px 0 0 #f7a600;
 }
+
+.size-modes {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.exchange .size-modes button {
+  background: #1e2329;
+  border: 1px solid #2b3139;
+  border-radius: 0;
+}
+
+.exchange .size-modes button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.exchange .size-modes button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+dl.estimate {
+  display: grid;
+  gap: 2px;
+}
+
+dl.estimate > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+dl.estimate dt {
+  color: #848e9c;
+}
+
+dl.estimate dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

@@ -48,6 +48,7 @@ import {
   playerVisibleFeed,
 } from './lifestyle.ts'
 import { assertLoan, initialLoan, interpretRepayLoan, interpretTakeLoan, settleMissedLoanInterest } from './loan.ts'
+import { buildSession, assertSession, createSessionStreams, interpretTick } from './session.ts'
 import { settleMargin, settleMarginInterest } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
 import { applyMonthlyCycle, interpretPayBill, isMonthlyCycleDay, reviewCoverable } from './monthly.ts'
@@ -113,6 +114,7 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'realized' &&
       kind !== 'skip' &&
       kind !== 'sectionChange' &&
+      kind !== 'clockStep' &&
       kind !== 'jobChangeRequested' &&
       kind !== 'billPaid' &&
       kind !== 'coverableCheck' &&
@@ -133,6 +135,10 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
     }
     if (kind === 'lifestyleChange' || kind === 'coursePurchased') {
       assertLifestyleCommand(event)
+    }
+    if (kind === 'clockStep') {
+      assertSafeInteger((event as { from?: unknown }).from, 'pending clock step from', false)
+      assertSafeInteger((event as { to?: unknown }).to, 'pending clock step to', false)
     }
     if (kind === 'skip' || kind === 'sectionChange') {
       const from = (event as { from?: unknown }).from
@@ -332,13 +338,14 @@ function assertRealized(realized: readonly RealizedDay[]): void {
   }
 }
 
-function assertGame(state: GameState): void {
+function assertGame(state: GameState, defs?: MarketDefinitions): void {
   if (typeof state !== 'object' || state === null || Array.isArray(state)) {
     throw new Error(`game state must be an object, received ${describeValue(state)}`)
   }
   if (typeof state.market !== 'object' || state.market === null) {
     throw new Error(`game market must be an object, received ${describeValue(state.market)}`)
   }
+  if (defs !== undefined) assertSession(state.session, state.market.day, defs)
   assertPlayerAccounts(state.accounts)
   assertDayState(state.section, state.sleepHours)
   assertPlayerJob(state.job)
@@ -407,8 +414,10 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
   assertDefinitionsObject(defs)
   const playerJob = initialPlayerJob(start?.jobs, start?.jobId)
   const job = activeJob(playerJob)
+  const market = createMarket(defs, seed)
   const state: GameState = {
-    market: createMarket(defs, seed),
+    market,
+    session: buildSession(market, defs, createSessionStreams(seed)),
     accounts: {
       cashCents: STARTING_CASH_CENTS,
       tradingCents: STARTING_TRADING_CENTS,
@@ -457,7 +466,7 @@ function commandType(cmd: unknown): string | null {
 /** Apply one player command. A rejection logs the reason and leaves balances and positions unchanged. */
 export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unknown): GameState {
   assertDefinitionsObject(defs)
-  assertGame(state)
+  assertGame(state, defs)
   assertPerception(state.perception, state.market.day, state.market.feed.day)
   if (state.runEnd !== null) {
     const command = commandType(cmd) ?? 'invalid'
@@ -488,6 +497,13 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
     if (outcome.accepted) state.section = outcome.section
     const events = outcome.accepted ? outcome.events : [outcome.event]
     for (const event of events) state.pending.push(event)
+  } else if (type === 'tick') {
+    const outcome = interpretTick(state, cmd)
+    if (outcome.accepted) {
+      state.pending.push(outcome.event)
+    } else {
+      state.pending.push({ kind: 'commandRejected', day: state.market.day, command: 'tick', reason: outcome.reason })
+    }
   } else if (type === 'setJob') {
     const outcome = interpretSetJob(state, cmd)
     if (outcome.accepted) state.job.pending = outcome.pending
@@ -607,6 +623,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const equityAtStart = tradingEquity(state, defs).equity
   assertPolicyRateEntry(state.market, defs)
   stepMarketDay(state.market, defs)
+  state.session = buildSession(state.market, defs, state.session.streams)
   const traded = settleTradingAccount(state, defs, equityAtStart)
   const policyRate = readPolicyRatePercent(state.market, defs)
   const savings = settleSavings(state.accounts, state.market.day, policyRate)

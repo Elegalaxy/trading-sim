@@ -280,6 +280,14 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `to=${formatToken(event.to, 'to')}`,
         `clock=${formatClock(event.clock)}`,
       ].join(' ')
+    case 'clockStep':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=clockStep',
+        `from=${formatNumber(event.from)}`,
+        `to=${formatNumber(event.to)}`,
+        `time=${formatClock(event.time)}`,
+      ].join(' ')
     case 'savingsAccrual':
       return [
         `day=${formatNumber(event.day)}`,

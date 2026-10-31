@@ -55,6 +55,7 @@ import {
   TRADE_FEE_DENOMINATOR,
   TRADE_FEE_NUMERATOR,
 } from './constants.ts'
+import { quoteMarket } from './session.ts'
 import type {
   AssetDefinition,
   BorrowFeeEvent,
@@ -339,7 +340,7 @@ export function tradingEquity(state: GameState, defs: MarketDefinitions): { equi
   if (!Number.isSafeInteger(state.accounts.tradingCents)) {
     throw new Error(`trading cash must be a safe integer, received ${describeValue(state.accounts.tradingCents)}`)
   }
-  const marked = exposure(state.market, defs, state.positions)
+  const marked = exposure(quoteMarket(state), defs, state.positions)
   if (marked === 'overflow') throw new Error('trading equity overflowed a safe integer')
   const equity = state.accounts.tradingCents + marked.marked
   if (!Number.isSafeInteger(equity)) {
@@ -404,7 +405,7 @@ export function closeWholePosition(state: GameState, defs: MarketDefinitions, as
   const side: OrderSide = position.signedShares > 0 ? 'sell' : 'buy'
   const def = findAsset(defs, assetId)
   if (def === undefined) throw new Error(`position ${assetId} is not an asset`)
-  const quote = quoteFill(state.market, def, side, quantity)
+  const quote = quoteFill(quoteMarket(state), def, side, quantity)
   if (quote === 'overflow') throw new Error(`close of ${assetId} overflowed a safe integer`)
   const nextTrading = state.accounts.tradingCents + quote.cashMove
   if (!Number.isSafeInteger(nextTrading)) {
@@ -452,7 +453,8 @@ export function interpretOrder(state: GameState, defs: MarketDefinitions, cmd: u
   const def = findAsset(defs, record.asset)
   if (def === undefined) return rejected(day, 'unknownAsset')
 
-  const quote = quoteFill(state.market, def, record.side, quantity)
+  const market = quoteMarket(state)
+  const quote = quoteFill(market, def, record.side, quantity)
   if (quote === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   const nextTrading = state.accounts.tradingCents + quote.cashMove
   if (!Number.isSafeInteger(nextTrading)) {
@@ -470,7 +472,7 @@ export function interpretOrder(state: GameState, defs: MarketDefinitions, cmd: u
       costCents: projection.costCents,
     }
   }
-  const marked = exposure(state.market, defs, nextPositions)
+  const marked = exposure(market, defs, nextPositions)
   if (marked === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   const equity = nextTrading + marked.marked
   if (!Number.isSafeInteger(equity)) return rejected(day, 'notionalNotSafeInteger')

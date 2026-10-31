@@ -773,6 +773,16 @@ export type SectionChangeEvent = {
   clock: string
 }
 
+/** The market clock moved forward inside the session. `from` and `to` are step numbers 0 to 16. */
+export type ClockStepEvent = {
+  kind: 'clockStep'
+  day: number
+  from: number
+  to: number
+  /** Display-only `HH:MM` at `to`. */
+  time: string
+}
+
 /**
  * Salary added to cash. One event per job worked in that month.
  * `days` is how many days of the 30-day month that job was active.
@@ -1019,6 +1029,7 @@ export type CommandLogEvent =
   | RealizedEvent
   | SkipEvent
   | SectionChangeEvent
+  | ClockStepEvent
   | JobChangeRequestedEvent
   | BillPaidEvent
   | CoverableCheckEvent
@@ -1069,6 +1080,32 @@ export type LogEvent =
   | CalendarItemEvent
   | HeadlineEvent
   | RumourGeneratedEvent
+
+/** One 15-minute bar. Prices are integer cents. Volume is whole shares and is display only. */
+export type SessionBar = {
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+/**
+ * Today's market session, fixed at the start of the day. `bars[id]` has one bar per step.
+ * The last bar closes at the price the next end of day will print. `clock` is how many
+ * steps have been played, 0 (open) through the number of bars (close). Bars past `clock`
+ * are hidden from the player. A day with no further step (day 120) is flat.
+ */
+export type SessionState = {
+  day: number
+  clock: number
+  bars: Record<string, SessionBar[]>
+  /**
+   * Own streams, kept off the market so a session can never move a market hash.
+   * They advance once per day, when the session is built.
+   */
+  streams: { intraday: RngStream; volume: RngStream }
+}
 
 /**
  * Seeded market. `day` is 0 before the first step.
@@ -1273,6 +1310,8 @@ export type FiTracker = {
  */
 export type GameState = {
   market: MarketState
+  /** Today's intraday path and the market clock. See session.ts. */
+  session: SessionState
   accounts: PlayerAccounts
   section: DaySection
   sleepHours: number

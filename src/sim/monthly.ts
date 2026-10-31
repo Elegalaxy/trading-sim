@@ -81,6 +81,7 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
   if (ids.length === 0) return state.accounts.tradingCents
   const scratch: GameState = {
     market: state.market,
+    session: state.session,
     accounts: { ...state.accounts },
     section: state.section,
     sleepHours: state.sleepHours,

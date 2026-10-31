@@ -1,25 +1,23 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
-import { buildCandles, candleRangeLabel, type Candle, type TimeframeId } from './candles.ts'
+import { buildCandles, candleRangeLabel, formatVolume, type Candle, type DaySource, type TimeframeId } from './candles.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
 import { useTradingStore } from './store.ts'
 import { Tell } from './Tell.tsx'
 
 const VISIBLE: Record<TimeframeId, number> = {
+  '15m': 64,
+  '1H': 48,
   '1D': 80,
   '1W': 26,
   '1M': 12,
 }
 
-const TIMEFRAMES: readonly { id: TimeframeId | '15m' | '1H' | '4H'; label: string; enabled: boolean }[] = [
-  { id: '15m', label: '15m', enabled: false },
-  { id: '1H', label: '1H', enabled: false },
-  { id: '4H', label: '4H', enabled: false },
-  { id: '1D', label: '1D', enabled: true },
-  { id: '1W', label: '1W', enabled: true },
-  { id: '1M', label: '1M', enabled: true },
-]
+const TIMEFRAMES: readonly TimeframeId[] = ['15m', '1H', '1D', '1W', '1M']
+
+/** Share of the plot height under the price area that is kept for the volume bars. */
+const VOLUME_SHARE = 0.16
 
 const AXIS_RIGHT = 76
 const AXIS_BOTTOM = 22
@@ -31,10 +29,7 @@ const FLAT = '#848e9c'
 const GRID = '#1e2329'
 const CROSS = '#758696'
 
-export type ChartPoint = {
-  day: number
-  priceCents: number
-}
+export type ChartPoint = DaySource
 
 type Hover = {
   index: number
@@ -45,7 +40,9 @@ function chartSignature(asset: string, points: readonly ChartPoint[]): string {
   const parts = [asset, String(points.length)]
   for (let i = 0; i < points.length; i += 1) {
     const point = points[i]
-    parts.push(point === undefined ? 'missing' : `${point.day}:${point.priceCents}`)
+    parts.push(
+      point === undefined ? 'missing' : `${point.day}:${point.open}:${point.close}:${point.bars === null ? 'x' : point.bars.length}`,
+    )
   }
   return parts.join('|')
 }
@@ -88,7 +85,7 @@ export function PriceChart({ asset, points }: { asset: string; points: readonly 
   const chartLog =
     lastBar === undefined
       ? `chart asset=${drawnAsset} timeframe=${timeframe} bars=0 last=none`
-      : `chart asset=${drawnAsset} timeframe=${timeframe} bars=${bars.length} last=O=${lastBar.open} H=${lastBar.high} L=${lastBar.low} C=${lastBar.close} vol=none`
+      : `chart asset=${drawnAsset} timeframe=${timeframe} bars=${bars.length} last=O=${lastBar.open} H=${lastBar.high} L=${lastBar.low} C=${lastBar.close} vol=${lastBar.volume === null ? 'none' : lastBar.volume}`
 
   useEffect(() => {
     const node = stageRef.current
@@ -121,6 +118,10 @@ export function PriceChart({ asset, points }: { asset: string; points: readonly 
   const plotBottom = Math.max(plotTop + 1, size.h - AXIS_BOTTOM)
   const plotW = plotRight - plotLeft
   const plotH = plotBottom - plotTop
+  const volumeH = Math.round(plotH * VOLUME_SHARE)
+  const priceH = plotH - volumeH
+  let maxVolume = 0
+  for (const bar of bars) if (bar.volume !== null && bar.volume > maxVolume) maxVolume = bar.volume
 
   let yLow = 0
   let ySpan = 1
@@ -155,38 +156,27 @@ export function PriceChart({ asset, points }: { asset: string; points: readonly 
   }
 
   const crossPrice =
-    hover === null ? null : nearestCent(yLow + (1 - (hover.y - plotTop) / plotH) * ySpan)
+    hover === null || hover.y > plotTop + priceH ? null : nearestCent(yLow + (1 - (hover.y - plotTop) / priceH) * ySpan)
 
   return (
     <div className="tv-chart">
       <div className="tv-toolbar" role="toolbar" aria-label="Chart timeframe">
-        {TIMEFRAMES.map((item) =>
-          item.enabled ? (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={timeframe === item.id}
-              onClick={() => onTimeframe(item.id as TimeframeId)}
-            >
-              {item.label}
-            </button>
-          ) : (
-            <button key={item.id} type="button" disabled title="This market prints one price a day.">
-              {item.label}
-            </button>
-          ),
-        )}
+        {TIMEFRAMES.map((id) => (
+          <button key={id} type="button" aria-pressed={timeframe === id} onClick={() => onTimeframe(id)}>
+            {id}
+          </button>
+        ))}
       </div>
       <div className="tv-stage" ref={stageRef} style={blurStyle}>
         {fx.tell ? <Tell /> : null}
         {bars.length === 0 || active === undefined ? (
-          <p className="tv-empty">{drawnAsset}: no candles yet. End the day to plot a price.</p>
+          <p className="tv-empty">{drawnAsset}: no candles yet. Open the market and step the clock, or end the day.</p>
         ) : (
           <>
             <p className={`tv-legend ohlc-${activeTone}`}>
               <span className="tv-symbol">{drawnAsset}</span> {timeframe} {candleRangeLabel(active)} O{' '}
               {formatUsd(active.open, 'open')} H {formatUsd(active.high, 'high')} L {formatUsd(active.low, 'low')} C{' '}
-              {formatUsd(active.close, 'close')} <span className="tv-vol">Vol —</span>
+              {formatUsd(active.close, 'close')} <span className="tv-vol">Vol {formatVolume(active.volume)}</span>
             </p>
             <svg
               className="chart"
@@ -199,7 +189,7 @@ export function PriceChart({ asset, points }: { asset: string; points: readonly 
               onPointerLeave={() => setHover(null)}
             >
               {ticks.map((tick) => {
-                const y = priceY(tick, yLow, ySpan, plotTop, plotH)
+                const y = priceY(tick, yLow, ySpan, plotTop, priceH)
                 return (
                   <g key={tick}>
                     <line x1={plotLeft} x2={plotRight} y1={y} y2={y} stroke={GRID} />
@@ -213,14 +203,24 @@ export function PriceChart({ asset, points }: { asset: string; points: readonly 
                 const color = toneColor(toneOf(bar))
                 const cx = plotLeft + (index + 0.5) * slot
                 const bodyWidth = Math.max(1, Math.min(10, slot * 0.62))
-                const yOpen = priceY(bar.open, yLow, ySpan, plotTop, plotH)
-                const yClose = priceY(bar.close, yLow, ySpan, plotTop, plotH)
-                const yHigh = priceY(bar.high, yLow, ySpan, plotTop, plotH)
-                const yLowPx = priceY(bar.low, yLow, ySpan, plotTop, plotH)
+                const yOpen = priceY(bar.open, yLow, ySpan, plotTop, priceH)
+                const yClose = priceY(bar.close, yLow, ySpan, plotTop, priceH)
+                const yHigh = priceY(bar.high, yLow, ySpan, plotTop, priceH)
+                const yLowPx = priceY(bar.low, yLow, ySpan, plotTop, priceH)
                 const top = Math.min(yOpen, yClose)
                 const height = Math.max(1, Math.abs(yClose - yOpen))
                 return (
-                  <g key={`${bar.startDay}-${bar.endDay}`}>
+                  <g key={`${bar.startDay}-${bar.endDay}-${bar.time ?? ''}`}>
+                    {bar.volume !== null && maxVolume > 0 ? (
+                      <rect
+                        x={cx - bodyWidth / 2}
+                        y={plotBottom - (bar.volume / maxVolume) * (volumeH - 4)}
+                        width={bodyWidth}
+                        height={(bar.volume / maxVolume) * (volumeH - 4)}
+                        fill={color}
+                        opacity="0.35"
+                      />
+                    ) : null}
                     <line x1={cx} x2={cx} y1={yHigh} y2={yLowPx} stroke={color} strokeWidth="1" />
                     <rect x={cx - bodyWidth / 2} y={top} width={bodyWidth} height={height} fill={color} />
                   </g>

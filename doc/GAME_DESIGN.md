@@ -72,7 +72,7 @@ High leverage is available, and losses cannot exceed the account. The game guara
 - `[CONFIRMED]` Skipping is the gap after work when there is nothing to do. The day jumps ahead until the stock market opens.
 - `[OPEN]` Clock times for sleep, work, and market open and close. Whether other empty gaps can be skipped, such as after the market closes. Whether management actions are available during work, or only outside it.
 - `[PROVISIONAL]` With no job, the skip runs from the end of sleep until the market opens.
-- `[PROVISIONAL]` A day has no intraday price movement. The player acts at the current prices, then the day ends. Prices, events and accounts update at the end of the day.
+- `[PROVISIONAL]` Prices move during the market session in 15-minute steps (section 5, Intraday session). Events, fair value, accounts and the margin check still update once per day, at End day. Replaces the 2026-10-22 rule of no intraday price movement.
 - `[PROVISIONAL]` During market hours the player can place any number of orders.
 - `[PROVISIONAL]` Reading the news and verifying the true feed are management actions, available while the day is playing. Without reading the news, the player sees only the macro calendar and the single top headline.
 
@@ -99,6 +99,23 @@ High leverage is available, and losses cannot exceed the account. The game guara
 - `[PROVISIONAL]` Each day the price moves a fraction of the way toward fair value, plus noise from the asset's volatility. A daily price-move cap applies (section 7).
 - `[PROVISIONAL]` A move above the cap is not lost. The rest of the gap stays between price and fair value and plays out over the following days.
 - `[PROVISIONAL]` Event effects add to fair value, and have a magnitude, a duration and a decay shape. Effects stack, with a per-day limit on the total change in fair value.
+
+### Intraday session `[PROVISIONAL]`
+
+Added 2026-10-31 at the user's request: the player can trade at intraday prices, with a volume figure. Numbers are placeholders. Built in plan Step 28.
+
+- `[CONFIRMED]` Orders are tradable intraday: a fill uses the price at the player's current time in the session, not one price per day.
+- `[PROVISIONAL]` The session is the market window, 17:00 to 21:00, in 16 steps of 15 minutes. Open market moves the clock to 17:00. A new control moves the clock forward one step at a time, and End day jumps to 21:00 and then to the next day. The clock never moves back.
+- `[PROVISIONAL]` The day's close is still decided when the day is stepped, exactly as today, from fair value, events and noise. The intraday path is a bridge from the previous close (the open) to that close, with noise that scales with the asset's volatility. The path is fixed and hidden at the start of the day. The player sees only bars up to the current clock time.
+- `[PROVISIONAL]` The path uses its own seeded stream, so adding it does not change the daily price, event or rumour draws, and a seeded run still gives the same market whatever the player does. The existing daily golden fixtures should not change.
+- `[PROVISIONAL]` The 8% daily move cap applies to the close against the previous close. Intraday bars may swing past 8% from the open but are clamped to a wider band (suggested 12%), so the loss cap guarantee in section 7 is not weakened.
+- `[PROVISIONAL]` Margin, liquidation, the warning, the wipe-out check, interest and borrow fees are still checked once per day at the close (end-of-day check). Intraday checks stay out. The margin meter during the session uses the current intraday price and is information only. Order sizing against the 5x cap uses the current intraday price.
+- `[PROVISIONAL]` Spread and fee are unchanged. An event day still widens the spread.
+- `[PROVISIONAL]` Volume is cosmetic: a per-bar figure that is higher on event days and on larger moves, plus noise, from a separate seeded stream. It does not change prices, spread or fills. The player can see it per bar and per day.
+- `[PROVISIONAL]` The day's high and low in the header and the candle are the session path's high and low. Daily closes, scores and the FI ledger are unchanged.
+- `[OPEN]` Whether a player who ends the day without reaching 21:00 has their open orders affected (there are none, since orders are market orders), and whether News or rumours reveal the close early. Default: no.
+- `[OPEN]` Whether the 15-minute clock step costs anything (energy, stress). Default: no cost.
+- `[PROVISIONAL]` As built: the path is made by previewing the next market step on a copy, so End day prints exactly the close the session ended on. At End day, the drawdown and wipe-out measures start from the price at the clock, so only the move still to come counts. Day 120 has no next step and its session is flat. The two session streams are kept off the market, so a session never changes a market hash or a daily fixture.
 
 ### Events
 
@@ -316,7 +333,7 @@ The loan was going to wait for a later version. On 2026-10-22 it became one of t
 
 ## 13. Presentation and Technical Direction
 
-- `[PROVISIONAL]` The trade screen is a terminal: a candle chart, an order rail, and a bottom subpanel for positions, life, news, and the day book. A candle's open is the previous close. Its high and low are the ends of the printed move, so one day has no wick past the body. 1W groups 7 days and 1M groups 30, and those groups can show a wick. 15m, 1H, and 4H are not printed. Volume is not printed.
+- `[PROVISIONAL]` The trade screen is a terminal: a candle chart, an order rail, and a bottom subpanel for positions, life, news, and the day book. A candle's open is the previous close. From the intraday session on, 15m and 1H bars are real, a 1D candle's high and low come from the session path, and a volume bar is printed. 4H is not offered because the session is 4 hours (it would equal 1D). 1W groups 7 days and 1M groups 30.
 - `[PROVISIONAL]` A short "this is a simulation, not financial advice" note.
 - `[CONFIRMED]` Stack: TypeScript, React, and Vite (2026-10-22). The simulation is plain TypeScript, shared by the game and a Node harness. Tests use Vitest. Saves are versioned JSON in browser localStorage. The project stays in `trading-sim/` and does not import `rpg/`.
 - `[PROVISIONAL]` Platform is a local browser app. Desktop wrapping is later.
@@ -464,6 +481,8 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 
 ## 19. Changelog
 
+- 2026-10-31: Built the intraday session (plan Step 28). Added `tick`, 15m and 1H candles, a volume panel and per-bar volume. Orders fill at the clock quote. Old saves are rejected as damaged.
+- 2026-10-31: Intraday session and volume added to the design at the user's request. Orders become tradable intraday on a 15-minute clock over 17:00 to 21:00, with a hidden path ending at the day's existing close. Volume is cosmetic. Margin and liquidation stay end-of-day. 4H is dropped. Provisional values; no code changed yet.
 - 2026-10-24: The trade screen uses a chart, an order rail, and a bottom subpanel. Chart open, high, low, and close come from the daily closes already stored. 1W and 1M group those days. Intraday timeframes and volume are not printed.
 - 2026-10-24: The player-facing unit is US dollars ($1 = 100 stored cents; 1E = $1,000). Open market stays on the same day and does not move prices. End day sleeps into the next day and moves prices. Cash at $0.00 cannot pay food, lifestyle, courses, bills, or a loan repayment. An order still uses the trading account.
 - 2026-10-22: Confirmed the stack: TypeScript, React, and Vite. The simulation is plain TypeScript, tests use Vitest, and saves are versioned JSON in localStorage. The app stays in `trading-sim/` and does not import `rpg/`.

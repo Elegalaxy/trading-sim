@@ -235,7 +235,7 @@ function applyCappedMove(previousCents: number, rawMove: number): { delta: numbe
 }
 
 /** 1000 × 100 cents × the equal-weight average of (price / start price). */
-function indexQuoteCents(defs: MarketDefinitions, assets: MarketState['assets']): number {
+export function indexQuoteCents(defs: MarketDefinitions, assets: MarketState['assets']): number {
   let ratioSum = 0
   let count = 0
   for (const def of defs.assets) {

@@ -20,6 +20,7 @@ import { StatMeters } from './StatMeters.tsx'
 import { JobPanel } from './JobPanel.tsx'
 import { LifestylePanel } from './LifestylePanel.tsx'
 import { LoanPanel } from './LoanPanel.tsx'
+import { sessionPrice } from '../sim/session.ts'
 import { formatUsd } from './money.ts'
 import { useTradingStore } from './store.ts'
 
@@ -42,28 +43,43 @@ export function Dashboard() {
 
   const market = run?.game.market ?? null
   const points: ChartPoint[] = []
+  let lastPrice: number | undefined
+  let dayHigh: number | undefined
+  let dayLow: number | undefined
+  let dayOpen: number | undefined
   if (run !== null) {
-    for (const row of run.closes) {
-      const priceCents = row.prices[asset]
-      if (priceCents === undefined) throw new Error(`chart is missing ${asset} on day ${row.day}`)
-      points.push({ day: row.day, priceCents })
+    const rows = run.closes
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i]
+      const before = i === 0 ? undefined : rows[i - 1]
+      const close = row?.prices[asset]
+      const open = before?.prices[asset] ?? row?.bars?.[asset]?.[0]?.open ?? close
+      if (row === undefined || close === undefined || open === undefined) {
+        throw new Error(`chart is missing ${asset} on day ${row?.day ?? i}`)
+      }
+      if (before === undefined && row.bars === undefined) continue
+      points.push({ day: row.day - 1, open, close, bars: row.bars?.[asset] ?? null })
     }
+    const session = run.game.session
+    const sessionBars = session.bars[asset]
+    if (sessionBars === undefined) throw new Error(`session is missing ${asset} on day ${session.day}`)
+    const played = sessionBars.slice(0, session.clock)
+    const open = sessionBars[0]?.open
+    if (open === undefined) throw new Error(`session has no bars for ${asset}`)
+    lastPrice = sessionPrice(run.game, asset)
+    dayOpen = open
+    dayHigh = played.reduce((best, bar) => Math.max(best, bar.high), open)
+    dayLow = played.reduce((best, bar) => Math.min(best, bar.low), open)
+    if (played.length > 0) points.push({ day: session.day, open, close: lastPrice, bars: played })
   }
   const events = run === null ? [] : [...run.game.market.log, ...run.game.log, ...run.game.perception.events]
   const cash = run?.game.accounts.cashCents
   const trading = run?.game.accounts.tradingCents
   const savings = run?.game.accounts.savingsCents
-  const lastPoint = points[points.length - 1]
-  const prevPoint = points.length > 1 ? points[points.length - 2] : undefined
-  const lastPrice = lastPoint?.priceCents
-  const dayHigh =
-    lastPrice === undefined ? undefined : prevPoint === undefined ? lastPrice : Math.max(lastPrice, prevPoint.priceCents)
-  const dayLow =
-    lastPrice === undefined ? undefined : prevPoint === undefined ? lastPrice : Math.min(lastPrice, prevPoint.priceCents)
   let changeText = '0.00%'
   let changeUp = true
-  if (lastPrice !== undefined && prevPoint !== undefined && prevPoint.priceCents > 0) {
-    const pct = ((lastPrice - prevPoint.priceCents) / prevPoint.priceCents) * 100
+  if (lastPrice !== undefined && dayOpen !== undefined && dayOpen > 0) {
+    const pct = ((lastPrice - dayOpen) / dayOpen) * 100
     if (!Number.isFinite(pct)) throw new Error(`price change is not finite for ${asset}`)
     changeUp = pct >= 0
     changeText = `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`

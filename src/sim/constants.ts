@@ -234,3 +234,31 @@ export const BIAS_STRESS_FLOOR = 60
 export const BIAS_STRESS_CEILING = 100
 export const BIAS_CAP_PERCENT = 25
 export const VERIFY_ENERGY_COST = 2
+
+/**
+ * Intraday session (design section 5). The market window is split into this many
+ * steps of SESSION_STEP_MINUTES. 17:00 to 21:00 is 16 steps of 15 minutes. Provisional.
+ */
+export const SESSION_STEPS = 16
+export const SESSION_STEP_MINUTES = 15
+
+/** Intraday bars stay within this band around the open: 12%. The daily close is capped at 8%. */
+export const SESSION_BAND_NUMERATOR = 12
+export const SESSION_BAND_DENOMINATOR = 100
+
+/** Share of the daily volatility used as the size of intraday noise. Provisional. */
+export const SESSION_NOISE_SCALE = 1
+
+/** A bar's wick reaches past its body by up to this fraction of one step's noise. Provisional. */
+export const SESSION_WICK_SCALE = 0.6
+
+/**
+ * Volume is cosmetic. Daily base notional in cents, divided by the open price,
+ * gives a base share count. Provisional.
+ */
+export const SESSION_BASE_NOTIONAL_CENTS = 200_000_000
+
+/** Extra volume on a day of a full 8% move, and on an event day. The bar noise is log-normal. */
+export const SESSION_MOVE_VOLUME_BOOST = 1.5
+export const SESSION_EVENT_VOLUME_BOOST = 0.6
+export const SESSION_VOLUME_NOISE = 0.25

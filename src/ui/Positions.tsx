@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
+import { sessionPrice } from '../sim/session.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatSignedUsd, formatUsd } from './money.ts'
@@ -58,7 +59,7 @@ function positionRows(game: GameState): PositionRow[] {
   for (const def of MARKET_DEFINITIONS.assets) {
     const position = game.positions[def.id]
     if (position === undefined) continue
-    const price = game.market.assets[def.id]?.priceCents
+    const price = sessionPrice(game, def.id)
     if (!Number.isSafeInteger(price) || price <= 0) {
       throw new Error(`position ${def.id} price must be a positive safe integer, received ${String(price)}`)
     }

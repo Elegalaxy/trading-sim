@@ -751,6 +751,7 @@ ul {
 
 .exchange button[type='submit'],
 .exchange .day-actions button,
+.exchange .clock-actions button,
 .exchange .bill-actions button,
 .exchange .subpanel-body button {
   background: #1e2329;
@@ -774,6 +775,7 @@ ul {
 
 .exchange button[type='submit']:disabled,
 .exchange .day-actions button:disabled,
+.exchange .clock-actions button:disabled,
 .exchange .subpanel-body button:disabled {
   background: #1e2329;
   border-color: #2b3139;
@@ -808,4 +810,10 @@ ul {
     grid-template-rows: 460px 280px;
     border-right: 0;
   }
+}
+
+.clock-actions {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
 }

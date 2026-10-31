@@ -16,6 +16,7 @@ const SECTIONS = ['sleep', 'work', 'market'] as const
 const ENVELOPE_KEYS = ['version', 'savedAt', 'mode', 'seed', 'state'] as const
 const STATE_KEYS = [
   'market',
+  'session',
   'accounts',
   'section',
   'sleepHours',
@@ -48,6 +49,7 @@ const MARKET_KEYS = [
 ] as const
 const STREAM_NAMES = ['market', 'events', 'info', 'distortion'] as const
 const STREAM_KEYS = ['a', 'b', 'c', 'd'] as const
+const SESSION_KEYS = ['day', 'clock', 'bars', 'streams'] as const
 const ACCOUNT_KEYS = ['cashCents', 'tradingCents', 'savingsCents', 'accruedSavingsCents'] as const
 const JOB_KEYS = ['catalog', 'jobId', 'pending', 'worked', 'courses'] as const
 const FI_KEYS = ['streak', 'interest', 'status'] as const
@@ -223,6 +225,12 @@ function checkState(value: unknown): string | null {
   if (!isRecord(value) || !sameKeys(value, STATE_KEYS)) return 'shape:state'
   const market = checkMarket(value.market)
   if (market !== null) return market
+  if (!isRecord(value.session) || !sameKeys(value.session, SESSION_KEYS)) return 'shape:state.session'
+  const sessionDay = finiteNumber(value.session.day, 'state.session.day')
+  if (sessionDay !== null) return sessionDay
+  const sessionClock = finiteNumber(value.session.clock, 'state.session.clock')
+  if (sessionClock !== null) return sessionClock
+  if (!isRecord(value.session.bars) || !isRecord(value.session.streams)) return 'shape:state.session.bars'
   const accounts = checkAccounts(value.accounts)
   if (accounts !== null) return accounts
   if (!(SECTIONS as readonly string[]).includes(String(value.section))) return 'shape:state.section'

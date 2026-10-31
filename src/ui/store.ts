@@ -9,7 +9,7 @@ import { recordScore } from '../persist/scores.ts'
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
-import type { ForcedSaleEvent, GameState, LiquidationEvent } from '../sim/types.ts'
+import type { ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 
 const SEED_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-'
@@ -19,6 +19,8 @@ const definitions = MARKET_DEFINITIONS
 export type CloseRow = {
   day: number
   prices: Readonly<Record<string, number>>
+  /** The session that led into this close, one list of 15-minute bars per asset. Absent on a loaded save. */
+  bars?: Readonly<Record<string, readonly SessionBar[]>>
 }
 
 export type TradingRun = {
@@ -654,6 +656,7 @@ export function endDay(): void {
     return
   }
   const dayBefore = run.game.market.day
+  const sessionBars = run.game.session.bars
   try {
     simEndDay(run.game, definitions)
   } catch (error) {
@@ -697,7 +700,7 @@ export function endDay(): void {
     mode: run.mode,
     scoreStored: run.scoreStored,
     game: run.game,
-    closes: [...run.closes, { day, prices }],
+    closes: [...run.closes, { day, prices, bars: sessionBars }],
     summary,
     liquidations,
     forcedSales,

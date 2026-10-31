@@ -1081,3 +1081,45 @@ dl.estimate dd {
   min-width: 9.5em;
   margin: 0;
 }
+
+/* A bill or a message must not squeeze the chart: keep the banner to one slim strip. */
+.exchange .bill-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 6px 12px;
+  border-width: 1px 0;
+  border-radius: 0;
+}
+
+.exchange .bill-banner h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.exchange .bill-banner p,
+.exchange .bill-banner ul {
+  margin: 0;
+}
+
+.exchange .bill-banner ul {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.exchange .tv-chart,
+.exchange .chart-column {
+  overflow: hidden;
+}
+
+.exchange .session-bar,
+.exchange .symbol-bar {
+  flex-shrink: 0;
+}

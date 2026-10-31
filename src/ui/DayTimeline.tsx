@@ -127,7 +127,7 @@ export function DayTimeline({ game }: { game: GameState | null }) {
         </div>
       </div>
       {message !== null ? (
-        <p className={message === 'The market is open at 17:00.' ? 'trade-ok' : 'trade-alert'} role={message === 'The market is open at 17:00.' ? 'status' : 'alert'}>
+        <p className={`day-message ${message === 'The market is open at 17:00.' ? 'trade-ok' : 'trade-alert'}`} role={message === 'The market is open at 17:00.' ? 'status' : 'alert'}>
           {message}
         </p>
       ) : null}

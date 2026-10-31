@@ -1059,3 +1059,25 @@ dl.estimate dd {
   font-size: 0.9rem;
   color: #848e9c;
 }
+
+/* The message floats under the bar so it never pushes the buttons around. */
+.exchange .session-bar .panel {
+  position: relative;
+}
+
+.exchange .session-bar .day-message {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  right: 12px;
+  margin: 2px 0 0;
+  padding: 4px 10px;
+  background: #1e2329;
+  border: 1px solid #2b3139;
+  border-radius: 4px;
+}
+
+.exchange .session-bar .panel > p:not(.day-message) {
+  min-width: 9.5em;
+  margin: 0;
+}

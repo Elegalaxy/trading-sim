@@ -90,7 +90,7 @@ export function Dashboard() {
     <main className="dashboard exchange">
       <header className="symbol-bar">
         <div className="symbol-id">
-          <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} />
+          <strong className="symbol-name">{asset}</strong>
           {lastPrice === undefined ? (
             <strong className="last-price">—</strong>
           ) : (
@@ -137,6 +137,7 @@ export function Dashboard() {
       <BillBanner game={run?.game ?? null} />
 
       <div className="exchange-body">
+        <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} />
         <div className="chart-column">
           <PriceChart asset={asset} points={points} />
           <section className="subpanel" aria-label="Subpanel">

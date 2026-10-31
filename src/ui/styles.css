@@ -640,7 +640,7 @@ ul {
 
 .exchange-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: 230px minmax(0, 1fr) 320px;
   flex: 1;
   min-height: 0;
 }
@@ -815,6 +815,11 @@ ul {
     grid-template-rows: 460px 280px;
     border-right: 0;
   }
+
+  .market-list {
+    border-right: 0;
+    border-bottom: 1px solid #2b3139;
+  }
 }
 
 .clock-actions {
@@ -824,35 +829,42 @@ ul {
 }
 
 .market-list {
-  position: relative;
+  min-height: 0;
+  overflow: auto;
+  background: #161a1e;
+  border-right: 1px solid #2b3139;
 }
 
-.exchange .market-toggle {
+.market-head {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  padding: 8px 10px;
+  color: #848e9c;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #2b3139;
+}
+
+.market-head span:last-child {
+  min-width: 60px;
+  text-align: right;
+}
+
+.symbol-name {
   font-size: 1.05rem;
-  background: #1e2329;
-  border: 1px solid #2b3139;
   color: #eaecef;
 }
 
 .market-panel {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 260px;
   margin: 0;
-  padding: 4px;
+  padding: 0;
   list-style: none;
-  background: #1e2329;
-  border: 1px solid #2b3139;
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 50%);
 }
 
 .exchange .market-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
   text-align: left;
   background: transparent;

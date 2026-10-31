@@ -4,7 +4,7 @@ import { dayBlocks, sectionClock } from '../sim/day.ts'
 import { activeJob } from '../sim/jobs.ts'
 import type { DaySection, GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
-import { dispatch } from './store.ts'
+import { dispatch, endDay } from './store.ts'
 
 function skipReasonText(reason: string): string {
   if (reason === 'cannotSkip') return 'Nothing to skip.'
@@ -42,7 +42,7 @@ export function DayTimeline({ game }: { game: GameState | null }) {
     }
     const outcome = dispatch({ type: 'skip' })
     if (outcome.accepted) {
-      setMessage('Skipped to the market.')
+      setMessage('The market is open. Prices have not moved.')
       return
     }
     const reason = outcome.reason ?? 'rejected'
@@ -67,11 +67,33 @@ export function DayTimeline({ game }: { game: GameState | null }) {
         })}
       </ol>
       {section === null ? <p>Start a game to play the day.</p> : <p>Now {sectionClock(section)}.</p>}
-      <button type="button" onClick={onSkip} disabled={game === null || game.runEnd !== null}>
-        Skip
-      </button>
+      <div className="day-actions">
+        <div>
+          <button type="button" onClick={onSkip} disabled={game === null || game.runEnd !== null || section === 'market'} title="Same day. Prices stay where they are.">
+            Open market
+          </button>
+          <p className="day-note">Same day. Prices stay where they are.</p>
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={() => endDay()}
+            disabled={game === null || game.bill !== null || game.runEnd !== null}
+            title={
+              game?.runEnd !== null
+                ? 'The run has ended.'
+                : game?.bill !== null
+                  ? 'Pay the bill before the day can end.'
+                  : undefined
+            }
+          >
+            End day
+          </button>
+          <p className="day-note">Sleep. The next day starts and prices move.</p>
+        </div>
+      </div>
       {message !== null ? (
-        <p className={message === 'Skipped to the market.' ? 'trade-ok' : 'trade-alert'} role={message === 'Skipped to the market.' ? 'status' : 'alert'}>
+        <p className={message === 'The market is open. Prices have not moved.' ? 'trade-ok' : 'trade-alert'} role={message === 'The market is open. Prices have not moved.' ? 'status' : 'alert'}>
           {message}
         </p>
       ) : null}

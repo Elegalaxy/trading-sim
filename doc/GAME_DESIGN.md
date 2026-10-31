@@ -134,6 +134,7 @@ High leverage is available, and losses cannot exceed the account. The game guara
 
 ### Money accounts
 
+- `[CONFIRMED]` The player sees and types US dollars. The simulation keeps integer cents. $1 is 100 cents, so 1E is $1,000. Cash pays life costs. The trading account pays orders.
 - `[CONFIRMED]` The first playable has three accounts: cash, a trading account and a savings account.
 - `[CONFIRMED]` The savings account has low interest, no withdrawal limits, and instant free transfers.
 - `[PROVISIONAL]` The savings rate is a small fixed spread below the policy rate.
@@ -315,7 +316,7 @@ The loan was going to wait for a later version. On 2026-10-22 it became one of t
 
 ## 13. Presentation and Technical Direction
 
-- `[PROVISIONAL]` Plain dashboard presentation: charts, a news feed, account balances, the two stat meters, the margin meter, and a day summary.
+- `[PROVISIONAL]` The trade screen is a terminal: a candle chart, an order rail, and a bottom subpanel for positions, life, news, and the day book. A candle's open is the previous close. Its high and low are the ends of the printed move, so one day has no wick past the body. 1W groups 7 days and 1M groups 30, and those groups can show a wick. 15m, 1H, and 4H are not printed. Volume is not printed.
 - `[PROVISIONAL]` A short "this is a simulation, not financial advice" note.
 - `[CONFIRMED]` Stack: TypeScript, React, and Vite (2026-10-22). The simulation is plain TypeScript, shared by the game and a Node harness. Tests use Vitest. Saves are versioned JSON in browser localStorage. The project stays in `trading-sim/` and does not import `rpg/`.
 - `[PROVISIONAL]` Platform is a local browser app. Desktop wrapping is later.
@@ -463,6 +464,8 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 
 ## 19. Changelog
 
+- 2026-10-24: The trade screen uses a chart, an order rail, and a bottom subpanel. Chart open, high, low, and close come from the daily closes already stored. 1W and 1M group those days. Intraday timeframes and volume are not printed.
+- 2026-10-24: The player-facing unit is US dollars ($1 = 100 stored cents; 1E = $1,000). Open market stays on the same day and does not move prices. End day sleeps into the next day and moves prices. Cash at $0.00 cannot pay food, lifestyle, courses, bills, or a loan repayment. An order still uses the trading account.
 - 2026-10-22: Confirmed the stack: TypeScript, React, and Vite. The simulation is plain TypeScript, tests use Vitest, and saves are versioned JSON in localStorage. The app stays in `trading-sim/` and does not import `rpg/`.
 - 2026-10-22: Wrote the first-playable plan, [plans/2026-10-22-first-playable.md](plans/2026-10-22-first-playable.md). It recommends a tech stack for the user to decide and uses placeholder values, labeled provisional in the plan only, for open items such as the clock, sleep, consumables and loan numbers. No rule in this document changed. Section 18 now points at the plan.
 - 2026-10-22: A played day is sleep, work, and trading while the market is open. Not enough sleep worsens energy and stress. Eating, drinking, and lifestyle changes are available while the day is playing and do not occupy a section. Skipping jumps from the end of work, when there is nothing to do, until the stock market opens.

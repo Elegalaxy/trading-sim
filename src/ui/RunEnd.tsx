@@ -1,8 +1,9 @@
 import type { RunMode } from '../persist/save.ts'
 import type { GameState, RunOutcome } from '../sim/types.ts'
 import { leaveRun } from './store.ts'
+import { formatUsd } from './money.ts'
 
-function whole(value: number, label: string): string {
+function count(value: number, label: string): string {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`${label} must be a safe integer, received ${String(value)}`)
   }
@@ -43,9 +44,9 @@ export function RunEnd({ seed, mode, game }: { seed: string; mode: RunMode; game
       <p>
         Reason {end.reason}. {reasonText(end.reason)}
       </p>
-      <p>Day {whole(end.day, 'run end day')}.</p>
-      <p>Net worth {whole(end.netWorthCents, 'net worth')} cents.</p>
-      <p>Score {whole(end.score, 'score')}.</p>
+      <p>Day {count(end.day, 'run end day')}.</p>
+      <p>Net worth {formatUsd(end.netWorthCents, 'net worth')}.</p>
+      <p>Score {count(end.score, 'score')}.</p>
       <p>Seed {seed}.</p>
       <p>Mode {modeLabel}.</p>
       <button type="button" onClick={() => leaveRun()}>

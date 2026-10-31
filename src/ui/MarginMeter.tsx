@@ -9,6 +9,7 @@ import {
 import { tradingEquity } from '../sim/trading.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
+import { formatUsd } from './money.ts'
 
 function markPercent(numerator: number, denominator: number): number {
   if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator <= 0) {
@@ -73,7 +74,7 @@ export function MarginMeter({ game }: { game: GameState | null }) {
       ) : (
         <>
           <p>
-            Equity {equity} cents. Gross {gross} cents. Ratio {formatPercent(equity, gross)}.
+            Equity {formatUsd(equity, 'margin equity')}. Gross {formatUsd(gross, 'margin gross')}. Ratio {formatPercent(equity, gross)}.
           </p>
           <div className="margin-track" aria-hidden="true">
             <div className="margin-fill" style={{ width: `${fillPercent}%` }} />

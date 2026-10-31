@@ -1,5 +1,4 @@
 import { debugLog } from './debug.ts'
-import { AdminLog } from './AdminLog.tsx'
 import { Dashboard } from './Dashboard.tsx'
 import { StartScreen } from './StartScreen.tsx'
 import { useTradingStore } from './store.ts'
@@ -16,12 +15,10 @@ function App() {
       </div>
     )
   }
-  const events = [...run.game.market.log, ...run.game.log, ...run.game.perception.events]
 
   return (
     <div className="app">
       <Dashboard />
-      {import.meta.env.DEV ? <AdminLog events={events} /> : null}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
+import { formatSignedUsd, formatUsd } from './money.ts'
 
 type PositionRow = {
   asset: string
@@ -16,16 +17,10 @@ function formatAverage(costCents: number, shares: number): string {
   if (!Number.isSafeInteger(costCents) || !Number.isSafeInteger(shares) || shares <= 0) {
     throw new Error(`entry average expected a safe cost over positive shares, received ${costCents} / ${shares}`)
   }
-  if (costCents % shares === 0) return String(costCents / shares)
-  return (costCents / shares).toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
-}
-
-function formatSignedCents(cents: number): string {
-  if (!Number.isSafeInteger(cents)) {
-    throw new Error(`unrealized P&L must be a safe integer, received ${String(cents)}`)
-  }
-  if (cents > 0) return `+${cents}`
-  return String(cents)
+  if (costCents % shares === 0) return formatUsd(costCents / shares, 'entry average')
+  const dollars = costCents / shares / 100
+  if (!Number.isFinite(dollars)) throw new Error(`entry average is not finite for ${costCents} / ${shares}`)
+  return `$${dollars.toFixed(4)}`
 }
 
 /**
@@ -116,10 +111,10 @@ export function Positions({ game }: { game: GameState | null }) {
                   <td>{row.asset}</td>
                   <td>{row.side}</td>
                   <td>{row.shares}</td>
-                  <td>{formatAverage(row.costCents, row.shares)} cents</td>
-                  <td>{row.price} cents</td>
+                  <td>{formatAverage(row.costCents, row.shares)}</td>
+                  <td>{formatUsd(row.price, 'price')}</td>
                   <td className={row.pnl > 0 ? 'pnl-gain' : row.pnl < 0 ? 'pnl-loss' : undefined}>
-                    {formatSignedCents(row.pnl)} cents
+                    {formatSignedUsd(row.pnl, 'unrealized')}
                   </td>
                 </tr>
               ))}

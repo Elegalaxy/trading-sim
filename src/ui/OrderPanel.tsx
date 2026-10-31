@@ -3,6 +3,7 @@ import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { interpretOrder, tradingEquity } from '../sim/trading.ts'
 import { ORDER_SIDES, type GameState, type OrderSide } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
+import { formatUsd } from './money.ts'
 import { dispatch, parsePositiveInteger } from './store.ts'
 
 type OrderQuote =
@@ -205,9 +206,14 @@ export function OrderPanel({ game }: { game: GameState | null }) {
             }}
           />
         </label>
-        <button type="submit" disabled={game?.runEnd != null}>
+        <button type="submit" disabled={game?.runEnd != null || (quote !== null && !quote.accepted)}>
           Place order
         </button>
+        {game !== null ? (
+          <p className="day-note">
+            Orders use the trading account ({formatUsd(game.accounts.tradingCents, 'trading')}), not cash.
+          </p>
+        ) : null}
         {quantityError !== null ? (
           <p className="trade-alert" role="alert">
             {quantityError}
@@ -216,9 +222,9 @@ export function OrderPanel({ game }: { game: GameState | null }) {
           <p>Start a game to estimate an order.</p>
         ) : quote === null ? null : quote.accepted ? (
           <div className="estimate">
-            <p>Estimated fill price: {quote.fillPrice} cents</p>
-            <p>Fee: {quote.fee} cents</p>
-            <p>Spread cost: {quote.spreadCost} cents</p>
+            <p>Estimated fill price: {formatUsd(quote.fillPrice, 'fill price')}</p>
+            <p>Fee: {formatUsd(quote.fee, 'fee')}</p>
+            <p>Spread cost: {formatUsd(quote.spreadCost, 'spread')}</p>
             <p>{ratioAfterText(quote.equity, quote.gross)}</p>
           </div>
         ) : (

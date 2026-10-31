@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ACCOUNT_NAMES, type AccountName, type GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
-import { dispatch, parsePositiveInteger } from './store.ts'
+import { formatUsd, parseUsdToCents } from './money.ts'
+import { dispatch } from './store.ts'
 
 function isAccountName(value: string): value is AccountName {
   return (ACCOUNT_NAMES as readonly string[]).includes(value)
@@ -25,10 +26,7 @@ function transferReasonText(reason: string): string {
 }
 
 function balanceText(cents: number, name: string): string {
-  if (!Number.isSafeInteger(cents)) {
-    throw new Error(`${name} balance must be a safe integer, received ${String(cents)}`)
-  }
-  return `${cents} cents`
+  return formatUsd(cents, name)
 }
 
 export function Accounts({ game }: { game: GameState | null }) {
@@ -43,7 +41,7 @@ export function Accounts({ game }: { game: GameState | null }) {
     setResultMessage(null)
   }
 
-  const parsed = parsePositiveInteger(amountText, 'Amount')
+  const parsed = parseUsdToCents(amountText, 'Amount')
   const amountError = !parsed.ok && (attempted || amountText.trim().length > 0) ? parsed.reason : null
   const balances =
     game === null
@@ -91,7 +89,16 @@ export function Accounts({ game }: { game: GameState | null }) {
       setResultMessage('The run has ended.')
       return
     }
-    const outcome = dispatch({ type: 'transfer', from, to, amountCents: parsed.value })
+    const sourceCents =
+      from === 'cash' ? game.accounts.cashCents : from === 'trading' ? game.accounts.tradingCents : game.accounts.savingsCents
+    if (parsed.cents > sourceCents) {
+      console.error(`[ui] rejected transfer: ${from} has ${sourceCents} cents, asked ${parsed.cents}`)
+      debugLog('[ui]', `transfer rejected before dispatch: ${from} cents=${sourceCents} asked=${parsed.cents}`)
+      setResultMessage(`${from} has ${formatUsd(sourceCents, from)}. That amount is larger.`)
+      return
+    }
+    debugLog('[ui]', `transfer usd cents=${parsed.cents} from=${from} to=${to}`)
+    const outcome = dispatch({ type: 'transfer', from, to, amountCents: parsed.cents })
     if (outcome.accepted) {
       setResultMessage('Transfer accepted.')
       return
@@ -105,11 +112,17 @@ export function Accounts({ game }: { game: GameState | null }) {
       {game === null ? (
         <p>Start a game to see balances.</p>
       ) : (
-        <ul className="balance-list">
-          <li>Cash: {balanceText(game.accounts.cashCents, 'cash')}</li>
-          <li>Trading: {balanceText(game.accounts.tradingCents, 'trading')}</li>
-          <li>Savings: {balanceText(game.accounts.savingsCents, 'savings')}</li>
-        </ul>
+        <>
+          <ul className="balance-list">
+            <li>Cash: {balanceText(game.accounts.cashCents, 'cash')}</li>
+            <li>Trading: {balanceText(game.accounts.tradingCents, 'trading')}</li>
+            <li>Savings: {balanceText(game.accounts.savingsCents, 'savings')}</li>
+          </ul>
+          <p className="day-note">
+            Cash pays food, lifestyle, courses, and bills. Orders use the trading account
+            {game.accounts.cashCents === 0 ? ', so a trade can still go through while cash is $0.00.' : '.'}
+          </p>
+        </>
       )}
       <form className="trade-form" onSubmit={onSubmit}>
         <label htmlFor="transfer-from">
@@ -133,11 +146,11 @@ export function Accounts({ game }: { game: GameState | null }) {
           </select>
         </label>
         <label htmlFor="transfer-amount">
-          Amount (cents){' '}
+          Amount (USD){' '}
           <input
             id="transfer-amount"
             value={amountText}
-            inputMode="numeric"
+            inputMode="decimal"
             autoComplete="off"
             spellCheck={false}
             onChange={(event) => {
@@ -146,7 +159,20 @@ export function Accounts({ game }: { game: GameState | null }) {
             }}
           />
         </label>
-        <button type="submit" disabled={game?.runEnd != null}>
+        <button
+          type="submit"
+          disabled={
+            game?.runEnd != null ||
+            (parsed.ok &&
+              game !== null &&
+              parsed.cents >
+                (from === 'cash'
+                  ? game.accounts.cashCents
+                  : from === 'trading'
+                    ? game.accounts.tradingCents
+                    : game.accounts.savingsCents))
+          }
+        >
           Transfer
         </button>
         {amountError !== null ? (

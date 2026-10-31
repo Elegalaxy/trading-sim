@@ -5,13 +5,11 @@ import { LOAN_RATE_SPREAD_PERCENT } from '../sim/constants.ts'
 import { loanAnnualRate, loanLimitCents, unusedLoanLimitCents } from '../sim/loan.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
-import { dispatch, parsePositiveInteger } from './store.ts'
+import { formatUsd, parseUsdToCents } from './money.ts'
+import { dispatch } from './store.ts'
 
-function cents(value: number, label: string): string {
-  if (!Number.isSafeInteger(value)) {
-    throw new Error(`${label} must be a safe integer, received ${String(value)}`)
-  }
-  return String(value)
+function money(value: number, label: string): string {
+  return formatUsd(value, label)
 }
 
 function rateText(value: number): string {
@@ -54,8 +52,8 @@ export function LoanPanel({ game }: { game: GameState | null }) {
     setMessage(null)
   }
 
-  const takeParsed = parsePositiveInteger(takeText, 'Loan amount')
-  const repayParsed = parsePositiveInteger(repayText, 'Repayment')
+  const takeParsed = parseUsdToCents(takeText, 'Loan amount')
+  const repayParsed = parseUsdToCents(repayText, 'Repayment')
   const interestDue = game?.loan.interestDueCents ?? 0
   const balance = game?.loan.balanceCents ?? 0
   const limit = game === null ? 0 : loanLimitCents(game)
@@ -72,7 +70,8 @@ export function LoanPanel({ game }: { game: GameState | null }) {
       setMessage(takeParsed.reason)
       return
     }
-    const outcome = dispatch({ type: 'takeLoan', amountCents: takeParsed.value })
+    debugLog('[ui]', `loan take usd cents=${takeParsed.cents}`)
+    const outcome = dispatch({ type: 'takeLoan', amountCents: takeParsed.cents })
     if (!outcome.accepted) {
       const reason = outcome.reason ?? 'rejected'
       console.error(`[ui] rejected takeLoan: ${reason}`)
@@ -94,7 +93,14 @@ export function LoanPanel({ game }: { game: GameState | null }) {
       setMessage(repayParsed.reason)
       return
     }
-    const outcome = dispatch({ type: 'repayLoan', amountCents: repayParsed.value })
+    debugLog('[ui]', `loan repay usd cents=${repayParsed.cents}`)
+    if (game !== null && repayParsed.cents > game.accounts.cashCents) {
+      console.error(`[ui] rejected repayment: cash ${game.accounts.cashCents} cents, asked ${repayParsed.cents}`)
+      setTone('alert')
+      setMessage(`Cash has ${formatUsd(game.accounts.cashCents, 'cash')}. That repayment is larger.`)
+      return
+    }
+    const outcome = dispatch({ type: 'repayLoan', amountCents: repayParsed.cents })
     if (!outcome.accepted) {
       const reason = outcome.reason ?? 'rejected'
       console.error(`[ui] rejected repayLoan: ${reason}`)
@@ -115,9 +121,9 @@ export function LoanPanel({ game }: { game: GameState | null }) {
       ) : (
         <>
           <ul className="balance-list">
-            <li>Balance: {cents(balance, 'loan balance')} cents</li>
-            <li>Limit: {cents(limit, 'loan limit')} cents</li>
-            <li>Unused: {cents(unused, 'unused loan')} cents</li>
+            <li>Balance: {money(balance, 'loan balance')}</li>
+            <li>Limit: {money(limit, 'loan limit')}</li>
+            <li>Unused: {money(unused, 'unused loan')}</li>
             <li>
               Rate: {rateText(annual)} percent a year (policy + {LOAN_RATE_SPREAD_PERCENT} points),
               charged monthly
@@ -125,17 +131,17 @@ export function LoanPanel({ game }: { game: GameState | null }) {
           </ul>
           {interestDue > 0 ? (
             <p className="trade-alert" role="alert">
-              Loan interest of {cents(interestDue, 'loan interest')} cents is due. Cash pays it when cash covers it.
+              Loan interest of {money(interestDue, 'loan interest')} is due. Cash pays it when cash covers it.
               At the end of the day, unpaid interest sells the worst positions, then savings. Lifestyle is not changed.
             </p>
           ) : null}
           <form className="trade-form" onSubmit={onTake}>
             <label htmlFor="loan-take">
-              Take{' '}
+              Take (USD){' '}
               <input
                 id="loan-take"
                 value={takeText}
-                inputMode="numeric"
+                inputMode="decimal"
                 autoComplete="off"
                 onChange={(event) => setTakeText(event.target.value)}
               />
@@ -146,16 +152,16 @@ export function LoanPanel({ game }: { game: GameState | null }) {
           </form>
           <form className="trade-form" onSubmit={onRepay}>
             <label htmlFor="loan-repay">
-              Repay{' '}
+              Repay (USD){' '}
               <input
                 id="loan-repay"
                 value={repayText}
-                inputMode="numeric"
+                inputMode="decimal"
                 autoComplete="off"
                 onChange={(event) => setRepayText(event.target.value)}
               />
             </label>
-            <button type="submit" disabled={game.runEnd !== null || balance === 0}>
+            <button type="submit" disabled={game.runEnd !== null || balance === 0 || game.accounts.cashCents === 0}>
               Repay loan
             </button>
           </form>

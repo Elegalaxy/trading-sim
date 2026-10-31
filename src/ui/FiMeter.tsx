@@ -1,6 +1,7 @@
 import { FI_HOLD_DAYS } from '../sim/constants.ts'
 import { lifestyleExpensesCents } from '../sim/lifestyle.ts'
 import type { GameState } from '../sim/types.ts'
+import { formatUsd } from './money.ts'
 
 function cents(value: number, label: string): string {
   if (!Number.isSafeInteger(value)) {
@@ -34,8 +35,8 @@ export function FiMeter({ game }: { game: GameState | null }) {
     <section className={covered ? 'panel fi-covered' : 'panel'} aria-label="Financial independence">
       <h2>Financial independence</h2>
       <p>Window {cents(windowDays, 'FI window')} days.</p>
-      <p>Passive income {cents(passiveCents, 'passive income')} cents.</p>
-      <p>Expenses {cents(expensesCents, 'expenses')} cents.</p>
+      <p>Passive income {formatUsd(passiveCents, 'passive income')}.</p>
+      <p>Expenses {formatUsd(expensesCents, 'expenses')}.</p>
       <p>
         Hold {cents(streak, 'FI streak')} of {cents(FI_HOLD_DAYS, 'FI hold')}.
       </p>

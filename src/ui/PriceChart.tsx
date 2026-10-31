@@ -1,37 +1,44 @@
+import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
+import { buildCandles, candleRangeLabel, type Candle, type TimeframeId } from './candles.ts'
+import { debugLog } from './debug.ts'
+import { formatUsd } from './money.ts'
 import { useTradingStore } from './store.ts'
 import { Tell } from './Tell.tsx'
 
-const CHART_DAYS = 60
-const WIDTH = 640
-const HEIGHT = 220
-const PAD_LEFT = 16
-const PAD_RIGHT = 16
+const VISIBLE: Record<TimeframeId, number> = {
+  '1D': 80,
+  '1W': 26,
+  '1M': 12,
+}
+
+const TIMEFRAMES: readonly { id: TimeframeId | '15m' | '1H' | '4H'; label: string; enabled: boolean }[] = [
+  { id: '15m', label: '15m', enabled: false },
+  { id: '1H', label: '1H', enabled: false },
+  { id: '4H', label: '4H', enabled: false },
+  { id: '1D', label: '1D', enabled: true },
+  { id: '1W', label: '1W', enabled: true },
+  { id: '1M', label: '1M', enabled: true },
+]
+
+const AXIS_RIGHT = 76
+const AXIS_BOTTOM = 22
+const PAD_LEFT = 8
 const PAD_TOP = 16
-const PAD_BOTTOM = 28
+const UP = '#0ecb81'
+const DOWN = '#f6465d'
+const FLAT = '#848e9c'
+const GRID = '#1e2329'
+const CROSS = '#758696'
 
 export type ChartPoint = {
   day: number
   priceCents: number
 }
 
-function assertPoint(point: ChartPoint, index: number): void {
-  if (!Number.isSafeInteger(point.day) || point.day < 1) {
-    throw new Error(`chart point ${index} day must be a safe integer >= 1, received ${String(point.day)}`)
-  }
-  if (!Number.isSafeInteger(point.priceCents) || point.priceCents <= 0) {
-    throw new Error(
-      `chart point ${index} price must be a positive safe integer, received ${String(point.priceCents)}`,
-    )
-  }
-}
-
-function position(index: number, count: number, price: number, min: number, span: number): { x: number; y: number } {
-  const innerW = WIDTH - PAD_LEFT - PAD_RIGHT
-  const innerH = HEIGHT - PAD_TOP - PAD_BOTTOM
-  const x = count === 1 ? PAD_LEFT + innerW / 2 : PAD_LEFT + (index / (count - 1)) * innerW
-  const y = PAD_TOP + (1 - (price - min) / span) * innerH
-  return { x, y }
+type Hover = {
+  index: number
+  y: number
 }
 
 function chartSignature(asset: string, points: readonly ChartPoint[]): string {
@@ -43,79 +50,212 @@ function chartSignature(asset: string, points: readonly ChartPoint[]): string {
   return parts.join('|')
 }
 
-function validatePoints(points: readonly ChartPoint[]): void {
-  const shown = points.slice(-CHART_DAYS)
-  for (let i = 0; i < shown.length; i += 1) {
-    const point = shown[i]
-    if (point === undefined) throw new Error(`chart point ${i} is missing`)
-    assertPoint(point, i)
-  }
+function toneOf(candle: Candle): 'up' | 'down' | 'flat' {
+  if (candle.close > candle.open) return 'up'
+  if (candle.close < candle.open) return 'down'
+  return 'flat'
+}
+
+function toneColor(tone: 'up' | 'down' | 'flat'): string {
+  if (tone === 'up') return UP
+  if (tone === 'down') return DOWN
+  return FLAT
+}
+
+function nearestCent(value: number): number {
+  if (!Number.isFinite(value)) throw new Error(`chart price is not finite, received ${String(value)}`)
+  return Math.round(value)
+}
+
+function priceY(price: number, low: number, span: number, top: number, height: number): number {
+  return top + (1 - (price - low) / span) * height
 }
 
 export function PriceChart({ asset, points }: { asset: string; points: readonly ChartPoint[] }) {
   const energy = useTradingStore().run?.game.stats.energy ?? null
   const fx = useCosmeticFx(energy)
   const view = useDelayedValue('price-chart', { asset, points }, fx.delayMs, chartSignature(asset, points))
-  validatePoints(points)
-  validatePoints(view.points)
+  const [timeframe, setTimeframe] = useState<TimeframeId>('1D')
+  const [hover, setHover] = useState<Hover | null>(null)
+  const [size, setSize] = useState({ w: 640, h: 420 })
+  const stageRef = useRef<HTMLDivElement>(null)
 
-  const shown = view.points.slice(-CHART_DAYS)
+  const bars = buildCandles(view.points, timeframe).slice(-VISIBLE[timeframe])
   const drawnAsset = view.asset
+  const active = hover !== null && bars[hover.index] !== undefined ? bars[hover.index] : bars[bars.length - 1]
+  const activeTone = active === undefined ? 'flat' : toneOf(active)
+  const lastBar = bars[bars.length - 1]
+  const chartLog =
+    lastBar === undefined
+      ? `chart asset=${drawnAsset} timeframe=${timeframe} bars=0 last=none`
+      : `chart asset=${drawnAsset} timeframe=${timeframe} bars=${bars.length} last=O=${lastBar.open} H=${lastBar.high} L=${lastBar.low} C=${lastBar.close} vol=none`
 
-  const latest = shown[shown.length - 1]
-  const caption =
-    latest === undefined
-      ? `${drawnAsset}: no daily closes yet`
-      : `${drawnAsset}: ${shown.length} daily close${shown.length === 1 ? '' : 's'} in the last ${CHART_DAYS} days, latest ${latest.priceCents} cents (${(latest.priceCents / 100).toFixed(2)})`
+  useEffect(() => {
+    const node = stageRef.current
+    if (node === null) return
+    const observer = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect
+      if (box === undefined) return
+      const w = Math.max(1, Math.floor(box.width))
+      const h = Math.max(1, Math.floor(box.height))
+      setSize((current) => (current.w === w && current.h === h ? current : { w, h }))
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    debugLog('[ui]', chartLog)
+  }, [chartLog])
+
+  function onTimeframe(next: TimeframeId): void {
+    setHover(null)
+    setTimeframe(next)
+  }
+
   const filter = blurFilter(fx.blurPx)
   const blurStyle = filter === undefined ? undefined : { filter }
+  const plotLeft = PAD_LEFT
+  const plotRight = Math.max(plotLeft + 1, size.w - AXIS_RIGHT)
+  const plotTop = PAD_TOP
+  const plotBottom = Math.max(plotTop + 1, size.h - AXIS_BOTTOM)
+  const plotW = plotRight - plotLeft
+  const plotH = plotBottom - plotTop
 
-  if (shown.length === 0) {
-    return (
-      <div className="chart-wrap">
-        {fx.tell ? <Tell /> : null}
-        <div style={blurStyle}>
-          <p>{`${caption}. End the day to plot prices.`}</p>
-        </div>
-      </div>
-    )
+  let yLow = 0
+  let ySpan = 1
+  if (bars.length > 0) {
+    let min = bars[0]?.low ?? 0
+    let max = bars[0]?.high ?? 0
+    for (const bar of bars) {
+      if (bar.low < min) min = bar.low
+      if (bar.high > max) max = bar.high
+    }
+    const pad = max === min ? Math.max(1, Math.round(min * 0.01)) : Math.max(1, Math.round((max - min) * 0.08))
+    yLow = min - pad
+    ySpan = max + pad - yLow
+    if (ySpan <= 0) ySpan = 1
   }
 
-  let min = shown[0]?.priceCents ?? 0
-  let max = min
-  for (const point of shown) {
-    if (point.priceCents < min) min = point.priceCents
-    if (point.priceCents > max) max = point.priceCents
+  const slot = bars.length === 0 ? plotW : plotW / bars.length
+  const ticks = [0, 1, 2, 3, 4].map((step) => yLow + (ySpan * step) / 4)
+
+  function onMove(event: PointerEvent<SVGSVGElement>): void {
+    if (bars.length === 0) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) return
+    const x = ((event.clientX - rect.left) / rect.width) * size.w
+    const y = ((event.clientY - rect.top) / rect.height) * size.h
+    if (x < plotLeft || x >= plotRight) {
+      setHover(null)
+      return
+    }
+    const index = Math.min(bars.length - 1, Math.max(0, Math.floor((x - plotLeft) / slot)))
+    setHover({ index, y })
   }
-  const span = max === min ? 1 : max - min
-  const coords = shown.map((point, index) => position(index, shown.length, point.priceCents, min, span))
-  const line = coords.map((coord) => `${coord.x},${coord.y}`).join(' ')
-  const first = shown[0]
-  const last = shown[shown.length - 1]
-  if (first === undefined || last === undefined) throw new Error('chart window is empty')
+
+  const crossPrice =
+    hover === null ? null : nearestCent(yLow + (1 - (hover.y - plotTop) / plotH) * ySpan)
 
   return (
-    <div className="chart-wrap">
-      {fx.tell ? <Tell /> : null}
-      <div style={blurStyle}>
-        <p>{caption}</p>
-        <svg
-          className="chart"
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          role="img"
-          aria-label={`${drawnAsset} daily closes, ${shown.length} days`}
-        >
-          <polyline points={line} fill="none" stroke="#9ec1ff" strokeWidth="2" />
-          {coords.map((coord, index) => (
-            <circle key={shown[index]?.day ?? index} cx={coord.x} cy={coord.y} r="3" fill="#d6e4ff" />
-          ))}
-          <text x={PAD_LEFT} y={HEIGHT - 8} fill="#c5cad6" fontSize="12">
-            {first.day}
-          </text>
-          <text x={WIDTH - PAD_RIGHT} y={HEIGHT - 8} fill="#c5cad6" fontSize="12" textAnchor="end">
-            {last.day}
-          </text>
-        </svg>
+    <div className="tv-chart">
+      <div className="tv-toolbar" role="toolbar" aria-label="Chart timeframe">
+        {TIMEFRAMES.map((item) =>
+          item.enabled ? (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={timeframe === item.id}
+              onClick={() => onTimeframe(item.id as TimeframeId)}
+            >
+              {item.label}
+            </button>
+          ) : (
+            <button key={item.id} type="button" disabled title="This market prints one price a day.">
+              {item.label}
+            </button>
+          ),
+        )}
+      </div>
+      <div className="tv-stage" ref={stageRef} style={blurStyle}>
+        {fx.tell ? <Tell /> : null}
+        {bars.length === 0 || active === undefined ? (
+          <p className="tv-empty">{drawnAsset}: no candles yet. End the day to plot a price.</p>
+        ) : (
+          <>
+            <p className={`tv-legend ohlc-${activeTone}`}>
+              <span className="tv-symbol">{drawnAsset}</span> {timeframe} {candleRangeLabel(active)} O{' '}
+              {formatUsd(active.open, 'open')} H {formatUsd(active.high, 'high')} L {formatUsd(active.low, 'low')} C{' '}
+              {formatUsd(active.close, 'close')} <span className="tv-vol">Vol —</span>
+            </p>
+            <svg
+              className="chart"
+              width={size.w}
+              height={size.h}
+              viewBox={`0 0 ${size.w} ${size.h}`}
+              role="img"
+              aria-label={`${drawnAsset} ${timeframe} candles, ${bars.length} bars`}
+              onPointerMove={onMove}
+              onPointerLeave={() => setHover(null)}
+            >
+              {ticks.map((tick) => {
+                const y = priceY(tick, yLow, ySpan, plotTop, plotH)
+                return (
+                  <g key={tick}>
+                    <line x1={plotLeft} x2={plotRight} y1={y} y2={y} stroke={GRID} />
+                    <text x={plotRight + 8} y={y + 4} fill="#848e9c" fontSize="11">
+                      {formatUsd(nearestCent(tick), 'axis')}
+                    </text>
+                  </g>
+                )
+              })}
+              {bars.map((bar, index) => {
+                const color = toneColor(toneOf(bar))
+                const cx = plotLeft + (index + 0.5) * slot
+                const bodyWidth = Math.max(1, Math.min(10, slot * 0.62))
+                const yOpen = priceY(bar.open, yLow, ySpan, plotTop, plotH)
+                const yClose = priceY(bar.close, yLow, ySpan, plotTop, plotH)
+                const yHigh = priceY(bar.high, yLow, ySpan, plotTop, plotH)
+                const yLowPx = priceY(bar.low, yLow, ySpan, plotTop, plotH)
+                const top = Math.min(yOpen, yClose)
+                const height = Math.max(1, Math.abs(yClose - yOpen))
+                return (
+                  <g key={`${bar.startDay}-${bar.endDay}`}>
+                    <line x1={cx} x2={cx} y1={yHigh} y2={yLowPx} stroke={color} strokeWidth="1" />
+                    <rect x={cx - bodyWidth / 2} y={top} width={bodyWidth} height={height} fill={color} />
+                  </g>
+                )
+              })}
+              {bars.length > 0 ? (
+                <>
+                  <text x={plotLeft} y={size.h - 6} fill="#848e9c" fontSize="11">
+                    {candleRangeLabel(bars[0]!)}
+                  </text>
+                  <text x={plotRight} y={size.h - 6} fill="#848e9c" fontSize="11" textAnchor="end">
+                    {candleRangeLabel(bars[bars.length - 1]!)}
+                  </text>
+                </>
+              ) : null}
+              {hover !== null && bars[hover.index] !== undefined ? (
+                <g>
+                  <line
+                    x1={plotLeft + (hover.index + 0.5) * slot}
+                    x2={plotLeft + (hover.index + 0.5) * slot}
+                    y1={plotTop}
+                    y2={plotBottom}
+                    stroke={CROSS}
+                  />
+                  <line x1={plotLeft} x2={plotRight} y1={hover.y} y2={hover.y} stroke={CROSS} />
+                  {crossPrice !== null ? (
+                    <text x={plotRight + 8} y={hover.y + 4} fill="#eaecef" fontSize="11">
+                      {formatUsd(crossPrice, 'crosshair')}
+                    </text>
+                  ) : null}
+                </g>
+              ) : null}
+            </svg>
+          </>
+        )}
       </div>
     </div>
   )

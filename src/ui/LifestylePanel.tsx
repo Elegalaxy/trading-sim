@@ -3,6 +3,7 @@ import { COURSE_OFFERS, LIFESTYLE_OFFERS } from '../content/lifestyle.ts'
 import { lifestyleExpensesCents, projectedBillCents, upfrontCents } from '../sim/lifestyle.ts'
 import type { GameState, LifestyleCategory } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
+import { formatUsd } from './money.ts'
 import { dispatch } from './store.ts'
 
 function reasonText(reason: string): string {
@@ -47,9 +48,9 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
         return
       }
       const offer = LIFESTYLE_OFFERS.find((item) => item.id === event.category)
-      const paid = event.upfront === 0 ? 'No refund.' : `Paid ${event.upfront} cents.`
+      const paid = event.upfront === 0 ? 'No refund.' : `Paid ${formatUsd(event.upfront, 'lifestyle upfront')}.`
       setTone('ok')
-      setMessage(`${offer?.name ?? event.category} is tier ${event.to}. ${paid} Monthly expenses ${event.expensesCents} cents.`)
+      setMessage(`${offer?.name ?? event.category} is tier ${event.to}. ${paid} Monthly expenses ${formatUsd(event.expensesCents, 'expenses')}.`)
       return
     }
     const reason = outcome.reason ?? 'rejected'
@@ -71,7 +72,7 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
       }
       const offer = COURSE_OFFERS.find((item) => item.id === event.course)
       setTone('ok')
-      setMessage(`${offer?.name ?? event.course} bought for ${event.cost} cents. The monthly bill did not change.`)
+      setMessage(`${offer?.name ?? event.course} bought for ${formatUsd(event.cost, 'course')}. The monthly bill did not change.`)
       return
     }
     const reason = outcome.reason ?? 'rejected'
@@ -83,13 +84,13 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
   return (
     <section className="panel" aria-label="Lifestyle">
       <h2>Lifestyle</h2>
-      <p>Cash {current.accounts.cashCents} cents.</p>
+      <p>Cash {formatUsd(current.accounts.cashCents, 'cash')}.</p>
       <p>
-        Monthly expenses {expenses} cents. Next bill {nextBill} cents.
+        Monthly expenses {formatUsd(expenses, 'monthly expenses')}. Next bill {formatUsd(nextBill, 'next bill')}.
       </p>
       {current.bill !== null ? (
         <p>
-          Bill due now: {current.bill.amountCents} cents. Changing lifestyle does not change it.
+          Bill due now: {formatUsd(current.bill.amountCents, 'bill due')}. Changing lifestyle does not change it.
         </p>
       ) : null}
       <ul className="lifestyle-list">
@@ -103,9 +104,19 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
               {Array.from({ length: offer.maxTier + 1 }, (_, tier) => {
                 const upfront = upfrontCents(offer.id, tierNow, tier)
                 const label =
-                  tier === tierNow ? `Tier ${tier} (current)` : upfront === 0 ? `Tier ${tier} (no refund)` : `Tier ${tier} (pay ${upfront})`
+                  tier === tierNow
+                    ? `Tier ${tier} (current)`
+                    : upfront === 0
+                      ? `Tier ${tier} (no refund)`
+                      : `Tier ${tier} (${formatUsd(upfront, 'tier upfront')})`
+                const unaffordable = upfront > 0 && current.accounts.cashCents < upfront
                 return (
-                  <button key={tier} type="button" disabled={ended || tier === tierNow} onClick={() => onTier(offer.id, tier)}>
+                  <button
+                    key={tier}
+                    type="button"
+                    disabled={ended || tier === tierNow || unaffordable}
+                    onClick={() => onTier(offer.id, tier)}
+                  >
                     {label}
                   </button>
                 )
@@ -119,11 +130,15 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
           const owned = current.job.courses.includes(offer.id)
           return (
             <li key={offer.id}>
-              <button type="button" disabled={ended || owned} onClick={() => onCourse(offer.id)}>
+              <button
+                type="button"
+                disabled={ended || owned || current.accounts.cashCents < offer.costCents}
+                onClick={() => onCourse(offer.id)}
+              >
                 {owned ? `${offer.name} (owned)` : `Buy ${offer.name}`}
               </button>
               <span>
-                {offer.costCents} cents. Unlocks {offer.unlocks}. No monthly cost.
+                {formatUsd(offer.costCents, offer.name)}. Unlocks {offer.unlocks}. No monthly cost.
               </span>
             </li>
           )

@@ -36,7 +36,7 @@ function Meter({
   )
 }
 
-export function StatMeters({ game }: { game: GameState | null }) {
+export function StatMeters({ game, compact = false }: { game: GameState | null; compact?: boolean }) {
   const energy = game === null ? null : assertStat(game.stats.energy, 'energy')
   const stress = game === null ? null : assertStat(game.stats.stress, 'stress')
   const energyWarning = energy !== null && energy < ENERGY_WARNING_BELOW
@@ -56,9 +56,9 @@ export function StatMeters({ game }: { game: GameState | null }) {
   }, [fxLine])
 
   return (
-    <>
+    <div className={compact ? 'stats-compact' : undefined}>
       <section className="panel" aria-label="Energy and stress">
-        <h2>Energy and stress</h2>
+        {compact ? null : <h2>Energy and stress</h2>}
         {energy === null || stress === null ? (
           <p>Start a game to see energy and stress.</p>
         ) : (
@@ -69,6 +69,6 @@ export function StatMeters({ game }: { game: GameState | null }) {
         )}
       </section>
       <Settings />
-    </>
+    </div>
   )
 }

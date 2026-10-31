@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { activeJob } from '../sim/jobs.ts'
 import type { ConsumableDefinition, GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
+import { formatUsd } from './money.ts'
 import { dispatch } from './store.ts'
 
 function effectText(item: ConsumableDefinition): string {
@@ -69,11 +70,16 @@ export function Consumables({ game }: { game: GameState | null }) {
             const used = game.stats.consumed.includes(item.id)
             return (
               <li key={item.id}>
-                <button type="button" onClick={() => onBuy(item)}>
+                <button
+                  type="button"
+                  onClick={() => onBuy(item)}
+                  disabled={used || game.runEnd !== null || game.accounts.cashCents < item.costCents}
+                >
                   {used ? `${item.name} (used today)` : item.name}
                 </button>
                 <span>
-                  {item.costCents} cents. {effectText(item)}.
+                  {formatUsd(item.costCents, item.name)}. {effectText(item)}.
+                  {game.accounts.cashCents < item.costCents ? ' Cash is too low.' : ''}
                 </span>
               </li>
             )

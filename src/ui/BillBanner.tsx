@@ -2,12 +2,10 @@ import { useState } from 'react'
 import { unusedLoanLimitCents } from '../sim/loan.ts'
 import type { GameState } from '../sim/types.ts'
 import { dispatch } from './store.ts'
+import { formatUsd } from './money.ts'
 
-function cents(value: number, label: string): string {
-  if (!Number.isSafeInteger(value)) {
-    throw new Error(`${label} must be a safe integer, received ${String(value)}`)
-  }
-  return String(value)
+function money(value: number, label: string): string {
+  return formatUsd(value, label)
 }
 
 export function BillBanner({ game }: { game: GameState | null }) {
@@ -78,8 +76,8 @@ export function BillBanner({ game }: { game: GameState | null }) {
     <section className="panel bill-banner" role="alert" aria-label="Bill due">
       <h2>Bill due</h2>
       <p>
-        The bill is {cents(bill.amountCents, 'bill')} cents. Cash has {cents(game.accounts.cashCents, 'cash')} cents.
-        Shortfall {cents(shortfall, 'shortfall')} cents. The day cannot end until this is paid.
+        The bill is {money(bill.amountCents, 'bill')}. Cash has {money(game.accounts.cashCents, 'cash')}.
+        Shortfall {money(Math.max(shortfall, 0), 'shortfall')}. The day cannot end until this is paid.
       </p>
       <ul>
         <li>
@@ -99,7 +97,7 @@ export function BillBanner({ game }: { game: GameState | null }) {
           {loanOpen ? (
             <span className="day-note">A loan is already open.</span>
           ) : loanDraw > 0 ? (
-            <span className="day-note">Adds {cents(loanDraw, 'loan draw')} cents to cash. It does not pay the bill.</span>
+            <span className="day-note">Adds {money(loanDraw, 'loan draw')} to cash. It does not pay the bill.</span>
           ) : shortfall > 0 ? (
             <span className="day-note">No unused loan limit.</span>
           ) : null}

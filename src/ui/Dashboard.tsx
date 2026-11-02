@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { activeJob } from '../sim/jobs.ts'
 import { viewedFeed } from '../sim/game.ts'
@@ -28,8 +28,15 @@ import { LoanPanel } from './LoanPanel.tsx'
 import { sessionPrice } from '../sim/session.ts'
 import { buildHistory } from './history.ts'
 import { formatUsd } from './money.ts'
-import { useStoredFlag } from './storedFlag.ts'
+import { useStoredFlag, useStoredNumber } from './storedFlag.ts'
 import { useTradingStore } from './store.ts'
+
+const WATCH_MIN = 240
+const WATCH_MAX = 520
+const RAIL_MIN = 300
+const RAIL_MAX = 560
+/** The chart column never gets narrower than this when a side column is dragged. */
+const MIDDLE_MIN = 420
 
 type Desk = 'positions' | 'history' | 'pnl' | 'equity' | 'book' | 'log'
 type View = 'chart' | 'life'
@@ -42,6 +49,9 @@ export function Dashboard() {
   const [desk, setDesk] = useState<Desk>('positions')
   const [view, setView] = useState<View>('chart')
   const [watchOpen, setWatchOpen] = useStoredFlag('watch', true)
+  const [watchWidth, setWatchWidth] = useStoredNumber('watch-width', 300, WATCH_MIN, WATCH_MAX)
+  const [railWidth, setRailWidth] = useStoredNumber('rail-width', 320, RAIL_MIN, RAIL_MAX)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const [railOpen, setRailOpen] = useStoredFlag('rail', true)
   const [deskSize, setDeskSize] = useState<'normal' | 'tall' | 'folded'>('normal')
 
@@ -51,6 +61,46 @@ export function Dashboard() {
       return
     }
     setAsset(value)
+  }
+
+  /** The widest a side column may get while the middle keeps its minimum. */
+  function widthLimit(side: 'left' | 'right', max: number): number {
+    const box = bodyRef.current?.getBoundingClientRect()
+    if (box === undefined) return max
+    const other = side === 'left' ? (railOpen ? railWidth : 32) : watchOpen ? watchWidth : 32
+    return Math.max(side === 'left' ? WATCH_MIN : RAIL_MIN, Math.min(max, box.width - other - MIDDLE_MIN - 12))
+  }
+
+  function setSide(side: 'left' | 'right', width: number): void {
+    const limit = widthLimit(side, side === 'left' ? WATCH_MAX : RAIL_MAX)
+    if (side === 'left') setWatchWidth(Math.min(width, limit))
+    else setRailWidth(Math.min(width, limit))
+  }
+
+  function startDrag(event: PointerEvent<HTMLDivElement>, side: 'left' | 'right'): void {
+    const box = bodyRef.current?.getBoundingClientRect()
+    if (box === undefined) return
+    event.preventDefault()
+    const target = event.currentTarget
+    target.setPointerCapture(event.pointerId)
+    const move = (next: globalThis.PointerEvent): void => {
+      setSide(side, side === 'left' ? next.clientX - box.left : box.right - next.clientX)
+    }
+    const stop = (): void => {
+      target.removeEventListener('pointermove', move)
+      target.removeEventListener('pointerup', stop)
+      target.removeEventListener('pointercancel', stop)
+    }
+    target.addEventListener('pointermove', move)
+    target.addEventListener('pointerup', stop)
+    target.addEventListener('pointercancel', stop)
+  }
+
+  function nudge(event: KeyboardEvent<HTMLDivElement>, side: 'left' | 'right'): void {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    const grow = (event.key === 'ArrowRight') === (side === 'left') ? 16 : -16
+    setSide(side, (side === 'left' ? watchWidth : railWidth) + grow)
   }
 
   const market = run?.game.market ?? null
@@ -171,8 +221,16 @@ export function Dashboard() {
       <BillBanner game={run?.game ?? null} />
 
       <div
+        ref={bodyRef}
         className="exchange-body"
-        style={{ '--watch-w': watchOpen ? '300px' : '32px', '--rail-w': railOpen ? '320px' : '32px' } as CSSProperties}
+        style={
+          {
+            '--watch-w': watchOpen ? `${watchWidth}px` : '32px',
+            '--rail-w': railOpen ? `${railWidth}px` : '32px',
+            '--grip-l': watchOpen ? '6px' : '0px',
+            '--grip-r': railOpen ? '6px' : '0px',
+          } as CSSProperties
+        }
       >
         <div className={watchOpen ? 'side-col' : 'side-col closed'}>
           <button
@@ -205,6 +263,19 @@ export function Dashboard() {
             </>
           ) : null}
         </div>
+        <div
+          className="resize-handle"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize the watchlist"
+          aria-valuenow={watchWidth}
+          aria-valuemin={WATCH_MIN}
+          aria-valuemax={WATCH_MAX}
+          tabIndex={0}
+          hidden={!watchOpen}
+          onPointerDown={(event) => startDrag(event, 'left')}
+          onKeyDown={(event) => nudge(event, 'left')}
+        />
         <div className={`chart-column desk-${deskSize}`}>
           <div className="main-view">
             <nav className="main-tabs" aria-label="Main view">
@@ -292,6 +363,19 @@ export function Dashboard() {
             </div>
           </section>
         </div>
+        <div
+          className="resize-handle"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize the order panel"
+          aria-valuenow={railWidth}
+          aria-valuemin={RAIL_MIN}
+          aria-valuemax={RAIL_MAX}
+          tabIndex={0}
+          hidden={!railOpen}
+          onPointerDown={(event) => startDrag(event, 'right')}
+          onKeyDown={(event) => nudge(event, 'right')}
+        />
         <aside className={railOpen ? 'ticket-rail side-col' : 'ticket-rail side-col closed'}>
           <button
             type="button"

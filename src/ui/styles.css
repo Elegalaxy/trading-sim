@@ -1627,3 +1627,65 @@ dl.estimate dd {
   font-size: 0.85rem;
   margin: var(--gap-s, 8px) 0;
 }
+
+.exchange .exchange-body {
+  grid-template-columns: var(--watch-w, 300px) var(--grip-l, 6px) minmax(0, 1fr) var(--grip-r, 6px) var(--rail-w, 320px);
+}
+
+.resize-handle {
+  position: relative;
+  cursor: col-resize;
+  background: #2b3139;
+  touch-action: none;
+}
+
+.resize-handle[hidden] {
+  display: none;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+}
+
+.resize-handle:hover,
+.resize-handle:focus-visible,
+.resize-handle:active {
+  background: #f7a600;
+  outline: none;
+}
+
+.side-col {
+  overflow-x: hidden;
+}
+
+.exchange .ticket-rail,
+.exchange .market-list,
+.side-news {
+  overflow-x: hidden;
+}
+
+.exchange .ticket-rail dl.estimate dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 980px) {
+  .exchange .exchange-body {
+    grid-template-columns: 1fr;
+  }
+
+  .resize-handle {
+    display: none;
+  }
+}
+
+.size-modes {
+  max-width: 100%;
+}
+
+.size-modes.leverage-modes {
+  display: flex;
+  flex-wrap: wrap;
+}

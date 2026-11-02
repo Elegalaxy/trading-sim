@@ -425,6 +425,20 @@ A daily price-move cap means a big event plays out over several days, so the pla
 
 Free trading, trading loops, a free option on extreme leverage, and farming small gains are all possible. The fee plus spread, the borrow costs, the wipe-out penalty and the daily move cap are the mitigations.
 
+### High leverage and the backstop `[PROVISIONAL]`
+
+Measured 2026-11-03 with the harness bots `longNova10`, `longNova20`, `longNova50` and `shortNova50` (one NOVA position as large as the margin allows, opened again after a liquidation; 100 runs of 120 days, seed `abc`). The start is $3,000 of trading equity.
+
+| Bot | Runs liquidated at least once | Mean final equity | Median | Backstop write-offs, 100 runs |
+|---|---|---|---|---|
+| random (1 share, 5x) | 0% | $2,967 | $2,940 | $0 |
+| longNova10 | 96% | $468 | $2 | $919 |
+| longNova20 | 97% | $284 | $0 | $19,464 |
+| longNova50 | 99% | $118 | $0 | $127,184 |
+| shortNova50 | 91% | $5,139 | $0 | $108,853 |
+
+A larger run of 300 (seed `xyz`) gave longNova50 a mean of $103 and shortNova50 a mean of $5,984 with a median of $0, a 95th percentile of $55,019 and a best run of $99,741. So 50x loses the account in most runs, but the short bot's mean is above the start. The backstop turns every gap below zero into a free write-off while gains stay uncapped, which is the "free option on extreme leverage" risk in section 16. `[OPEN]` Whether to cap leverage per asset by volatility, charge a liquidation fee, or stop writing off the shortfall. Default: leave as is until the playtests.
+
 ### Leverage plus distortion in a 30-minute run
 
 5x leverage, faster liquidation and stress effects can end a run in one bad day. Safeguards: the margin meter, the daily move cap, a simulation script that runs many seeded days and reports blow-up rates, and capped distortion while highly leveraged (all provisional).

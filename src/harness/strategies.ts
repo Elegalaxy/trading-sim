@@ -4,6 +4,10 @@
 // up to the 5x cap (margin ratio 20%). A rejected order shrinks the quantity.
 // The walk is capped. random draws a stream created in the harness. It does
 // not touch the game's market, events, info, or distortion streams.
+// longNova10, longNova20, longNova50 and shortNova50 hold the most volatile stock
+// at that leverage, as large as the margin allows. They open again after a
+// liquidation. They exist to measure how often high leverage is liquidated and
+// how often the backstop is used.
 
 import {
   MARGIN_MIN_RATIO_DENOMINATOR,
@@ -14,7 +18,16 @@ import { createRng, nextInt } from '../sim/rng.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import type { GameState, MarketDefinitions, OrderSide, RngStream } from '../sim/types.ts'
 
-export const STRATEGY_NAMES = ['hold', 'maxLongIndex', 'maxShortIndex', 'random'] as const
+export const STRATEGY_NAMES = [
+  'hold',
+  'maxLongIndex',
+  'maxShortIndex',
+  'random',
+  'longNova10',
+  'longNova20',
+  'longNova50',
+  'shortNova50',
+] as const
 
 export type StrategyName = (typeof STRATEGY_NAMES)[number]
 
@@ -25,6 +38,18 @@ export type DayAction = {
 }
 
 const INDEX_ID = 'M4X'
+const LEVERAGED_ASSET = 'NOVA'
+
+/** Strategies that hold one stock at a chosen leverage. */
+const LEVERAGED: Partial<Record<StrategyName, { side: OrderSide; leverage: number }>> = {
+  longNova10: { side: 'buy', leverage: 10 },
+  longNova20: { side: 'buy', leverage: 20 },
+  longNova50: { side: 'buy', leverage: 50 },
+  shortNova50: { side: 'sell', leverage: 50 },
+}
+/** Each retry shrinks the order by this share, since the fee and spread eat margin. */
+const SHRINK = 0.97
+const MAX_SHRINKS = 40
 const MAX_WALK = 64
 const MAX_TOP_UP = 8
 
@@ -137,12 +162,13 @@ function submit(
   asset: string,
   side: OrderSide,
   quantity: number,
+  leverage?: number,
 ): boolean {
   if (!Number.isSafeInteger(quantity) || quantity <= 0) {
     throw new Error(`[DEBUG batch] order quantity must be a positive safe integer, received ${String(quantity)}`)
   }
   const before = game.pending.length
-  applyCommand(game, defs, { type: 'order', asset, side, quantity })
+  applyCommand(game, defs, { type: 'order', asset, side, quantity, leverage })
   return orderAccepted(game, before, asset, side, quantity)
 }
 
@@ -193,6 +219,30 @@ function placeTowardCap(game: GameState, defs: MarketDefinitions, side: OrderSid
     quantity -= 1
   }
   if (walks === 0) topUp(game, defs, INDEX_ID, side, action)
+  return action
+}
+
+/**
+ * Open the largest position the margin allows at `leverage`: start from free margin times
+ * leverage, then shrink until the order is accepted. Does nothing when a position is open.
+ */
+function placeLeveraged(game: GameState, defs: MarketDefinitions, side: OrderSide, leverage: number): DayAction {
+  const action = emptyAction()
+  if ((game.positions[LEVERAGED_ASSET]?.signedShares ?? 0) !== 0) return action
+  const price = requireAssetPrice(game, LEVERAGED_ASSET)
+  const book = tradingEquity(game, defs)
+  const room = book.equity - book.required
+  if (room <= 0) return action
+  let quantity = Math.floor((room * leverage) / price)
+  for (let tries = 0; quantity > 0 && tries < MAX_SHRINKS; tries += 1) {
+    if (submit(game, defs, LEVERAGED_ASSET, side, quantity, leverage)) {
+      action.orders += 1
+      action.lastQuantity = quantity
+      return action
+    }
+    action.rejections += 1
+    quantity = Math.floor(quantity * SHRINK)
+  }
   return action
 }
 
@@ -273,6 +323,8 @@ export function actDay(
     assertIndex(defs)
     return placeTowardCap(game, defs, 'sell')
   }
+  const leveraged = LEVERAGED[strategy]
+  if (leveraged !== undefined) return placeLeveraged(game, defs, leveraged.side, leveraged.leverage)
   if (randomStream === null) throw new Error('[DEBUG batch] random strategy is missing its harness stream')
   return placeRandom(game, defs, randomStream)
 }

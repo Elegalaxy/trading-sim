@@ -1268,3 +1268,75 @@ dl.estimate dd {
     grid-template-columns: 1fr;
   }
 }
+
+.exchange .symbol-accounts {
+  margin: 0 auto;
+  padding: 0 24px;
+  border-left: 1px solid #2b3139;
+  border-right: 1px solid #2b3139;
+}
+
+.exchange .symbol-meta {
+  margin-left: 0;
+}
+
+.side-col:not(.ticket-rail) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.side-col:not(.ticket-rail) .market-list {
+  flex: none;
+}
+
+.side-news {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid #2b3139;
+}
+
+.side-news .panel {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+@media (max-width: 980px) {
+  .exchange .symbol-accounts {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .side-col:not(.ticket-rail) {
+    overflow: auto;
+  }
+}
+
+.exchange .symbol-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.exchange .symbol-accounts {
+  flex: none;
+  margin: 0;
+}
+
+.exchange .symbol-meta {
+  flex: 1 1 0;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+@media (max-width: 980px) {
+  .exchange .symbol-left,
+  .exchange .symbol-meta {
+    flex: none;
+  }
+}

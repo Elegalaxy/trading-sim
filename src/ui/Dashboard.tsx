@@ -29,7 +29,7 @@ import { useStoredFlag } from './storedFlag.ts'
 import { useTradingStore } from './store.ts'
 
 type Desk = 'positions' | 'book' | 'log'
-type View = 'chart' | 'news' | 'life'
+type View = 'chart' | 'life'
 
 export function Dashboard() {
   const snapshot = useTradingStore()
@@ -111,24 +111,28 @@ export function Dashboard() {
   return (
     <main className="dashboard exchange">
       <header className="symbol-bar">
-        <div className="symbol-id">
-          <strong className="symbol-name">{asset}</strong>
-          {lastPrice === undefined ? (
-            <strong className="last-price">—</strong>
-          ) : (
-            <strong className={changeUp ? 'last-price up' : 'last-price down'}>{formatUsd(lastPrice, asset)}</strong>
-          )}
-          <span className={changeUp ? 'change up' : 'change down'}>{changeText}</span>
+        <div className="symbol-left">
+          <div className="symbol-id">
+            <strong className="symbol-name">{asset}</strong>
+            {lastPrice === undefined ? (
+              <strong className="last-price">—</strong>
+            ) : (
+              <strong className={changeUp ? 'last-price up' : 'last-price down'}>{formatUsd(lastPrice, asset)}</strong>
+            )}
+            <span className={changeUp ? 'change up' : 'change down'}>{changeText}</span>
+          </div>
+          <dl className="symbol-stats">
+            <div>
+              <dt>High</dt>
+              <dd>{dayHigh === undefined ? '—' : formatUsd(dayHigh, 'high')}</dd>
+            </div>
+            <div>
+              <dt>Low</dt>
+              <dd>{dayLow === undefined ? '—' : formatUsd(dayLow, 'low')}</dd>
+            </div>
+          </dl>
         </div>
-        <dl className="symbol-stats">
-          <div>
-            <dt>High</dt>
-            <dd>{dayHigh === undefined ? '—' : formatUsd(dayHigh, 'high')}</dd>
-          </div>
-          <div>
-            <dt>Low</dt>
-            <dd>{dayLow === undefined ? '—' : formatUsd(dayLow, 'low')}</dd>
-          </div>
+        <dl className="symbol-stats symbol-accounts">
           <div>
             <dt>Cash</dt>
             <dd>{cash === undefined ? '—' : formatUsd(cash, 'cash')}</dd>
@@ -160,7 +164,7 @@ export function Dashboard() {
 
       <div
         className="exchange-body"
-        style={{ '--watch-w': watchOpen ? '230px' : '32px', '--rail-w': railOpen ? '320px' : '32px' } as CSSProperties}
+        style={{ '--watch-w': watchOpen ? '300px' : '32px', '--rail-w': railOpen ? '320px' : '32px' } as CSSProperties}
       >
         <div className={watchOpen ? 'side-col' : 'side-col closed'}>
           <button
@@ -173,16 +177,31 @@ export function Dashboard() {
           >
             {watchOpen ? '◂ Watchlist' : '▸'}
           </button>
-          {watchOpen ? <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} /> : null}
+          {watchOpen ? (
+            <>
+              <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} />
+              <div className="side-news">
+                <Fold id="news" title="News">
+                  <NewsFeed
+                    key={`${market?.day ?? 'none'}-${market?.feed.day ?? 0}`}
+                    feed={run === null ? null : viewedFeed(run.game)}
+                    verified={run?.game.perception.verified ?? false}
+                    job={run === null ? null : activeJob(run.game.job)}
+                    newsReads={run?.game.stats.newsReads ?? 0}
+                  />
+                </Fold>
+                <Fold id="calendar" title="Calendar" startFolded>
+                  <CalendarPanel market={market} />
+                </Fold>
+              </div>
+            </>
+          ) : null}
         </div>
         <div className={`chart-column desk-${deskSize}`}>
           <div className="main-view">
             <nav className="main-tabs" aria-label="Main view">
               <button type="button" aria-pressed={view === 'chart'} onClick={() => setView('chart')}>
                 Chart
-              </button>
-              <button type="button" aria-pressed={view === 'news'} onClick={() => setView('news')}>
-                News
               </button>
               <button type="button" aria-pressed={view === 'life'} onClick={() => setView('life')}>
                 Life
@@ -191,18 +210,6 @@ export function Dashboard() {
             <div className={view === 'chart' ? 'main-pane' : 'main-pane hidden'}>
               <PriceChart asset={asset} points={points} levels={levels} />
             </div>
-            {view === 'news' ? (
-              <div className="main-pane main-scroll desk">
-                <NewsFeed
-                  key={`${market?.day ?? 'none'}-${market?.feed.day ?? 0}`}
-                  feed={run === null ? null : viewedFeed(run.game)}
-                  verified={run?.game.perception.verified ?? false}
-                  job={run === null ? null : activeJob(run.game.job)}
-                  newsReads={run?.game.stats.newsReads ?? 0}
-                />
-                <CalendarPanel market={market} />
-              </div>
-            ) : null}
             {view === 'life' ? (
               <div className="main-pane main-scroll desk desk-grid">
                 <Fold id="job" title="Job">

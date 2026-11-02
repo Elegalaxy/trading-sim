@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { activeJob } from '../sim/jobs.ts'
 import { viewedFeed } from '../sim/game.ts'
@@ -25,9 +25,11 @@ import { LoanPanel } from './LoanPanel.tsx'
 import { sessionPrice } from '../sim/session.ts'
 import { buildHistory } from './history.ts'
 import { formatUsd } from './money.ts'
+import { useStoredFlag } from './storedFlag.ts'
 import { useTradingStore } from './store.ts'
 
-type Desk = 'positions' | 'life' | 'news' | 'book' | 'log'
+type Desk = 'positions' | 'book' | 'log'
+type View = 'chart' | 'news' | 'life'
 
 export function Dashboard() {
   const snapshot = useTradingStore()
@@ -35,6 +37,9 @@ export function Dashboard() {
   const assets = MARKET_DEFINITIONS.assets
   const [asset, setAsset] = useState(assets[0]?.id ?? 'NOVA')
   const [desk, setDesk] = useState<Desk>('positions')
+  const [view, setView] = useState<View>('chart')
+  const [watchOpen, setWatchOpen] = useStoredFlag('watch', true)
+  const [railOpen, setRailOpen] = useStoredFlag('rail', true)
   const [deskSize, setDeskSize] = useState<'normal' | 'tall' | 'folded'>('normal')
 
   function onAsset(value: string): void {
@@ -153,20 +158,72 @@ export function Dashboard() {
       {run !== null ? <RunEnd seed={run.seed} mode={run.mode} game={run.game} /> : null}
       <BillBanner game={run?.game ?? null} />
 
-      <div className="exchange-body">
-        <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} />
+      <div
+        className="exchange-body"
+        style={{ '--watch-w': watchOpen ? '230px' : '32px', '--rail-w': railOpen ? '320px' : '32px' } as CSSProperties}
+      >
+        <div className={watchOpen ? 'side-col' : 'side-col closed'}>
+          <button
+            type="button"
+            className="side-toggle"
+            aria-expanded={watchOpen}
+            aria-label={watchOpen ? 'Hide the watchlist' : 'Show the watchlist'}
+            title={watchOpen ? 'Hide the watchlist' : 'Show the watchlist'}
+            onClick={() => setWatchOpen(!watchOpen)}
+          >
+            {watchOpen ? '◂ Watchlist' : '▸'}
+          </button>
+          {watchOpen ? <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} /> : null}
+        </div>
         <div className={`chart-column desk-${deskSize}`}>
-          <PriceChart asset={asset} points={points} levels={levels} />
+          <div className="main-view">
+            <nav className="main-tabs" aria-label="Main view">
+              <button type="button" aria-pressed={view === 'chart'} onClick={() => setView('chart')}>
+                Chart
+              </button>
+              <button type="button" aria-pressed={view === 'news'} onClick={() => setView('news')}>
+                News
+              </button>
+              <button type="button" aria-pressed={view === 'life'} onClick={() => setView('life')}>
+                Life
+              </button>
+            </nav>
+            <div className={view === 'chart' ? 'main-pane' : 'main-pane hidden'}>
+              <PriceChart asset={asset} points={points} levels={levels} />
+            </div>
+            {view === 'news' ? (
+              <div className="main-pane main-scroll desk">
+                <NewsFeed
+                  key={`${market?.day ?? 'none'}-${market?.feed.day ?? 0}`}
+                  feed={run === null ? null : viewedFeed(run.game)}
+                  verified={run?.game.perception.verified ?? false}
+                  job={run === null ? null : activeJob(run.game.job)}
+                  newsReads={run?.game.stats.newsReads ?? 0}
+                />
+                <CalendarPanel market={market} />
+              </div>
+            ) : null}
+            {view === 'life' ? (
+              <div className="main-pane main-scroll desk desk-grid">
+                <Fold id="job" title="Job">
+                  <JobPanel game={run?.game ?? null} />
+                </Fold>
+                <Fold id="lifestyle" title="Lifestyle">
+                  <LifestylePanel game={run?.game ?? null} />
+                </Fold>
+                <Fold id="loan" title="Bank loan">
+                  <LoanPanel game={run?.game ?? null} />
+                </Fold>
+                <Fold id="food" title="Food and drink">
+                  <Consumables game={run?.game ?? null} />
+                </Fold>
+              </div>
+            ) : null}
+          </div>
           <section className="subpanel" aria-label="Subpanel">
             <nav className="subpanel-tabs" aria-label="Subpanel sections">
               <button type="button" aria-pressed={desk === 'positions'} onClick={() => setDesk('positions')}>
                 Positions
-              </button>
-              <button type="button" aria-pressed={desk === 'life'} onClick={() => setDesk('life')}>
-                Life
-              </button>
-              <button type="button" aria-pressed={desk === 'news'} onClick={() => setDesk('news')}>
-                News
               </button>
               <button type="button" aria-pressed={desk === 'book'} onClick={() => setDesk('book')}>
                 Day book
@@ -197,40 +254,6 @@ export function Dashboard() {
             </nav>
             <div className="subpanel-body">
               {desk === 'positions' ? <Positions game={run?.game ?? null} onSelect={onAsset} selected={asset} /> : null}
-              {desk === 'life' ? (
-                <div className="desk desk-grid">
-                  <Fold id="job" title="Job">
-                    <JobPanel game={run?.game ?? null} />
-                  </Fold>
-                  <Fold id="lifestyle" title="Lifestyle">
-                    <LifestylePanel game={run?.game ?? null} />
-                  </Fold>
-                  <Fold id="loan" title="Bank loan">
-                    <LoanPanel game={run?.game ?? null} />
-                  </Fold>
-                  <Fold id="food" title="Food and drink">
-                    <Consumables game={run?.game ?? null} />
-                  </Fold>
-                  <Fold id="fi" title="Financial independence">
-                    <FiMeter game={run?.game ?? null} />
-                  </Fold>
-                  <Fold id="accounts" title="Accounts">
-                    <Accounts game={run?.game ?? null} />
-                  </Fold>
-                </div>
-              ) : null}
-              {desk === 'news' ? (
-                <div className="desk">
-                  <NewsFeed
-                    key={`${market?.day ?? 'none'}-${market?.feed.day ?? 0}`}
-                    feed={run === null ? null : viewedFeed(run.game)}
-                    verified={run?.game.perception.verified ?? false}
-                    job={run === null ? null : activeJob(run.game.job)}
-                    newsReads={run?.game.stats.newsReads ?? 0}
-                  />
-                  <CalendarPanel market={market} />
-                </div>
-              ) : null}
               {desk === 'book' ? (
                 <DaySummaryPanel
                   summary={run?.summary ?? null}
@@ -242,13 +265,33 @@ export function Dashboard() {
             </div>
           </section>
         </div>
-        <aside className="ticket-rail">
-          <Fold id="order" title="Order">
-            <OrderPanel game={run?.game ?? null} asset={asset} />
-          </Fold>
-          <Fold id="margin" title="Margin">
-            <MarginMeter game={run?.game ?? null} />
-          </Fold>
+        <aside className={railOpen ? 'ticket-rail side-col' : 'ticket-rail side-col closed'}>
+          <button
+            type="button"
+            className="side-toggle"
+            aria-expanded={railOpen}
+            aria-label={railOpen ? 'Hide the order panel' : 'Show the order panel'}
+            title={railOpen ? 'Hide the order panel' : 'Show the order panel'}
+            onClick={() => setRailOpen(!railOpen)}
+          >
+            {railOpen ? 'Order ▸' : '◂'}
+          </button>
+          {railOpen ? (
+            <>
+              <Fold id="order" title="Order">
+                <OrderPanel game={run?.game ?? null} asset={asset} />
+              </Fold>
+              <Fold id="margin" title="Margin">
+                <MarginMeter game={run?.game ?? null} />
+              </Fold>
+              <Fold id="accounts" title="Accounts" startFolded>
+                <Accounts game={run?.game ?? null} />
+              </Fold>
+              <Fold id="fi" title="Financial independence" startFolded>
+                <FiMeter game={run?.game ?? null} />
+              </Fold>
+            </>
+          ) : null}
         </aside>
       </div>
     </main>

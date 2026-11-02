@@ -46,6 +46,8 @@
 
 import {
   BORROW_FEE_PPM_MAX,
+  DEFAULT_LEVERAGE,
+  MAX_LEVERAGE,
   BORROW_FEE_PPM_MIN,
   MARGIN_MIN_RATIO_DENOMINATOR,
   MARGIN_MIN_RATIO_NUMERATOR,
@@ -292,13 +294,19 @@ function projectPosition(
   return { signedShares: newShares, costCents, closedShares, realizedCents }
 }
 
+/** The leverage of an open position. A position saved without one counts as the default. */
+export function leverageOf(position: { leverage?: number } | undefined): number {
+  return position?.leverage ?? DEFAULT_LEVERAGE
+}
+
 function exposure(
   market: MarketState,
   defs: MarketDefinitions,
   positions: Record<string, OpenPosition>,
-): { marked: number; gross: number } | 'overflow' {
+): { marked: number; gross: number; required: number } | 'overflow' {
   let marked = 0
   let gross = 0
+  let required = 0
   const known = new Set<string>()
   for (const def of defs.assets) {
     known.add(def.id)
@@ -312,12 +320,13 @@ function exposure(
     if (!Number.isSafeInteger(markedPart) || !Number.isSafeInteger(grossPart)) return 'overflow'
     marked += markedPart
     gross += grossPart
+    required += Math.ceil(grossPart / leverageOf(positions[def.id]))
     if (!Number.isSafeInteger(marked) || !Number.isSafeInteger(gross)) return 'overflow'
   }
   for (const id of Object.keys(positions)) {
     if (!known.has(id)) throw new Error(`position ${id} is not an asset`)
   }
-  return { marked, gross }
+  return { marked, gross, required }
 }
 
 /**
@@ -335,8 +344,23 @@ function marginDecision(equity: number, gross: number): 'ok' | 'cash' | 'power' 
   return 'ok'
 }
 
-/** Trading-account equity and gross position value at the current quoted prices. */
-export function tradingEquity(state: GameState, defs: MarketDefinitions): { equity: number; gross: number } {
+/**
+ * The value the margin ratio is taken against: the required margin scaled to the old 5x
+ * account. At 5x leverage on every position it equals gross, so the 20% / 15% / 10% marks
+ * keep their meaning. Zero when nothing is open.
+ */
+export function marginBase(book: { gross: number; required: number }): number {
+  return book.gross === 0 ? 0 : book.required * MARGIN_MIN_RATIO_DENOMINATOR
+}
+
+/**
+ * Trading-account equity, gross position value, and the margin the open positions need
+ * (the sum of each position's value over its leverage), at the current quoted prices.
+ */
+export function tradingEquity(
+  state: GameState,
+  defs: MarketDefinitions,
+): { equity: number; gross: number; required: number } {
   if (!Number.isSafeInteger(state.accounts.tradingCents)) {
     throw new Error(`trading cash must be a safe integer, received ${describeValue(state.accounts.tradingCents)}`)
   }
@@ -346,7 +370,7 @@ export function tradingEquity(state: GameState, defs: MarketDefinitions): { equi
   if (!Number.isSafeInteger(equity)) {
     throw new Error(`trading equity is not a safe integer, received ${describeValue(equity)}`)
   }
-  return { equity, gross: marked.gross }
+  return { equity, gross: marked.gross, required: marked.required }
 }
 
 type FillQuote = {
@@ -459,7 +483,7 @@ export function interpretOrder(
   if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) {
     return rejected(day, 'quantityNotInteger')
   }
-  const record = cmd as { asset?: unknown; side?: unknown; quantity?: unknown }
+  const record = cmd as { asset?: unknown; side?: unknown; quantity?: unknown; leverage?: unknown }
   if (record.side !== 'buy' && record.side !== 'sell') {
     return rejected(day, 'sideNotBuyOrSell')
   }
@@ -471,6 +495,18 @@ export function interpretOrder(
   }
   const def = findAsset(defs, record.asset)
   if (def === undefined) return rejected(day, 'unknownAsset')
+
+  const requested = record.leverage
+  if (
+    requested !== undefined &&
+    (typeof requested !== 'number' || !Number.isSafeInteger(requested) || requested < 1 || requested > MAX_LEVERAGE)
+  ) {
+    return rejected(day, 'leverageInvalid')
+  }
+  const held = state.positions[def.id]
+  const addsToHeld =
+    held !== undefined && ((held.signedShares > 0 && record.side === 'buy') || (held.signedShares < 0 && record.side === 'sell'))
+  if (addsToHeld && requested !== undefined && requested !== leverageOf(held)) return rejected(day, 'leverageMismatch')
 
   const market = quoteMarket(state)
   const quote = quoteFill(market, def, record.side, quantity, fixedFill)
@@ -485,17 +521,19 @@ export function interpretOrder(
   const nextPositions: Record<string, OpenPosition> = { ...state.positions }
   if (projection.signedShares === 0) delete nextPositions[def.id]
   else {
+    const opensNew = held === undefined || Math.sign(projection.signedShares) !== Math.sign(held.signedShares)
     nextPositions[def.id] = {
       asset: def.id,
       signedShares: projection.signedShares,
       costCents: projection.costCents,
+      leverage: opensNew ? (requested ?? leverageOf(held)) : leverageOf(held),
     }
   }
   const marked = exposure(market, defs, nextPositions)
   if (marked === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   const equity = nextTrading + marked.marked
   if (!Number.isSafeInteger(equity)) return rejected(day, 'notionalNotSafeInteger')
-  const margin = marginDecision(equity, marked.gross)
+  const margin = marginDecision(equity, marginBase(marked))
   if (margin === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   if (margin === 'cash') return rejected(day, 'insufficientTradingCash')
   if (margin === 'power') return rejected(day, 'insufficientBuyingPower')

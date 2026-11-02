@@ -29,7 +29,7 @@ import {
   WIPE_OUT_RATIO_DENOMINATOR,
   WIPE_OUT_RATIO_NUMERATOR,
 } from './constants.ts'
-import { closeWholePosition, recordRealized, tradingEquity } from './trading.ts'
+import { closeWholePosition, marginBase, recordRealized, tradingEquity } from './trading.ts'
 import type {
   BackstopWriteOffEvent,
   GameState,
@@ -83,13 +83,13 @@ function compareRatio(equity: number, gross: number, numerator: number, denomina
   return 0
 }
 
-function checkEvent(day: number, equity: number, gross: number): MarginCheckEvent {
+function checkEvent(day: number, equity: number, gross: number, base: number): MarginCheckEvent {
   return {
     kind: 'marginCheck',
     day,
     equity,
     positionValue: gross,
-    ratio: ratio(equity, gross),
+    ratio: ratio(equity, base),
   }
 }
 
@@ -210,16 +210,17 @@ export function settleMargin(state: GameState, defs: MarketDefinitions, equityAt
   const day = state.market.day
   const events: MarginLogEvent[] = []
   const opening = tradingEquity(state, defs)
-  events.push(checkEvent(day, opening.equity, opening.gross))
+  const openingBase = marginBase(opening)
+  events.push(checkEvent(day, opening.equity, opening.gross, openingBase))
 
   const warn =
     opening.gross > 0 &&
-    compareRatio(opening.equity, opening.gross, MARGIN_WARNING_RATIO_NUMERATOR, MARGIN_WARNING_RATIO_DENOMINATOR) <= 0
+    compareRatio(opening.equity, openingBase, MARGIN_WARNING_RATIO_NUMERATOR, MARGIN_WARNING_RATIO_DENOMINATOR) <= 0
   const liquidate =
     opening.gross > 0 &&
     compareRatio(
       opening.equity,
-      opening.gross,
+      openingBase,
       MARGIN_LIQUIDATION_RATIO_NUMERATOR,
       MARGIN_LIQUIDATION_RATIO_DENOMINATOR,
     ) <= 0
@@ -229,7 +230,7 @@ export function settleMargin(state: GameState, defs: MarketDefinitions, equityAt
       day,
       equity: opening.equity,
       positionValue: opening.gross,
-      ratio: opening.equity / opening.gross,
+      ratio: opening.equity / openingBase,
     }
     events.push(warning)
   }
@@ -242,7 +243,7 @@ export function settleMargin(state: GameState, defs: MarketDefinitions, equityAt
       const current = tradingEquity(state, defs)
       if (current.gross === 0) break
       const stillUnder =
-        compareRatio(current.equity, current.gross, MARGIN_WARNING_RATIO_NUMERATOR, MARGIN_WARNING_RATIO_DENOMINATOR) <=
+        compareRatio(current.equity, marginBase(current), MARGIN_WARNING_RATIO_NUMERATOR, MARGIN_WARNING_RATIO_DENOMINATOR) <=
         0
       if (!stillUnder) break
       const asset = worstAsset(state, defs)
@@ -255,13 +256,13 @@ export function settleMargin(state: GameState, defs: MarketDefinitions, equityAt
         asset: close.asset,
         quantity: close.quantity,
         fill: close.fillPrice,
-        ratioAfter: ratio(after.equity, after.gross),
+        ratioAfter: ratio(after.equity, marginBase(after)),
       }
       events.push(logged)
     }
     if (closed > limit) throw new Error('liquidation did not finish within the asset count')
     const finished = tradingEquity(state, defs)
-    events.push(checkEvent(day, finished.equity, finished.gross))
+    events.push(checkEvent(day, finished.equity, finished.gross, marginBase(finished)))
   }
 
   const afterClose = tradingEquity(state, defs)

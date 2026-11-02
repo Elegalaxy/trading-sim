@@ -262,3 +262,11 @@ export const SESSION_BASE_NOTIONAL_CENTS = 200_000_000
 export const SESSION_MOVE_VOLUME_BOOST = 1.5
 export const SESSION_EVENT_VOLUME_BOOST = 0.6
 export const SESSION_VOLUME_NOISE = 0.25
+
+/**
+ * Leverage is chosen per position. Margin for a position is its value divided by its
+ * leverage. `MAX_LEVERAGE` is the highest a player may pick. A position or order saved
+ * without a leverage counts as `DEFAULT_LEVERAGE`, the old account-wide cap.
+ */
+export const MAX_LEVERAGE = 50
+export const DEFAULT_LEVERAGE = 5

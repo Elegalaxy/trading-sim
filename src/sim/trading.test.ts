@@ -464,6 +464,7 @@ describe('orders, fees, and borrow', () => {
       asset: 'NOVA',
       signedShares: -3,
       costCents: sold.fillPrice * 3,
+      leverage: 5,
     })
     const pnl = realizedEvents(flip)[0]
     if (pnl === undefined) throw new Error('[DEBUG trading] missing flip realized')

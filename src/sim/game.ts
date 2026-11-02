@@ -20,6 +20,7 @@ import {
   settleSavings,
 } from './accounts.ts'
 import {
+  MAX_LEVERAGE,
   RUN_LENGTH_DAYS,
   SAVINGS_PAY_INTERVAL_DAYS,
   SESSION_STEPS,
@@ -321,6 +322,12 @@ function assertPositions(positions: Record<string, OpenPosition>): void {
       throw new Error(
         `position ${id} signedShares must be a non-zero safe integer, received ${describeValue(position.signedShares)}`,
       )
+    }
+    if (
+      position.leverage !== undefined &&
+      (!Number.isSafeInteger(position.leverage) || position.leverage < 1 || position.leverage > MAX_LEVERAGE)
+    ) {
+      throw new Error(`position ${id} leverage must be a whole number from 1 to ${MAX_LEVERAGE}, received ${describeValue(position.leverage)}`)
     }
     if (!Number.isSafeInteger(position.costCents) || position.costCents < 0) {
       throw new Error(

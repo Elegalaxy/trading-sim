@@ -629,6 +629,8 @@ export type OpenPosition = {
   asset: string
   signedShares: number
   costCents: number
+  /** Whole number from 1 to MAX_LEVERAGE. Missing means DEFAULT_LEVERAGE (older saves). */
+  leverage?: number
 }
 
 /**
@@ -796,6 +798,8 @@ export type RestingOrder = {
   /** Exits set on the position once this order fills. Null means none. */
   tpCents: number | null
   slCents: number | null
+  /** Leverage for the position this order opens. Missing means the open position's, else the default. */
+  leverage?: number
 }
 
 /** Take profit and stop loss for one open position. A hit closes the whole position. */

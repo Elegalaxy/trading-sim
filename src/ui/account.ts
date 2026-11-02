@@ -1,9 +1,9 @@
 // Trading account numbers shown next to the order ticket. Equity is the trading balance plus
 // the positions at the current quote, so it already contains the floating P&L. Gross is the sum
-// of the position values. Buying power is how much more value the 5x limit still allows.
+// of the position values. Required margin is the sum of each position's value over its
+// leverage, and free margin is the equity left after it.
 
 import { MARKET_DEFINITIONS } from '../content/index.ts'
-import { MARGIN_MIN_RATIO_DENOMINATOR, MARGIN_MIN_RATIO_NUMERATOR } from '../sim/constants.ts'
 import { sessionPrice } from '../sim/session.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import type { GameState } from '../sim/types.ts'
@@ -40,8 +40,10 @@ export type AccountSummary = {
   floating: number
   equity: number
   gross: number
-  /** How much more position value the 5x limit allows right now. */
-  buyingPower: number
+  /** Margin the open positions need: each position's value over its leverage. */
+  required: number
+  /** Equity not tied up as margin. A new order of value V at leverage L needs V / L of it. */
+  freeMargin: number
 }
 
 export function accountSummary(game: GameState): AccountSummary {
@@ -52,14 +54,12 @@ export function accountSummary(game: GameState): AccountSummary {
     if (position === undefined || position.signedShares === 0) continue
     floating += unrealizedCents(sessionPrice(game, def.id), position.signedShares, position.costCents)
   }
-  const power =
-    Math.max(0, book.equity * MARGIN_MIN_RATIO_DENOMINATOR - book.gross * MARGIN_MIN_RATIO_NUMERATOR) /
-    MARGIN_MIN_RATIO_NUMERATOR
   return {
     balance: game.accounts.tradingCents,
     floating,
     equity: book.equity,
     gross: book.gross,
-    buyingPower: Math.floor(power),
+    required: book.required,
+    freeMargin: book.equity - book.required,
   }
 }

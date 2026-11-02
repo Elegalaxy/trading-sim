@@ -22,19 +22,25 @@ describe('order sizing', () => {
   })
 
   it('finds a long liquidation price below the quote', () => {
-    // equity $1,000, one long of 100 shares at $50 (gross $5,000): 5x.
-    const liq = liquidationPrice(100_000, 500_000, 100, 5_000)
+    // equity $1,000, one long of 100 shares at $50 (value $5,000) at 5x: margin $1,000.
+    const liq = liquidationPrice(100_000, 100_000, 100, 5_000, 5)
     // equity(P) = 100_000 + 100*(P-5000); liquidated at 10% of gross 100*P.
     expect(liq).toBe(4_444)
     expect(liq!).toBeLessThan(5_000)
   })
 
   it('finds a short liquidation price above the quote', () => {
-    const liq = liquidationPrice(100_000, 500_000, -100, 5_000)
+    const liq = liquidationPrice(100_000, 100_000, -100, 5_000, 5)
     expect(liq!).toBeGreaterThan(5_000)
   })
 
+  it('liquidates a 50x long on a drop of about one percent', () => {
+    // equity $100, 100 shares at $50 at 50x: margin $100, liquidated when equity is half of it.
+    const liq = liquidationPrice(10_000, 10_000, 100, 5_000, 50)
+    expect(liq).toBe(4_949)
+  })
+
   it('has none when flat', () => {
-    expect(liquidationPrice(100_000, 0, 0, 5_000)).toBeNull()
+    expect(liquidationPrice(100_000, 0, 0, 5_000, 5)).toBeNull()
   })
 })

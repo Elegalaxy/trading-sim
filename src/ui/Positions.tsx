@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { sessionPrice } from '../sim/session.ts'
+import { leverageOf } from '../sim/trading.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatSignedUsd, formatUsd, parseUsdToCents } from './money.ts'
@@ -12,6 +13,7 @@ type PositionRow = {
   asset: string
   side: 'long' | 'short'
   shares: number
+  leverage: number
   costCents: number
   price: number
   pnl: number
@@ -46,6 +48,7 @@ function positionRows(game: GameState): PositionRow[] {
       asset: def.id,
       side,
       shares,
+      leverage: leverageOf(position),
       costCents: position.costCents,
       price,
       pnl: unrealizedCents(price, position.signedShares, position.costCents),
@@ -230,6 +233,7 @@ export function Positions({
                 <th>Asset</th>
                 <th>Side</th>
                 <th>Shares</th>
+                <th>Lev</th>
                 <th>Entry average</th>
                 <th>Price</th>
                 <th>Unrealized</th>
@@ -257,6 +261,7 @@ export function Positions({
                   </td>
                   <td className={row.side === 'long' ? 'side-long' : 'side-short'}>{row.side}</td>
                   <td>{row.shares}</td>
+                  <td>{row.leverage}x</td>
                   <td>{formatAverage(row.costCents, row.shares)}</td>
                   <td>{formatUsd(row.price, 'price')}</td>
                   <td className={row.pnl > 0 ? 'pnl-gain' : row.pnl < 0 ? 'pnl-loss' : undefined}>

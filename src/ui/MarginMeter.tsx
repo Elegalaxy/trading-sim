@@ -6,7 +6,7 @@ import {
   MARGIN_WARNING_RATIO_DENOMINATOR,
   MARGIN_WARNING_RATIO_NUMERATOR,
 } from '../sim/constants.ts'
-import { tradingEquity } from '../sim/trading.ts'
+import { marginBase, tradingEquity } from '../sim/trading.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
@@ -43,9 +43,11 @@ const liquidationPercent = markPercent(MARGIN_LIQUIDATION_RATIO_NUMERATOR, MARGI
 
 export function MarginMeter({ game }: { game: GameState | null }) {
   const book = game === null ? null : tradingEquity(game, MARKET_DEFINITIONS)
-  const gross = book?.gross ?? 0
+  const gross = book === null ? 0 : marginBase(book)
+  const positions = book?.gross ?? 0
+  const required = book?.required ?? 0
   const equity = book?.equity ?? 0
-  const open = book !== null && gross > 0
+  const open = book !== null && positions > 0
   let tone = 'margin-none'
   if (open) {
     if (atOrBelowRatio(equity, gross, MARGIN_LIQUIDATION_RATIO_NUMERATOR, MARGIN_LIQUIDATION_RATIO_DENOMINATOR)) {
@@ -74,7 +76,8 @@ export function MarginMeter({ game }: { game: GameState | null }) {
       ) : (
         <>
           <p>
-            Equity {formatUsd(equity, 'margin equity')}. Gross {formatUsd(gross, 'margin gross')}. Ratio {formatPercent(equity, gross)}.
+            Equity {formatUsd(equity, 'margin equity')}. Margin used {formatUsd(required, 'margin used')} on{' '}
+            {formatUsd(positions, 'margin positions')} of positions. Ratio {formatPercent(equity, gross)}.
           </p>
           <div className="margin-track" aria-hidden="true">
             <div className="margin-fill" style={{ width: `${fillPercent}%` }} />

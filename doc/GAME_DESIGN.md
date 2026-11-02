@@ -214,18 +214,22 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 
 ### Leverage and margin
 
-- `[CONFIRMED]` Leverage has a cap of 5x in the first playable, and liquidation is faster than a gentle margin call.
-- `[PROVISIONAL]` The cap applies to every asset equally.
-- `[PROVISIONAL]` Margin ratio is account equity divided by total position value. At 5x the ratio starts at 20%.
+- `[CONFIRMED]` Liquidation is faster than a gentle margin call.
+- `[CONFIRMED]` Changed 2026-11-03 at the user's request: leverage is chosen per position, from 1x to 50x, when the position is opened. It replaces the earlier account-wide cap of 5x. A position saved without a leverage counts as 5x.
+- `[PROVISIONAL]` Margin for a position is its value divided by its leverage. The account needs equity of at least the margin of all positions together, so an order that would leave equity below that is rejected. A 1x position needs its full value and never borrows.
+- `[PROVISIONAL]` Adding to an open position uses its leverage. To change it, close it first. Reducing keeps the leverage. A flip opens the new side at the leverage on the order.
+- `[PROVISIONAL]` Margin ratio is equity divided by the required margin scaled to the old 5x account (five times the required margin). At 5x on every position this is the old equity over position value, so the marks below keep their meaning. In plain terms: the warning is at 75% of the required margin and liquidation at 50%.
 - `[CONFIRMED]` A warning appears at a 15% ratio, shown on a visible margin meter. Liquidation happens when the end-of-day ratio is 10% or lower.
 - `[PROVISIONAL]` Liquidation closes the worst-performing position first, and continues until the ratio is back above the warning level.
+- `[PROVISIONAL]` Limit orders carry their leverage and open the position at it when they fill.
 
 ### Loss cap guarantee
 
 - `[CONFIRMED]` Losses cannot exceed the account. There is no negative-balance debt.
 - `[CONFIRMED]` The guarantee has two parts: a daily price-move cap tied to the leverage limit, and a small backstop. The third part, a ladder penalty on a wipe-out, was removed on 2026-10-22 because there is no failure ladder (section 8).
-- `[CONFIRMED]` Daily price-move cap: a single day's price change is limited to 8%, below the 10% liquidation ratio, with room for fees and spread. An adverse move no larger than the ratio cannot take equity below zero before the end-of-day check.
-- `[PROVISIONAL]` Backstop: equity is floored at zero, and any rounding or spread shortfall is written off. The design test is that the backstop is never used beyond rounding.
+- `[CONFIRMED]` Daily price-move cap: a single day's price change is limited to 8%, below the 10% liquidation ratio, with room for fees and spread. At 5x or less an adverse move no larger than the ratio cannot take equity below zero before the end-of-day check.
+- `[PROVISIONAL]` Above about 10x one capped day can gap through the liquidation mark and below zero. The backstop then floors equity at zero and the loss is written off, so losses still never exceed the account. High leverage is therefore the one place the backstop is expected to be used. Measure it in the batch report.
+- `[PROVISIONAL]` Backstop: equity is floored at zero, and any rounding or spread shortfall is written off. The design test is that the backstop is never used beyond rounding at 5x or less.
 - `[PROVISIONAL]` A wipe-out is a liquidation that leaves the trading account below 10% of its value at the start of the day. It does not end the run. It drains the trading account and adds a stress spike. The run ends only under section 8.
 - `[PROVISIONAL]` The loss cap check is done once per day at the end-of-day check. Intraday checks are not part of the first playable.
 
@@ -493,6 +497,7 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 
 ## 19. Changelog
 
+- 2026-11-03: Leverage is now chosen per position, 1x to 50x (user decision), replacing the account-wide 5x cap. Margin is value over leverage. The 15% and 10% marks, read against the required margin, are unchanged. Above about 10x the backstop can be used.
 - 2026-11-01: Added limit orders, take profit and stop loss (plan Step 32), and order sizing by quantity, cost or value in the order panel. Old saves are rejected as damaged again.
 - 2026-10-31: Built the intraday session (plan Step 28). Added `tick`, 15m and 1H candles, a volume panel and per-bar volume. Orders fill at the clock quote. Old saves are rejected as damaged.
 - 2026-10-31: Intraday session and volume added to the design at the user's request. Orders become tradable intraday on a 15-minute clock over 17:00 to 21:00, with a hidden path ending at the day's existing close. Volume is cosmetic. Margin and liquidation stay end-of-day. 4H is dropped. Provisional values; no code changed yet.

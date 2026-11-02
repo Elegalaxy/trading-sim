@@ -18,7 +18,7 @@
 //   flipping a position removes its exits.
 // - Orders are placed in the market section. Cancelling works any time.
 
-import { SESSION_STEPS } from './constants.ts'
+import { MAX_LEVERAGE, SESSION_STEPS } from './constants.ts'
 import { clockTime, sessionPrice } from './session.ts'
 import { closeWholePosition, interpretOrder } from './trading.ts'
 import type {
@@ -104,9 +104,10 @@ function marginProblem(
   side: OrderSide,
   quantity: number,
   fixedFill: number,
+  leverage?: number,
 ): string | null {
   const clone = structuredClone(state)
-  const outcome = interpretOrder(clone, defs, { type: 'order', asset, side, quantity }, fixedFill)
+  const outcome = interpretOrder(clone, defs, { type: 'order', asset, side, quantity, leverage }, fixedFill)
   if (outcome.accepted) return null
   const rejection = outcome.events.find((event) => event.kind === 'commandRejected')
   return rejection !== undefined && rejection.kind === 'commandRejected' ? rejection.reason : 'rejected'
@@ -137,7 +138,11 @@ export function interpretLimitOrder(state: GameState, defs: MarketDefinitions, c
   }
   const problem = exitProblem(side === 'buy' ? 'long' : 'short', tp, sl, limit)
   if (problem !== null) return rejectEvent(state, command, problem)
-  const margin = marginProblem(state, defs, asset, side, quantity, limit)
+  const leverage = record.leverage
+  if (leverage !== undefined && (typeof leverage !== 'number' || !Number.isSafeInteger(leverage) || leverage < 1 || leverage > MAX_LEVERAGE)) {
+    return rejectEvent(state, command, 'leverageInvalid')
+  }
+  const margin = marginProblem(state, defs, asset, side, quantity, limit, leverage)
   if (margin !== null) return rejectEvent(state, command, margin)
   const order: RestingOrder = {
     id: state.resting.nextId,
@@ -147,6 +152,7 @@ export function interpretLimitOrder(state: GameState, defs: MarketDefinitions, c
     limitCents: limit,
     tpCents: tp,
     slCents: sl,
+    ...(leverage === undefined ? {} : { leverage }),
   }
   state.resting.nextId += 1
   state.resting.orders.push(order)
@@ -271,7 +277,7 @@ function triggerLimits(state: GameState, defs: MarketDefinitions, index: number)
     const outcome = interpretOrder(
       state,
       defs,
-      { type: 'order', asset: order.asset, side: order.side, quantity: order.quantity },
+      { type: 'order', asset: order.asset, side: order.side, quantity: order.quantity, leverage: order.leverage },
       fill,
     )
     if (!outcome.accepted) {

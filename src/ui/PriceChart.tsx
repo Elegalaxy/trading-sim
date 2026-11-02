@@ -255,9 +255,9 @@ export function PriceChart({
                     {bar.volume !== null && maxVolume > 0 ? (
                       <rect
                         x={cx - bodyWidth / 2}
-                        y={plotBottom - (bar.volume / maxVolume) * (volumeH - 4)}
+                        y={plotBottom - (bar.volume / maxVolume) * Math.max(0, volumeH - 4)}
                         width={bodyWidth}
-                        height={(bar.volume / maxVolume) * (volumeH - 4)}
+                        height={(bar.volume / maxVolume) * Math.max(0, volumeH - 4)}
                         fill={color}
                         opacity="0.35"
                       />

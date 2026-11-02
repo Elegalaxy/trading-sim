@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
-import { MARGIN_MIN_RATIO_DENOMINATOR, MARGIN_MIN_RATIO_NUMERATOR } from '../sim/constants.ts'
+import { DEFAULT_LEVERAGE } from '../sim/constants.ts'
 import { sessionPrice } from '../sim/session.ts'
-import { interpretOrder, tradingEquity } from '../sim/trading.ts'
+import { interpretOrder, leverageOf, tradingEquity } from '../sim/trading.ts'
 import { ORDER_SIDES, type GameState, type OrderSide } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatSignedUsd, formatUsd, parseUsdToCents } from './money.ts'
@@ -21,7 +21,10 @@ type OrderQuote =
       spreadCost: number
       equity: number
       gross: number
+      required: number
       netShares: number
+      /** Leverage of this asset's position after the order. */
+      leverage: number
     }
   | { accepted: false; reason: string }
 
@@ -55,7 +58,14 @@ function orderReasonText(reason: string): string {
 }
 
 /** Fill, fee, spread, and the book after the trade. The clone is not the live game. */
-function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: number, fixedFill?: number): OrderQuote {
+function quoteOrder(
+  game: GameState,
+  asset: string,
+  side: OrderSide,
+  quantity: number,
+  fixedFill?: number,
+  leverage?: number,
+): OrderQuote {
   if (game.section !== 'market') return { accepted: false, reason: 'marketClosed' }
   let clone: GameState
   try {
@@ -65,7 +75,7 @@ function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: n
     throw error
   }
   if (clone === game) throw new Error('order estimate must not use the live game')
-  const outcome = interpretOrder(clone, MARKET_DEFINITIONS, { type: 'order', asset, side, quantity }, fixedFill)
+  const outcome = interpretOrder(clone, MARKET_DEFINITIONS, { type: 'order', asset, side, quantity, leverage }, fixedFill)
   if (!outcome.accepted) {
     const rejection = outcome.events.find((event) => event.kind === 'commandRejected')
     const reason = rejection !== undefined && rejection.kind === 'commandRejected' ? rejection.reason : 'rejected'
@@ -89,13 +99,15 @@ function quoteOrder(game: GameState, asset: string, side: OrderSide, quantity: n
     spreadCost,
     equity: book.equity,
     gross: book.gross,
+    required: book.required,
     netShares: clone.positions[asset]?.signedShares ?? 0,
+    leverage: leverageOf(clone.positions[asset]),
   }
 }
 
 /** The fill price one share would get, used to turn dollars into shares. Falls back to the quote. */
-function probeFillPrice(game: GameState, asset: string, side: OrderSide): number {
-  const probe = quoteOrder(game, asset, side, 1)
+function probeFillPrice(game: GameState, asset: string, side: OrderSide, leverage: number): number {
+  const probe = quoteOrder(game, asset, side, 1, undefined, leverage)
   return probe.accepted ? probe.fillPrice : sessionPrice(game, asset)
 }
 
@@ -117,7 +129,7 @@ function sizeOrder(
   const parsed = parseUsdToCents(amountText, MODE_LABEL[mode])
   if (!parsed.ok) return { ok: false, reason: parsed.reason }
   if (game === null) return { ok: false, reason: 'notStarted' }
-  const fill = limitCents ?? probeFillPrice(game, asset, side)
+  const fill = limitCents ?? probeFillPrice(game, asset, side, leverage)
   const quantity = sharesForAmount(mode, parsed.cents, leverage, fill)
   return quantity < 1 ? { ok: false, reason: 'underOneShare' } : { ok: true, quantity }
 }
@@ -131,9 +143,8 @@ function parseOptionalUsd(text: string, label: string): OptionalUsd {
 }
 
 /** What the account has now, before this order. Floating P&L is already inside equity. */
-function AccountBox({ game }: { game: GameState }) {
+function AccountBox({ game, leverage }: { game: GameState; leverage: number }) {
   const account = accountSummary(game)
-  const leverage = account.equity > 0 ? account.gross / account.equity : null
   return (
     <dl className="estimate account-box">
       <div title="Cash in the trading account. Negative means you are borrowing on margin.">
@@ -150,30 +161,33 @@ function AccountBox({ game }: { game: GameState }) {
         <dt>Equity</dt>
         <dd>{formatUsd(account.equity, 'equity')}</dd>
       </div>
-      <div title="Total value of open positions. The limit is 5x equity.">
-        <dt>In positions</dt>
-        <dd>
-          {formatUsd(account.gross, 'in positions')}
-          {leverage === null ? '' : ` (${leverage.toFixed(2)}x)`}
-        </dd>
+      <div title="Margin the open positions tie up: each position's value divided by its leverage.">
+        <dt>Margin used</dt>
+        <dd>{formatUsd(account.required, 'margin used')}</dd>
       </div>
-      <div title="More position value you can open right now before hitting 5x.">
-        <dt>Available to buy</dt>
-        <dd>{formatUsd(account.buyingPower, 'available')}</dd>
+      <div title="Equity not tied up as margin. A new order of value V at leverage L uses V / L of it.">
+        <dt>Free margin</dt>
+        <dd>{formatUsd(account.freeMargin, 'free margin')}</dd>
+      </div>
+      <div title="The largest order value your free margin allows at the leverage selected below.">
+        <dt>Max order at {leverage}x</dt>
+        <dd>{formatUsd(Math.max(0, Math.floor(account.freeMargin * leverage)), 'max order')}</dd>
       </div>
     </dl>
   )
 }
 
-function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: true }>; leverage: number }) {
+function Estimate({
+  quote,
+  requiredBefore,
+}: {
+  quote: Extract<OrderQuote, { accepted: true }>
+  requiredBefore: number | null
+}) {
   const value = quote.quantity * quote.fillPrice
-  const cost = Math.ceil(value / leverage)
-  const buyingPower = Math.max(
-    0,
-    quote.equity * MARGIN_MIN_RATIO_DENOMINATOR - quote.gross * MARGIN_MIN_RATIO_NUMERATOR,
-  ) / MARGIN_MIN_RATIO_NUMERATOR
-  const accountLeverage = quote.equity > 0 ? quote.gross / quote.equity : null
-  const liq = liquidationPrice(quote.equity, quote.gross, quote.netShares, quote.price)
+  const change = requiredBefore === null ? null : quote.required - requiredBefore
+  const freeAfter = quote.equity - quote.required
+  const liq = liquidationPrice(quote.equity, quote.required, quote.netShares, quote.price, quote.leverage)
   return (
     <dl className="estimate">
       <div>
@@ -181,12 +195,16 @@ function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: 
         <dd>{quote.quantity}</dd>
       </div>
       <div>
+        <dt>Leverage</dt>
+        <dd>{quote.netShares === 0 ? '—' : `${quote.leverage}x`}</dd>
+      </div>
+      <div>
         <dt>Order value</dt>
         <dd>{formatUsd(value, 'value')}</dd>
       </div>
-      <div>
-        <dt>Cash needed at {leverage}x</dt>
-        <dd>{formatUsd(cost, 'cost')}</dd>
+      <div title="Margin this order ties up (or frees, if it reduces a position): its value divided by the leverage.">
+        <dt>Margin</dt>
+        <dd>{change === null ? '—' : formatSignedUsd(change, 'margin change')}</dd>
       </div>
       <div>
         <dt>Fill price</dt>
@@ -200,17 +218,13 @@ function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: 
         <dt>Spread cost</dt>
         <dd>{formatUsd(quote.spreadCost, 'spread')}</dd>
       </div>
-      <div>
-        <dt>Account leverage after</dt>
-        <dd>{accountLeverage === null ? '—' : `${accountLeverage.toFixed(2)}x of 5x`}</dd>
+      <div title="Equity left over after this order's margin. Below zero the order is rejected.">
+        <dt>Free margin after</dt>
+        <dd>{formatUsd(freeAfter, 'free margin after')}</dd>
       </div>
-      <div>
-        <dt>Equity / positions after</dt>
-        <dd>{quote.gross === 0 ? '—' : `${((quote.equity / quote.gross) * 100).toFixed(2)}%`}</dd>
-      </div>
-      <div>
-        <dt>Available after</dt>
-        <dd>{formatUsd(Math.floor(buyingPower), 'buying power')}</dd>
+      <div title="Equity as a share of margin used. 100% is fully used, 75% warns, 50% liquidates at the close.">
+        <dt>Margin level after</dt>
+        <dd>{quote.required === 0 ? '—' : `${((quote.equity / quote.required) * 100).toFixed(0)}%`}</dd>
       </div>
       <div>
         <dt>Est. liquidation price</dt>
@@ -223,7 +237,7 @@ function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: 
 export function OrderPanel({ game, asset }: { game: GameState | null; asset: string }) {
   const [side, setSide] = useState<OrderSide>('buy')
   const [mode, setMode] = useState<SizeMode>('quantity')
-  const [leverage, setLeverage] = useState<number>(1)
+  const [chosenLeverage, setChosenLeverage] = useState<number>(DEFAULT_LEVERAGE)
   const [orderType, setOrderType] = useState<OrderType>('market')
   const [limitText, setLimitText] = useState('')
   const [tpText, setTpText] = useState('')
@@ -245,6 +259,10 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
     setSlText('')
   }
 
+  // Adding to an open position keeps its leverage, so the buttons lock to it.
+  const held = game?.positions[asset]
+  const addsToHeld = held !== undefined && ((held.signedShares > 0 && side === 'buy') || (held.signedShares < 0 && side === 'sell'))
+  const leverage = addsToHeld ? leverageOf(held) : chosenLeverage
   const typed = amountText.trim().length > 0
   const limitParsed = orderType === 'limit' ? parseUsdToCents(limitText, 'Limit price') : null
   const limitCents = limitParsed !== null && limitParsed.ok ? limitParsed.cents : null
@@ -264,7 +282,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
   const quantity = sizing.ok ? sizing.quantity : 0
   const quote =
     game !== null && sizing.ok && (orderType === 'market' || limitCents !== null)
-      ? quoteOrder(game, asset, side, sizing.quantity, limitCents ?? undefined)
+      ? quoteOrder(game, asset, side, sizing.quantity, limitCents ?? undefined, leverage)
       : null
   const quoteKey =
     quote === null
@@ -327,11 +345,11 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
     const tpCents = tpParsed.ok ? tpParsed.cents : null
     const slCents = slParsed.ok ? slParsed.cents : null
     if (orderType === 'limit') {
-      const placed = dispatch({ type: 'limitOrder', asset, side, quantity: sizing.quantity, limitCents, tpCents, slCents })
+      const placed = dispatch({ type: 'limitOrder', asset, side, quantity: sizing.quantity, limitCents, tpCents, slCents, leverage })
       setResultMessage(placed.accepted ? 'Limit order placed.' : orderReasonText(placed.reason ?? 'rejected'))
       return
     }
-    const outcome = dispatch({ type: 'order', asset, side, quantity: sizing.quantity })
+    const outcome = dispatch({ type: 'order', asset, side, quantity: sizing.quantity, leverage })
     if (outcome.accepted) {
       if (tpCents !== null || slCents !== null) {
         const exits = dispatch({ type: 'setExits', asset, tpCents, slCents })
@@ -355,7 +373,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
         <p className="order-asset">
           Trading <strong>{asset}</strong>
         </p>
-        {game !== null ? <AccountBox game={game} /> : null}
+        {game !== null ? <AccountBox game={game} leverage={leverage} /> : null}
         <div className="side-toggle" role="group" aria-label="Side">
           {ORDER_SIDES.map((item) => (
             <button
@@ -407,13 +425,20 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
             </button>
           ))}
         </div>
-        <div className="size-modes" role="group" aria-label="Leverage for cost and value">
+        <div className="size-modes leverage-modes" role="group" aria-label="Leverage">
           {SIZING_LEVERAGE.map((item) => (
-            <button key={item} type="button" aria-pressed={leverage === item} onClick={() => setLeverage(item)}>
+            <button
+              key={item}
+              type="button"
+              aria-pressed={leverage === item}
+              disabled={addsToHeld}
+              onClick={() => setChosenLeverage(item)}
+            >
               {item}x
             </button>
           ))}
         </div>
+        {addsToHeld ? <p className="day-note">Adding to your open {asset} position, so it keeps {leverage}x.</p> : null}
         <label htmlFor="order-amount">
           {mode === 'quantity' ? 'Quantity (shares)' : mode === 'cost' ? `Cost in $ (x${leverage})` : 'Value in $'}{' '}
           <input
@@ -464,8 +489,8 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
         </button>
         {game !== null ? (
           <p className="day-note">
-            Orders use the trading account, not cash. Equity is balance plus floating P&amp;L. The real limit is 5x equity
-            across all positions; the leverage buttons only size this order.
+            Orders use the trading account, not cash. Equity is balance plus floating P&amp;L. Each position needs its value
+            divided by its leverage as margin, and the sum of all margins cannot exceed equity.
           </p>
         ) : null}
         {showPriceError ? (
@@ -479,7 +504,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
         ) : game === null ? (
           <p>Start a game to estimate an order.</p>
         ) : quote === null ? null : quote.accepted ? (
-          <Estimate quote={quote} leverage={leverage} />
+          <Estimate quote={quote} requiredBefore={game === null ? null : accountSummary(game).required} />
         ) : (
           <p className="trade-alert" role="alert">
             {orderReasonText(quote.reason)}

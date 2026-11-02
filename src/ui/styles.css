@@ -1423,3 +1423,116 @@ dl.estimate dd {
 .fold-body .panel > h2 + * {
   margin-top: 0;
 }
+
+/* Spacing scale: 8 / 12 / 16. Panels share it so padding and gaps match everywhere. */
+.exchange {
+  --gap-s: 8px;
+  --gap-m: 12px;
+  --gap-l: 16px;
+}
+
+.exchange .fold-bar {
+  padding: var(--gap-m) var(--gap-l);
+}
+
+.exchange .fold-body {
+  padding: var(--gap-m) var(--gap-l) var(--gap-l);
+}
+
+.fold-body .panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gap-m);
+}
+
+.fold-body .panel > * {
+  margin: 0;
+}
+
+.fold-body .panel > input,
+.fold-body .panel > select,
+.fold-body .panel > form,
+.fold-body .panel > label,
+.fold-body .panel > ul,
+.fold-body .panel > dl,
+.fold-body .panel > table,
+.fold-body .panel > div {
+  align-self: stretch;
+}
+
+.fold-body p {
+  margin: 0;
+}
+
+.fold-body p + p,
+.fold-body p + ul,
+.fold-body ul + p {
+  margin-top: var(--gap-s);
+}
+
+.exchange .desk-grid {
+  gap: var(--gap-l);
+  padding: var(--gap-l);
+}
+
+.exchange .main-scroll {
+  padding: var(--gap-l);
+}
+
+.exchange .main-tabs,
+.exchange .subpanel-tabs {
+  padding: 0 var(--gap-l);
+}
+
+.exchange .subpanel-body {
+  padding: var(--gap-m) var(--gap-l);
+}
+
+.exchange .side-toggle {
+  padding: var(--gap-m) var(--gap-l);
+}
+
+.exchange .side-col.closed .side-toggle {
+  padding: var(--gap-m) 0;
+}
+
+.exchange .market-head {
+  padding: var(--gap-s) var(--gap-l);
+}
+
+.exchange .market-row {
+  padding-left: var(--gap-l);
+  padding-right: var(--gap-l);
+}
+
+.exchange .symbol-bar {
+  padding: var(--gap-m) var(--gap-l);
+}
+
+.exchange .ticket-rail .fold + .fold {
+  margin-top: 0;
+}
+
+.fold-body ul {
+  padding-left: 0;
+  list-style-position: inside;
+}
+
+.fold-body ul:not([style]) li {
+  margin: 0;
+}
+
+.fold-body ul + ul,
+.fold-body ul + p {
+  margin-top: var(--gap-m);
+}
+
+.fold-body ul[class] li,
+.fold-body li:has(> button) {
+  list-style: none;
+}
+
+.fold-body li + li {
+  margin-top: var(--gap-s);
+}

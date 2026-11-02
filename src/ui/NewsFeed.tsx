@@ -65,6 +65,9 @@ export function NewsFeed({
   }
 
   const top = topHeadline(shownFeed.items)
+  // The feed is fixed for the day, so one read shows all of it. A read already paid for stays open.
+  const readToday = newsReads > 0
+  const listOpen = open || readToday
   const free = job?.perk === 'quietBreaks' && newsReads === 0
   const filter = blurFilter(fx.blurPx)
   const blurStyle = filter === undefined ? undefined : { filter }
@@ -108,10 +111,16 @@ export function NewsFeed({
           {top === undefined ? 'No headline' : itemText(top)}
         </p>
       </div>
-      <p>{free ? 'The first read today is free.' : `Reading costs ${NEWS_READ_ENERGY_COST} energy.`}</p>
+      <p>
+        {readToday
+          ? 'Read today. The feed does not change until tomorrow.'
+          : free
+            ? 'The first read today is free.'
+            : `Reading costs ${NEWS_READ_ENERGY_COST} energy.`}
+      </p>
       <p>{`Verifying costs ${VERIFY_ENERGY_COST} energy.`}</p>
-      <button type="button" onClick={onRead}>
-        Read news
+      <button type="button" onClick={onRead} disabled={readToday}>
+        {readToday ? 'Read' : 'Read news'}
       </button>
       <button type="button" onClick={onVerify} disabled={verified}>
         {verified ? 'Verified' : 'Verify'}
@@ -119,7 +128,7 @@ export function NewsFeed({
       {error !== null ? <p role="alert">{error}</p> : null}
       <div style={blurStyle}>
         {shownVerified ? <p>Showing today&apos;s true feed.</p> : null}
-        {open ? (
+        {listOpen ? (
           shownFeed.items.length === 0 ? (
             <p>The visible feed is empty.</p>
           ) : (

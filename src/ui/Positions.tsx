@@ -4,6 +4,7 @@ import { sessionPrice } from '../sim/session.ts'
 import type { GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatSignedUsd, formatUsd, parseUsdToCents } from './money.ts'
+import { unrealizedCents } from './account.ts'
 import { reasonText } from './reasons.ts'
 import { dispatch } from './store.ts'
 
@@ -24,32 +25,6 @@ function formatAverage(costCents: number, shares: number): string {
   const dollars = costCents / shares / 100
   if (!Number.isFinite(dollars)) throw new Error(`entry average is not finite for ${costCents} / ${shares}`)
   return `$${dollars.toFixed(4)}`
-}
-
-/**
- * Long P&L is (price - average) * shares.
- * Short P&L is (average - price) * abs(shares).
- * average is costCents / abs(signedShares).
- */
-function unrealizedCents(price: number, signedShares: number, costCents: number): number {
-  const shares = Math.abs(signedShares)
-  if (!Number.isSafeInteger(shares) || shares <= 0) {
-    throw new Error(`position shares must be a positive safe integer, received ${String(signedShares)}`)
-  }
-  if (!Number.isSafeInteger(price) || price <= 0) {
-    throw new Error(`position price must be a positive safe integer, received ${String(price)}`)
-  }
-  if (!Number.isSafeInteger(costCents) || costCents < 0) {
-    throw new Error(`position cost must be a safe integer >= 0, received ${String(costCents)}`)
-  }
-  const average = costCents / shares
-  const pnl = signedShares > 0 ? (price - average) * shares : (average - price) * shares
-  if (!Number.isFinite(pnl)) throw new Error(`unrealized P&L is not finite for ${String(signedShares)} shares`)
-  const cents = Math.round(pnl)
-  if (!Number.isSafeInteger(cents) || Math.abs(pnl - cents) > 1e-3) {
-    throw new Error(`unrealized P&L ${String(pnl)} is not a whole number of cents`)
-  }
-  return cents
 }
 
 function positionRows(game: GameState): PositionRow[] {
@@ -280,7 +255,7 @@ export function Positions({
                       </button>
                     )}
                   </td>
-                  <td>{row.side}</td>
+                  <td className={row.side === 'long' ? 'side-long' : 'side-short'}>{row.side}</td>
                   <td>{row.shares}</td>
                   <td>{formatAverage(row.costCents, row.shares)}</td>
                   <td>{formatUsd(row.price, 'price')}</td>

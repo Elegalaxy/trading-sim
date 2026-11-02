@@ -1536,3 +1536,94 @@ dl.estimate dd {
 .fold-body li + li {
   margin-top: var(--gap-s);
 }
+
+/* Green for long and gains, red for short and losses, as on the chart. */
+.exchange .positions-table td.side-long,
+.exchange .positions-table td.pnl-gain,
+.exchange .pnl-gain {
+  color: #0ecb81;
+}
+
+.exchange .positions-table td.side-short,
+.exchange .positions-table td.pnl-loss,
+.exchange .pnl-loss {
+  color: #f6465d;
+}
+
+.exchange .positions-table td.side-long,
+.exchange .positions-table td.side-short {
+  font-weight: 650;
+  text-transform: capitalize;
+}
+
+.news-actions {
+  display: flex;
+  gap: var(--gap-s, 8px);
+  align-self: flex-start;
+}
+
+.feed-tag {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #2b3139;
+  color: #848e9c;
+}
+
+.feed-tag.feed-headline {
+  background: #f7a600;
+  color: #1e2329;
+}
+
+.fold-body li:has(.feed-tag) {
+  list-style: none;
+}
+
+.pnl-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--gap-m, 12px) var(--gap-l, 16px);
+  margin: 0 0 var(--gap-m, 12px);
+}
+
+.pnl-stats div {
+  display: grid;
+  gap: 2px;
+}
+
+.pnl-stats dt {
+  color: #848e9c;
+  font-size: 12px;
+}
+
+.pnl-stats dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.pnl-tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-l, 16px);
+  align-items: flex-start;
+}
+
+.equity-chart {
+  display: block;
+  width: 100%;
+  height: 180px;
+  background: #0b0e11;
+  border: 1px solid #2b3139;
+  border-radius: 4px;
+}
+
+.equity-legend {
+  color: #848e9c;
+  font-size: 0.85rem;
+  margin: var(--gap-s, 8px) 0;
+}

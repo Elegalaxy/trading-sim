@@ -3,7 +3,7 @@ import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
 import { buildCandles, candleRangeLabel, formatVolume, type Candle, type DaySource, type TimeframeId } from './candles.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
-import { useTradingStore } from './store.ts'
+import { useTradingStore, type TradeMark } from './store.ts'
 import { Tell } from './Tell.tsx'
 
 const VISIBLE: Record<TimeframeId, number> = {
@@ -33,12 +33,13 @@ export type ChartPoint = DaySource
 
 /** A resting order or an exit, drawn as a dashed line across the chart. */
 export type ChartLevel = {
-  kind: 'limit' | 'takeProfit' | 'stopLoss'
+  kind: 'entry' | 'limit' | 'takeProfit' | 'stopLoss'
   label: string
   cents: number
 }
 
 const LEVEL_COLOR: Record<ChartLevel['kind'], string> = {
+  entry: '#4c9aff',
   limit: '#f7a600',
   takeProfit: UP,
   stopLoss: DOWN,
@@ -77,6 +78,23 @@ function nearestCent(value: number): number {
   return Math.round(value)
 }
 
+function minutesOf(time: string): number {
+  const [hours, minutes] = time.split(':')
+  return Number(hours) * 60 + Number(minutes)
+}
+
+/** The candle a fill belongs to: its day, and for 15m and 1H candles its time window. */
+function markIndex(bars: readonly Candle[], mark: TradeMark, timeframe: TimeframeId): number {
+  const width = timeframe === '15m' ? 15 : 60
+  return bars.findIndex((bar) => {
+    if (mark.day < bar.startDay || mark.day > bar.endDay) return false
+    if (bar.time === null) return true
+    const start = minutesOf(bar.time)
+    const at = minutesOf(mark.time)
+    return at >= start && at < start + width
+  })
+}
+
 function priceY(price: number, low: number, span: number, top: number, height: number): number {
   return top + (1 - (price - low) / span) * height
 }
@@ -85,10 +103,12 @@ export function PriceChart({
   asset,
   points,
   levels = [],
+  marks = [],
 }: {
   asset: string
   points: readonly ChartPoint[]
   levels?: readonly ChartLevel[]
+  marks?: readonly TradeMark[]
 }) {
   const energy = useTradingStore().run?.game.stats.energy ?? null
   const fx = useCosmeticFx(energy)
@@ -269,6 +289,28 @@ export function PriceChart({
                     <text x={plotRight + 4} y={y + 4} fill="#0b0e11" fontSize="10" fontWeight="650">
                       {arrow}
                       {level.label} {formatUsd(level.cents, 'level')}
+                    </text>
+                  </g>
+                )
+              })}
+              {marks.map((mark, n) => {
+                const index = markIndex(bars, mark, timeframe)
+                const bar = bars[index]
+                if (bar === undefined) return null
+                const cx = plotLeft + (index + 0.5) * slot
+                const buy = mark.side === 'buy'
+                const color = buy ? UP : DOWN
+                const tipY = buy ? priceY(bar.low, yLow, ySpan, plotTop, priceH) + 5 : priceY(bar.high, yLow, ySpan, plotTop, priceH) - 5
+                const dir = buy ? 1 : -1
+                return (
+                  <g key={`${mark.day}-${mark.time}-${mark.side}-${n}`}>
+                    <polygon
+                      points={`${cx},${tipY} ${cx - 6},${tipY + dir * 11} ${cx + 6},${tipY + dir * 11}`}
+                      fill={color}
+                      stroke="#0b0e11"
+                    />
+                    <text x={cx} y={tipY + dir * 23} fill={color} fontSize="10" fontWeight="650" textAnchor="middle">
+                      {buy ? 'Buy' : 'Sell'} {mark.quantity} @ {formatUsd(mark.cents, 'mark')}
                     </text>
                   </g>
                 )

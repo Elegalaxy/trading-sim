@@ -8,7 +8,10 @@ import { Consumables } from './Consumables.tsx'
 import { BillBanner } from './BillBanner.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
 import { DaySummaryPanel } from './DaySummary.tsx'
+import { EquityChart } from './EquityChart.tsx'
 import { Fold } from './Fold.tsx'
+import { History } from './History.tsx'
+import { PnlSummary } from './PnlSummary.tsx'
 import { DayTimeline } from './DayTimeline.tsx'
 import { FiMeter } from './FiMeter.tsx'
 import { MarginMeter } from './MarginMeter.tsx'
@@ -28,7 +31,7 @@ import { formatUsd } from './money.ts'
 import { useStoredFlag } from './storedFlag.ts'
 import { useTradingStore } from './store.ts'
 
-type Desk = 'positions' | 'book' | 'log'
+type Desk = 'positions' | 'history' | 'pnl' | 'equity' | 'book' | 'log'
 type View = 'chart' | 'life'
 
 export function Dashboard() {
@@ -90,6 +93,11 @@ export function Dashboard() {
       if (order.asset === asset) {
         levels.push({ kind: 'limit', label: order.side === 'buy' ? 'Buy' : 'Sell', cents: order.limitCents })
       }
+    }
+    const held = run.game.positions[asset]
+    if (held !== undefined && held.signedShares !== 0) {
+      const entry = Math.round(held.costCents / Math.abs(held.signedShares))
+      levels.push({ kind: 'entry', label: 'Entry', cents: entry })
     }
     const exit = run.game.resting.exits[asset]
     if (exit?.tpCents != null) levels.push({ kind: 'takeProfit', label: 'TP', cents: exit.tpCents })
@@ -208,7 +216,7 @@ export function Dashboard() {
               </button>
             </nav>
             <div className={view === 'chart' ? 'main-pane' : 'main-pane hidden'}>
-              <PriceChart asset={asset} points={points} levels={levels} />
+              <PriceChart asset={asset} points={points} levels={levels} marks={run?.marks.filter((mark) => mark.asset === asset)} />
             </div>
             {view === 'life' ? (
               <div className="main-pane main-scroll desk desk-grid">
@@ -231,6 +239,15 @@ export function Dashboard() {
             <nav className="subpanel-tabs" aria-label="Subpanel sections">
               <button type="button" aria-pressed={desk === 'positions'} onClick={() => setDesk('positions')}>
                 Positions
+              </button>
+              <button type="button" aria-pressed={desk === 'history'} onClick={() => setDesk('history')}>
+                History
+              </button>
+              <button type="button" aria-pressed={desk === 'pnl'} onClick={() => setDesk('pnl')}>
+                P&amp;L
+              </button>
+              <button type="button" aria-pressed={desk === 'equity'} onClick={() => setDesk('equity')}>
+                Equity
               </button>
               <button type="button" aria-pressed={desk === 'book'} onClick={() => setDesk('book')}>
                 Day book
@@ -261,6 +278,9 @@ export function Dashboard() {
             </nav>
             <div className="subpanel-body">
               {desk === 'positions' ? <Positions game={run?.game ?? null} onSelect={onAsset} selected={asset} /> : null}
+              {desk === 'history' ? <History history={run?.history ?? []} /> : null}
+              {desk === 'pnl' ? <PnlSummary game={run?.game ?? null} history={run?.history ?? []} /> : null}
+              {desk === 'equity' ? <EquityChart points={run?.equity ?? []} /> : null}
               {desk === 'book' ? (
                 <DaySummaryPanel
                   summary={run?.summary ?? null}

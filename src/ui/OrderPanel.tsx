@@ -5,8 +5,9 @@ import { sessionPrice } from '../sim/session.ts'
 import { interpretOrder, tradingEquity } from '../sim/trading.ts'
 import { ORDER_SIDES, type GameState, type OrderSide } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
-import { formatUsd, parseUsdToCents } from './money.ts'
+import { formatSignedUsd, formatUsd, parseUsdToCents } from './money.ts'
 import { liquidationPrice, sharesForAmount, SIZE_MODES, SIZING_LEVERAGE, type SizeMode } from './sizing.ts'
+import { accountSummary } from './account.ts'
 import { reasonText } from './reasons.ts'
 import { dispatch, parsePositiveInteger } from './store.ts'
 
@@ -129,6 +130,41 @@ function parseOptionalUsd(text: string, label: string): OptionalUsd {
   return parsed.ok ? { ok: true, cents: parsed.cents } : { ok: false, reason: parsed.reason }
 }
 
+/** What the account has now, before this order. Floating P&L is already inside equity. */
+function AccountBox({ game }: { game: GameState }) {
+  const account = accountSummary(game)
+  const leverage = account.equity > 0 ? account.gross / account.equity : null
+  return (
+    <dl className="estimate account-box">
+      <div title="Cash in the trading account. Negative means you are borrowing on margin.">
+        <dt>Balance</dt>
+        <dd>{formatUsd(account.balance, 'balance')}</dd>
+      </div>
+      <div title="Profit or loss on open positions at the current price. Not locked in until you close.">
+        <dt>Floating P&amp;L</dt>
+        <dd className={account.floating > 0 ? 'pnl-gain' : account.floating < 0 ? 'pnl-loss' : undefined}>
+          {formatSignedUsd(account.floating, 'floating')}
+        </dd>
+      </div>
+      <div title="What the account is worth now: balance plus open positions at the current price.">
+        <dt>Equity</dt>
+        <dd>{formatUsd(account.equity, 'equity')}</dd>
+      </div>
+      <div title="Total value of open positions. The limit is 5x equity.">
+        <dt>In positions</dt>
+        <dd>
+          {formatUsd(account.gross, 'in positions')}
+          {leverage === null ? '' : ` (${leverage.toFixed(2)}x)`}
+        </dd>
+      </div>
+      <div title="More position value you can open right now before hitting 5x.">
+        <dt>Available to buy</dt>
+        <dd>{formatUsd(account.buyingPower, 'available')}</dd>
+      </div>
+    </dl>
+  )
+}
+
 function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: true }>; leverage: number }) {
   const value = quote.quantity * quote.fillPrice
   const cost = Math.ceil(value / leverage)
@@ -145,11 +181,11 @@ function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: 
         <dd>{quote.quantity}</dd>
       </div>
       <div>
-        <dt>Value (after leverage)</dt>
+        <dt>Order value</dt>
         <dd>{formatUsd(value, 'value')}</dd>
       </div>
       <div>
-        <dt>Cost at {leverage}x (before leverage)</dt>
+        <dt>Cash needed at {leverage}x</dt>
         <dd>{formatUsd(cost, 'cost')}</dd>
       </div>
       <div>
@@ -169,11 +205,11 @@ function Estimate({ quote, leverage }: { quote: Extract<OrderQuote, { accepted: 
         <dd>{accountLeverage === null ? '—' : `${accountLeverage.toFixed(2)}x of 5x`}</dd>
       </div>
       <div>
-        <dt>Margin ratio after</dt>
+        <dt>Equity / positions after</dt>
         <dd>{quote.gross === 0 ? '—' : `${((quote.equity / quote.gross) * 100).toFixed(2)}%`}</dd>
       </div>
       <div>
-        <dt>Buying power left</dt>
+        <dt>Available after</dt>
         <dd>{formatUsd(Math.floor(buyingPower), 'buying power')}</dd>
       </div>
       <div>
@@ -319,6 +355,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
         <p className="order-asset">
           Trading <strong>{asset}</strong>
         </p>
+        {game !== null ? <AccountBox game={game} /> : null}
         <div className="side-toggle" role="group" aria-label="Side">
           {ORDER_SIDES.map((item) => (
             <button
@@ -427,8 +464,8 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
         </button>
         {game !== null ? (
           <p className="day-note">
-            Orders use the trading account ({formatUsd(game.accounts.tradingCents, 'trading')}), not cash. Leverage
-            here only sizes the order. The real limit is 5x across the account.
+            Orders use the trading account, not cash. Equity is balance plus floating P&amp;L. The real limit is 5x equity
+            across all positions; the leverage buttons only size this order.
           </p>
         ) : null}
         {showPriceError ? (

@@ -7,9 +7,12 @@ import { DAMAGED_SAVE_MESSAGE, inspectSave, isRunMode, isSeed, writeSave } from 
 import type { RunMode, SaveFile } from '../persist/save.ts'
 import { recordScore } from '../persist/scores.ts'
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
+import { SESSION_STEPS } from '../sim/constants.ts'
 import { stateHash } from '../sim/hash.ts'
+import { tradingEquity } from '../sim/trading.ts'
+import { clockTime } from '../sim/session.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
-import type { ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
+import type { AccountLogEvent, CommandLogEvent, ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 
 const SEED_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-'
@@ -21,6 +24,40 @@ export type CloseRow = {
   prices: Readonly<Record<string, number>>
   /** The session that led into this close, one list of 15-minute bars per asset. Absent on a loaded save. */
   bars?: Readonly<Record<string, readonly SessionBar[]>>
+}
+
+/** A fill the chart marks while its position is open. Kept in this browser session only. */
+export type TradeMark = {
+  asset: string
+  day: number
+  /** `HH:MM` of the 15-minute bar the fill happened in. */
+  time: string
+  side: 'buy' | 'sell'
+  cents: number
+  quantity: number
+}
+
+/** One fill for the History tab. Kept in this browser session only. */
+export type TradeRecord = {
+  n: number
+  asset: string
+  day: number
+  /** `HH:MM` of the bar. */
+  time: string
+  side: 'buy' | 'sell'
+  quantity: number
+  fillCents: number
+  feeCents: number
+  /** Closed-position P&L before the fee, or null when the fill only opened or added. */
+  realizedCents: number | null
+  via: 'market' | 'limit' | 'takeProfit' | 'stopLoss'
+}
+
+/** Trading account equity at a moment, for the equity chart. */
+export type EquityPoint = {
+  day: number
+  clock: number
+  equityCents: number
 }
 
 export type TradingRun = {
@@ -35,6 +72,9 @@ export type TradingRun = {
   liquidations: readonly LiquidationEvent[]
   /** Forced sales from missed loan interest on the summary day. */
   forcedSales: readonly ForcedSaleEvent[]
+  marks: readonly TradeMark[]
+  history: readonly TradeRecord[]
+  equity: readonly EquityPoint[]
 }
 
 export type DispatchResult = {
@@ -224,7 +264,11 @@ export function startGame(seed: string, jobId = 'jobless', mode: string = 'seede
     summary: null,
     liquidations: [],
     forcedSales: [],
+    marks: [],
+    history: [],
+    equity: [],
   }
+  recordEquity()
   debugLog('[ui]', `newRun mode=${mode} seed=${chosenSeed} job=${jobId}`)
   persistIfNeeded(true)
   debugLog(
@@ -297,7 +341,11 @@ export function continueGame(save: SaveFile): string | null {
     summary,
     liquidations,
     forcedSales,
+    marks: [],
+    history: [],
+    equity: [],
   }
+  recordEquity()
   debugLog('[save]', `loaded day=${game.market.day}`)
   debugLog('[ui]', `continue mode=${checked.save.mode} seed=${checked.save.seed} day=${game.market.day}`)
   publish()
@@ -570,6 +618,118 @@ function logBill(game: GameState): void {
   }
 }
 
+/** Add the current trading equity to the chart series. One point per day and clock step. */
+function recordEquity(): void {
+  if (run === null) return
+  const { equity } = tradingEquity(run.game, definitions)
+  const day = run.game.market.day
+  const clock = run.game.session.clock
+  const last = run.equity.at(-1)
+  const kept = last !== undefined && last.day === day && last.clock === clock ? run.equity.slice(0, -1) : run.equity
+  run.equity = [...kept, { day, clock, equityCents: equity }].slice(-4000)
+}
+
+type Held = Readonly<Record<string, { signedShares: number; costCents: number }>>
+
+/** Turn the fill events of one command (or of End day) into history rows. */
+function collectFills(events: ReadonlyArray<CommandLogEvent | AccountLogEvent>, held: Held, barTime: string, startN: number): TradeRecord[] {
+  const out: TradeRecord[] = []
+  const used = new Set<number>()
+  for (let i = 0; i < events.length; i += 1) {
+    const event = events[i]
+    if (event?.kind === 'orderFill') {
+      let realized: number | null = null
+      let via: TradeRecord['via'] = 'market'
+      let time = barTime
+      for (let j = i + 1; j < Math.min(events.length, i + 4); j += 1) {
+        const next = events[j]
+        if (next?.kind === 'realized' && next.asset === event.asset && realized === null) realized = next.amount
+        if (next?.kind === 'resting' && next.action === 'filled' && next.asset === event.asset && !used.has(j)) {
+          used.add(j)
+          via = 'limit'
+          if (next.time !== null) time = next.time
+          break
+        }
+      }
+      out.push({
+        n: startN + out.length,
+        asset: event.asset,
+        day: event.day,
+        time,
+        side: event.side,
+        quantity: event.quantity,
+        fillCents: event.fillPrice,
+        feeCents: event.fee,
+        realizedCents: realized,
+        via,
+      })
+    }
+  }
+  for (let i = 0; i < events.length; i += 1) {
+    const event = events[i]
+    if (event?.kind !== 'resting' || event.action !== 'filled' || used.has(i)) continue
+    if (event.detail !== 'takeProfit' && event.detail !== 'stopLoss') continue
+    if (event.side === null) continue
+    const before = held[event.asset]
+    let realized: number | null = null
+    if (before !== undefined && before.signedShares !== 0) {
+      const proceeds = event.priceCents * event.quantity
+      realized = before.signedShares > 0 ? proceeds - before.costCents : before.costCents - proceeds
+    }
+    out.push({
+      n: startN + out.length,
+      asset: event.asset,
+      day: event.day,
+      time: event.time ?? barTime,
+      side: event.side,
+      quantity: event.quantity,
+      fillCents: event.priceCents,
+      feeCents: event.fee,
+      realizedCents: realized,
+      via: event.detail,
+    })
+  }
+  return out
+}
+
+function heldNow(game: GameState): Held {
+  const out: Record<string, { signedShares: number; costCents: number }> = {}
+  for (const [asset, position] of Object.entries(game.positions)) {
+    out[asset] = { signedShares: position.signedShares, costCents: position.costCents }
+  }
+  return out
+}
+
+/** Marks only matter while their position is open. */
+function keepOpenMarks(game: GameState, marks: readonly TradeMark[]): TradeMark[] {
+  return marks.filter((mark) => game.positions[mark.asset] !== undefined)
+}
+
+/** Fills added by one command, in order. A resting fill's own event carries the bar time. */
+function newMarks(game: GameState, added: readonly CommandLogEvent[], before: Readonly<Record<string, number>>, marks: readonly TradeMark[]): TradeMark[] {
+  let next = marks.slice()
+  const signs: Record<string, number> = { ...before }
+  // The newest bar the player can see is the one before the clock.
+  const barTime = clockTime(Math.min(Math.max(game.session.clock - 1, 0), SESSION_STEPS - 1))
+  for (let i = 0; i < added.length; i += 1) {
+    const event = added[i]
+    if (event?.kind !== 'orderFill') continue
+    const after = added[i + 1]
+    const time = after?.kind === 'resting' && after.action === 'filled' && after.time !== null ? after.time : barTime
+    const prior = signs[event.asset] ?? 0
+    const now = game.positions[event.asset]?.signedShares ?? 0
+    // A flip or a fresh position starts a new set of marks for the asset.
+    if (prior === 0 || Math.sign(prior) !== Math.sign(now)) next = next.filter((mark) => mark.asset !== event.asset)
+    signs[event.asset] = now
+    if (now === 0) {
+      next = next.filter((mark) => mark.asset !== event.asset)
+      continue
+    }
+    next.push({ asset: event.asset, day: event.day, time, side: event.side, cents: event.fillPrice, quantity: event.quantity })
+  }
+  return next
+}
+
 /** One player command. Acceptance comes from the simulation log, not from a second set of rules. */
 export function dispatch(cmd: unknown): DispatchResult {
   const label = commandLabel(cmd)
@@ -601,6 +761,9 @@ export function dispatch(cmd: unknown): DispatchResult {
   }
   const from = run.game.section
   const before = run.game.pending.length
+  const heldBefore = heldNow(run.game)
+  const signsBefore: Record<string, number> = {}
+  for (const [asset, position] of Object.entries(run.game.positions)) signsBefore[asset] = position.signedShares
   try {
     applyCommand(run.game, definitions, cmd)
   } catch (error) {
@@ -627,6 +790,11 @@ export function dispatch(cmd: unknown): DispatchResult {
     return { accepted: false, reason: rejection.reason }
   }
   debugLog('[store]', `dispatch ${label} -> accepted`)
+  run.marks = newMarks(run.game, added, signsBefore, run.marks)
+  const barTime = clockTime(Math.min(Math.max(run.game.session.clock - 1, 0), SESSION_STEPS - 1))
+  const fills = collectFills(added, heldBefore, barTime, run.history.length + 1)
+  if (fills.length > 0) run.history = [...run.history, ...fills]
+  recordEquity()
   logOrderOrTransfer(cmd, true, '')
   logSkip(cmd, from, to, true, '')
   logJobCommand(cmd, true, '', run.game.job.pending?.effectiveDay ?? null)
@@ -657,11 +825,17 @@ export function endDay(): void {
   }
   const dayBefore = run.game.market.day
   const sessionBars = run.game.session.bars
+  const logStart = run.game.pending.length
+  const heldBefore = heldNow(run.game)
   try {
     simEndDay(run.game, definitions)
   } catch (error) {
     console.error('[store] endDay failed', error)
     throw error
+  }
+  if (run.game.log.length >= logStart) {
+    const fills = collectFills(run.game.log.slice(logStart), heldBefore, '20:45', run.history.length + 1)
+    if (fills.length > 0) run.history = [...run.history, ...fills]
   }
   logBill(run.game)
   logRunEnd(run.game)
@@ -682,7 +856,11 @@ export function endDay(): void {
       summary: run.summary,
       liquidations: readLiquidations(run.game),
       forcedSales: readForcedSales(run.game),
+      marks: keepOpenMarks(run.game, run.marks),
+      history: run.history,
+      equity: run.equity,
     }
+    recordEquity()
     debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
     persistIfNeeded(true)
     publish()
@@ -704,7 +882,11 @@ export function endDay(): void {
     summary,
     liquidations,
     forcedSales,
+    marks: keepOpenMarks(run.game, run.marks),
+    history: run.history,
+    equity: run.equity,
   }
+  recordEquity()
   debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
   debugLog(
     '[store]',

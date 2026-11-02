@@ -7,6 +7,18 @@ import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
 import { dispatch, useTradingStore } from './store.ts'
 import { Tell } from './Tell.tsx'
 
+/** A headline is a fact about today. A report or post is a rumour with a source and a reliability tier. */
+function tagText(item: ShownItem): string {
+  if (item.kind === 'headline') return 'Headline'
+  return item.kind === 'social' ? `Post · ${item.tier}` : `Rumour · ${item.tier}`
+}
+
+function bodyText(item: ShownItem): string {
+  if (item.kind === 'headline') return item.text
+  if (item.kind === 'social') return `${item.text} (${item.sourceId})`
+  return `${item.claim} (${item.sourceId})`
+}
+
 function itemText(item: ShownItem): string {
   if (item.kind === 'headline') return item.text
   if (item.kind === 'social') return `${item.text} (${item.sourceId}, ${item.tier})`
@@ -112,19 +124,17 @@ export function NewsFeed({
         </p>
       </div>
       <p>
-        {readToday
-          ? 'Read today. The feed does not change until tomorrow.'
-          : free
-            ? 'The first read today is free.'
-            : `Reading costs ${NEWS_READ_ENERGY_COST} energy.`}
+        {free ? 'The first read is free.' : `Reading costs ${NEWS_READ_ENERGY_COST} energy.`}{' '}
+        {`Verifying costs ${VERIFY_ENERGY_COST}.`}
       </p>
-      <p>{`Verifying costs ${VERIFY_ENERGY_COST} energy.`}</p>
-      <button type="button" onClick={onRead} disabled={readToday}>
-        {readToday ? 'Read' : 'Read news'}
-      </button>
-      <button type="button" onClick={onVerify} disabled={verified}>
-        {verified ? 'Verified' : 'Verify'}
-      </button>
+      <div className="news-actions">
+        <button type="button" onClick={onRead} disabled={readToday}>
+          {readToday ? 'Read' : 'Read news'}
+        </button>
+        <button type="button" onClick={onVerify} disabled={verified}>
+          {verified ? 'Verified' : 'Verify'}
+        </button>
+      </div>
       {error !== null ? <p role="alert">{error}</p> : null}
       <div style={blurStyle}>
         {shownVerified ? <p>Showing today&apos;s true feed.</p> : null}
@@ -136,7 +146,7 @@ export function NewsFeed({
               {shownFeed.items.map((item, index) => (
                 <li key={`${item.kind}-${index}`} className={item.distorted ? 'distorted' : undefined}>
                   {item.distorted ? <Tell /> : null}
-                  {itemText(item)}
+                  <span className={`feed-tag feed-${item.kind}`}>{tagText(item)}</span> {bodyText(item)}
                 </li>
               ))}
             </ul>

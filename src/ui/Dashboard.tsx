@@ -8,6 +8,7 @@ import { Consumables } from './Consumables.tsx'
 import { BillBanner } from './BillBanner.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
 import { DaySummaryPanel } from './DaySummary.tsx'
+import { Fold } from './Fold.tsx'
 import { DayTimeline } from './DayTimeline.tsx'
 import { FiMeter } from './FiMeter.tsx'
 import { MarginMeter } from './MarginMeter.tsx'
@@ -22,6 +23,7 @@ import { JobPanel } from './JobPanel.tsx'
 import { LifestylePanel } from './LifestylePanel.tsx'
 import { LoanPanel } from './LoanPanel.tsx'
 import { sessionPrice } from '../sim/session.ts'
+import { buildHistory } from './history.ts'
 import { formatUsd } from './money.ts'
 import { useTradingStore } from './store.ts'
 
@@ -33,6 +35,7 @@ export function Dashboard() {
   const assets = MARKET_DEFINITIONS.assets
   const [asset, setAsset] = useState(assets[0]?.id ?? 'NOVA')
   const [desk, setDesk] = useState<Desk>('positions')
+  const [deskSize, setDeskSize] = useState<'normal' | 'tall' | 'folded'>('normal')
 
   function onAsset(value: string): void {
     if (!assets.some((item) => item.id === value)) {
@@ -49,6 +52,9 @@ export function Dashboard() {
   let dayLow: number | undefined
   let dayOpen: number | undefined
   if (run !== null) {
+    const def = assets.find((item) => item.id === asset)
+    if (def === undefined) throw new Error(`unknown asset ${asset}`)
+    points.push(...buildHistory(run.seed, asset, def.startPriceCents, Math.max(def.dailyVolatility, 0.006)))
     const rows = run.closes
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i]
@@ -149,7 +155,7 @@ export function Dashboard() {
 
       <div className="exchange-body">
         <MarketList asset={asset} game={run?.game ?? null} onSelect={onAsset} />
-        <div className="chart-column">
+        <div className={`chart-column desk-${deskSize}`}>
           <PriceChart asset={asset} points={points} levels={levels} />
           <section className="subpanel" aria-label="Subpanel">
             <nav className="subpanel-tabs" aria-label="Subpanel sections">
@@ -170,17 +176,47 @@ export function Dashboard() {
                   Log
                 </button>
               ) : null}
+              <span className="subpanel-size">
+                <button
+                  type="button"
+                  aria-label={deskSize === 'tall' ? 'Shrink the panel' : 'Enlarge the panel'}
+                  title={deskSize === 'tall' ? 'Shrink' : 'Enlarge'}
+                  onClick={() => setDeskSize(deskSize === 'tall' ? 'normal' : 'tall')}
+                >
+                  {deskSize === 'tall' ? '⤓' : '⤒'}
+                </button>
+                <button
+                  type="button"
+                  aria-label={deskSize === 'folded' ? 'Show the panel' : 'Hide the panel'}
+                  title={deskSize === 'folded' ? 'Show' : 'Hide'}
+                  onClick={() => setDeskSize(deskSize === 'folded' ? 'normal' : 'folded')}
+                >
+                  {deskSize === 'folded' ? '▴' : '▾'}
+                </button>
+              </span>
             </nav>
             <div className="subpanel-body">
               {desk === 'positions' ? <Positions game={run?.game ?? null} onSelect={onAsset} selected={asset} /> : null}
               {desk === 'life' ? (
-                <div className="desk">
-                  <JobPanel game={run?.game ?? null} />
-                  <LifestylePanel game={run?.game ?? null} />
-                  <LoanPanel game={run?.game ?? null} />
-                  <Consumables game={run?.game ?? null} />
-                  <FiMeter game={run?.game ?? null} />
-                  <Accounts game={run?.game ?? null} />
+                <div className="desk desk-grid">
+                  <Fold id="job" title="Job">
+                    <JobPanel game={run?.game ?? null} />
+                  </Fold>
+                  <Fold id="lifestyle" title="Lifestyle">
+                    <LifestylePanel game={run?.game ?? null} />
+                  </Fold>
+                  <Fold id="loan" title="Bank loan">
+                    <LoanPanel game={run?.game ?? null} />
+                  </Fold>
+                  <Fold id="food" title="Food and drink">
+                    <Consumables game={run?.game ?? null} />
+                  </Fold>
+                  <Fold id="fi" title="Financial independence">
+                    <FiMeter game={run?.game ?? null} />
+                  </Fold>
+                  <Fold id="accounts" title="Accounts">
+                    <Accounts game={run?.game ?? null} />
+                  </Fold>
                 </div>
               ) : null}
               {desk === 'news' ? (
@@ -207,8 +243,12 @@ export function Dashboard() {
           </section>
         </div>
         <aside className="ticket-rail">
-          <OrderPanel game={run?.game ?? null} asset={asset} />
-          <MarginMeter game={run?.game ?? null} />
+          <Fold id="order" title="Order">
+            <OrderPanel game={run?.game ?? null} asset={asset} />
+          </Fold>
+          <Fold id="margin" title="Margin">
+            <MarginMeter game={run?.game ?? null} />
+          </Fold>
         </aside>
       </div>
     </main>

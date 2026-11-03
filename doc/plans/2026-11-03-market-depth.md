@@ -269,12 +269,13 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M9: Liquidity grabs in the session
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M2
 - Files to create or change: `src/sim/session.ts` (third session stream from the unused `info` member of `#session`), `src/sim/types.ts`, `src/persist/save.ts`, `src/sim/session.test.ts`
 - What changes: on some days a bar's wick reaches a public level (round price, prior day's high or low) and returns. Levels come from public prices only, never from `state.resting`.
 - Must not change: closes, `intraday` and `volume` draws, the 12% band, any fixture.
 - Verification: test that two games with different resting orders get identical bars.
+- Progress: done 2026-11-04 on branch `market-depth-m7`. `SessionState.streams.levels` (from the `info` member of `#session`), `applyGrab` in `sim/session.ts` (three floats per stock per day: chance 25%, bar, level). Levels: the next round price above the bar's high or below its low, and the high and low of the participants' recent closes, within 1.5% of the open; the wick overshoots by 0.1%. Only a bar's high or low widens, so no close, path or other stream moves. Persist rejects a session without `levels`. Tests: some bars grab a round price over 60 days, and two games with different resting orders get identical bars for 10 days. No market fixture changed.
 
 ### Step M10: Social feed "Y"
 

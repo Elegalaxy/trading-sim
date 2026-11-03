@@ -280,6 +280,15 @@ export const SESSION_NOISE_SCALE = 1
 export const SESSION_WICK_SCALE = 0.6
 
 /**
+ * Liquidity grabs, provisional. On a share of stock-days one bar's wick runs through a public
+ * level (a round price, or the high or low of the last few closes) and comes back. The level
+ * must be within this share (ppm) of the open of the day. The wick overshoots it by this share.
+ */
+export const SESSION_GRAB_CHANCE = 0.25
+export const SESSION_GRAB_REACH_PPM = 15_000
+export const SESSION_GRAB_OVERSHOOT_PPM = 1_000
+
+/**
  * Daily base notional in cents, divided by the open price, gives a base share count.
  * A stock's own `liquidityNotionalCents` replaces it. Volume is the liquidity that
  * slippage is measured against. Provisional.

@@ -1341,7 +1341,7 @@ export type SessionState = {
    * Own streams, kept off the market so a session can never move a market hash.
    * They advance once per day, when the session is built.
    */
-  streams: { intraday: RngStream; volume: RngStream }
+  streams: { intraday: RngStream; volume: RngStream; levels: RngStream }
 }
 
 /**

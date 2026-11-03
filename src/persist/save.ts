@@ -299,6 +299,7 @@ function checkState(value: unknown): string | null {
   const sessionClock = finiteNumber(value.session.clock, 'state.session.clock')
   if (sessionClock !== null) return sessionClock
   if (!isRecord(value.session.bars) || !isRecord(value.session.streams)) return 'shape:state.session.bars'
+  if (!sameKeys(value.session.streams, ['intraday', 'volume', 'levels'])) return 'shape:state.session.streams'
   if (!isRecord(value.resting) || !sameKeys(value.resting, RESTING_KEYS)) return 'shape:state.resting'
   const nextId = finiteNumber(value.resting.nextId, 'state.resting.nextId')
   if (nextId !== null) return nextId

@@ -383,6 +383,18 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `quantity=${formatNumber(event.quantity)}`,
         `fill=${formatNumber(event.fill)}`,
         `ratio=${formatOptionalNumber(event.ratioAfter, 'ratio')}`,
+        `fee=${formatNumber(event.fee ?? 0)}`,
+        ...(event.time === undefined ? [] : [`time=${event.time}`]),
+      ].join(' ')
+    case 'funding':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=funding',
+        `asset=${formatAsset(event.asset)}`,
+        `side=${event.side}`,
+        `notional=${formatNumber(event.notional)}`,
+        `ratePpm=${formatNumber(event.ratePpm)}`,
+        `amount=${formatNumber(event.amount)}`,
       ].join(' ')
     case 'backstopWriteOff':
       return [

@@ -116,19 +116,20 @@ describe('FI hold, run end, and score', () => {
     debugFi(`${formatEvent(check)} ${formatEvent(paid)} salaryStandIn=${salaryStandIn}`)
   })
 
-  it('does not subtract margin interest a second time', () => {
+  it('does not subtract funding a second time', () => {
     const defs = market()
     const game = createGame(defs, 'loan')
-    game.accounts.tradingCents = -100_000
+    game.positions.NOVA = { asset: 'NOVA', signedShares: 10, costCents: 48_000, leverage: 5 }
+    game.accounts.tradingCents = 300_000
     endDay(game, defs)
-    const interest = game.log.find((item) => item.kind === 'marginInterest')
-    if (interest?.kind !== 'marginInterest') throw new Error('[DEBUG fi] missing margin interest')
-    expect(interest.interest).toBeGreaterThan(0)
+    const funding = game.log.find((item) => item.kind === 'funding')
+    if (funding?.kind !== 'funding') throw new Error('[DEBUG fi] missing funding')
+    expect(funding.amount).toBeGreaterThan(0)
     const check = fiCheck(game)
-    expect(game.realized).toEqual([{ day: 1, cents: -interest.interest }])
-    expect(check.passiveCents).toBe(-interest.interest)
-    expect(check.passiveCents).not.toBe(-2 * interest.interest)
-    debugFi(`${formatEvent(check)} ${formatEvent(interest)}`)
+    expect(game.realized).toEqual([{ day: 1, cents: -funding.amount }])
+    expect(check.passiveCents).toBe(-funding.amount)
+    expect(check.passiveCents).not.toBe(-2 * funding.amount)
+    debugFi(`${formatEvent(check)} ${formatEvent(funding)}`)
   })
 
   it('wins on the 5th covered day from day 30 and not on the 4th', () => {

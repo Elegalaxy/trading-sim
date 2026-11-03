@@ -733,6 +733,24 @@ export type LiquidationEvent = {
   quantity: number
   fill: number
   ratioAfter: number | null
+  /** Liquidation fee in cents, on top of the trade fee. Missing on older logs. */
+  fee?: number
+  /** `HH:MM` of the bar when it happened inside the session. Missing for the close. */
+  time?: string
+}
+
+/**
+ * Funding paid for one open position for one day. `ratePpm` is the base plus the crowd
+ * share, `amount` is cents paid (never received) on `notional`, the position value.
+ */
+export type FundingEvent = {
+  kind: 'funding'
+  day: number
+  asset: string
+  side: 'long' | 'short'
+  notional: number
+  ratePpm: number
+  amount: number
 }
 
 /** Cents added to trading cash so equity is no longer negative. */
@@ -1093,6 +1111,8 @@ export type CommandLogEvent =
   | CoursePurchasedEvent
   | LoanTakenEvent
   | LoanRepaidEvent
+  | LiquidationEvent
+  | BackstopWriteOffEvent
 
 export type MarginLogEvent =
   | MarginInterestEvent
@@ -1105,6 +1125,7 @@ export type MarginLogEvent =
 export type AccountLogEvent =
   | CommandLogEvent
   | BorrowFeeEvent
+  | FundingEvent
   | MarginLogEvent
   | SavingsAccrualEvent
   | SavingsInterestPaidEvent

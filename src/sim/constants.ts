@@ -270,3 +270,15 @@ export const SESSION_VOLUME_NOISE = 0.25
  */
 export const MAX_LEVERAGE = 50
 export const DEFAULT_LEVERAGE = 5
+
+/**
+ * Funding replaces margin interest and the short borrow fee (funding.ts). Every open position
+ * pays `FUNDING_BASE_PPM` of its value a day, and the side the day's move favoured pays up to
+ * `FUNDING_TREND_CAP_PPM` more, `FUNDING_TREND_PERCENT` percent of the move.
+ */
+export const FUNDING_BASE_PPM = 100
+export const FUNDING_TREND_PERCENT = 5
+export const FUNDING_TREND_CAP_PPM = 2000
+
+/** Charged on the value of a position closed by liquidation, on top of the trade fee. 0.5%. */
+export const LIQUIDATION_FEE_PPM = 5000

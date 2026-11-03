@@ -20,6 +20,7 @@
 
 import { MAX_LEVERAGE, SESSION_STEPS } from './constants.ts'
 import { clockTime, sessionPrice } from './session.ts'
+import { settleIntradayMargin } from './margin.ts'
 import { closeWholePosition, interpretOrder } from './trading.ts'
 import type {
   CommandLogEvent,
@@ -319,7 +320,11 @@ export function advanceClock(state: GameState, defs: MarketDefinitions, from: nu
     throw new Error(`clock move must go forward inside 0 to ${SESSION_STEPS}, received ${describeValue(from)} to ${describeValue(to)}`)
   }
   const events: CommandLogEvent[] = []
-  if (state.resting.orders.length === 0 && Object.keys(state.resting.exits).length === 0) {
+  if (
+    state.resting.orders.length === 0 &&
+    Object.keys(state.resting.exits).length === 0 &&
+    Object.keys(state.positions).length === 0
+  ) {
     state.session.clock = to
     return events
   }
@@ -327,6 +332,8 @@ export function advanceClock(state: GameState, defs: MarketDefinitions, from: nu
     state.session.clock = index + 1
     for (const event of triggerExits(state, defs, index)) events.push(event)
     for (const event of triggerLimits(state, defs, index)) events.push(event)
+    // An open position is watched after every bar, like a perpetual future.
+    for (const event of settleIntradayMargin(state, defs, clockTime(index))) events.push(event)
     for (const event of pruneExits(state)) events.push(event)
   }
   state.session.clock = to

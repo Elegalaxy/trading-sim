@@ -46,7 +46,8 @@ export function DaySummaryPanel({
             <ul>
               {liquidations.map((event, index) => (
                 <li key={`${event.day}-${event.asset}-${index}`}>
-                  Liquidated {event.asset}: {event.quantity} shares.
+                  Liquidated {event.asset}: {event.quantity} shares{event.time === undefined ? '' : ` at ${event.time}`}
+                  {event.fee === undefined || event.fee === 0 ? '' : `, fee ${formatUsd(event.fee, 'liquidation fee')}`}.
                 </li>
               ))}
             </ul>

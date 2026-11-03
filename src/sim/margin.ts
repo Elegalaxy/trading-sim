@@ -7,6 +7,11 @@
 //    of borrowed × annual rate / 365, deducted from trading cash.
 // 2. The short borrow fee stays in trading.ts and runs between interest and
 //    the check. This file does not charge it.
+// Intraday: after every 15-minute bar the clock passes, `settleIntradayMargin` runs the
+//    liquidation part of step 3 at that bar's close, like a perpetual future that is
+//    watched all the time. There is no warning or check event inside the session.
+// Liquidation fee: every position closed by liquidation also pays 0.5% of its value, charged
+//    to trading cash and the realized ledger on top of the trade fee.
 // 3. Margin check at the quoted price. Ratio = equity / gross. Gross of 0 has
 //    no ratio. At or below 15% with a position open, log a warning. At or
 //    below 10%, close whole positions until the ratio is above 15% or nothing
@@ -20,6 +25,7 @@
 //    the day, before the market step. The run continues. Stress is unchanged.
 
 import {
+  LIQUIDATION_FEE_PPM,
   MARGIN_DAYS_PER_YEAR,
   MARGIN_INTEREST_SPREAD_PERCENT,
   MARGIN_LIQUIDATION_RATIO_DENOMINATOR,
@@ -27,8 +33,10 @@ import {
   MARGIN_WARNING_RATIO_DENOMINATOR,
   MARGIN_WARNING_RATIO_NUMERATOR,
   WIPE_OUT_RATIO_DENOMINATOR,
+  RATE_PPM_SCALE,
   WIPE_OUT_RATIO_NUMERATOR,
 } from './constants.ts'
+import { quoteMarket } from './session.ts'
 import { closeWholePosition, marginBase, recordRealized, tradingEquity } from './trading.ts'
 import type {
   BackstopWriteOffEvent,
@@ -130,8 +138,8 @@ function worstAsset(state: GameState, defs: MarketDefinitions): string {
   for (const def of defs.assets) {
     const position = state.positions[def.id]
     if (position === undefined) continue
-    const price = state.market.assets[def.id]?.priceCents
-    if (!Number.isSafeInteger(price) || price <= 0) {
+    const price = quoteMarket(state).assets[def.id]?.priceCents
+    if (!Number.isSafeInteger(price) || price === undefined || price <= 0) {
       throw new Error(`asset ${def.id} price must be a positive safe integer, received ${describeValue(price)}`)
     }
     const pnl = unrealizedCents(position, price)
@@ -198,6 +206,101 @@ export function settleMarginInterest(state: GameState, policyPercent: number): M
   }
 }
 
+/** Charge the liquidation fee on a position that was just closed. Returns the fee in cents. */
+function chargeLiquidationFee(state: GameState, day: number, quantity: number, fillPrice: number): number {
+  const value = quantity * fillPrice
+  if (!Number.isSafeInteger(value)) throw new Error('liquidation fee basis is not a safe integer')
+  const fee = roundHalfAwayFromZero((value * LIQUIDATION_FEE_PPM) / RATE_PPM_SCALE)
+  state.accounts.tradingCents -= fee
+  if (!Number.isSafeInteger(state.accounts.tradingCents)) {
+    throw new Error(`trading cash after the liquidation fee is not a safe integer, received ${describeValue(state.accounts.tradingCents)}`)
+  }
+  if (fee !== 0) recordRealized(state, day, -fee)
+  return fee
+}
+
+/**
+ * Close whole positions, worst result first, until the ratio is above the warning mark or
+ * nothing is open. Each pays the liquidation fee. `time` marks a liquidation inside the session.
+ */
+function liquidateUnderWarning(
+  state: GameState,
+  defs: MarketDefinitions,
+  day: number,
+  events: MarginLogEvent[],
+  time?: string,
+): void {
+  const limit = defs.assets.length
+  if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('liquidation needs at least one asset')
+  let closed = 0
+  while (closed <= limit) {
+    const current = tradingEquity(state, defs)
+    if (current.gross === 0) break
+    const stillUnder =
+      compareRatio(current.equity, marginBase(current), MARGIN_WARNING_RATIO_NUMERATOR, MARGIN_WARNING_RATIO_DENOMINATOR) <= 0
+    if (!stillUnder) break
+    const asset = worstAsset(state, defs)
+    const close = closeWholePosition(state, defs, asset)
+    const fee = chargeLiquidationFee(state, day, close.quantity, close.fillPrice)
+    closed += 1
+    const after = tradingEquity(state, defs)
+    const logged: LiquidationEvent = {
+      kind: 'liquidation',
+      day,
+      asset: close.asset,
+      quantity: close.quantity,
+      fill: close.fillPrice,
+      ratioAfter: ratio(after.equity, marginBase(after)),
+      fee,
+      ...(time === undefined ? {} : { time }),
+    }
+    events.push(logged)
+  }
+  if (closed > limit) throw new Error('liquidation did not finish within the asset count')
+}
+
+/** If equity is below zero, add the shortfall to trading cash and log the write-off. */
+function floorAtZero(state: GameState, defs: MarketDefinitions, day: number, events: MarginLogEvent[]): void {
+  const afterClose = tradingEquity(state, defs)
+  if (afterClose.equity >= 0) return
+  const amount = -afterClose.equity
+  const nextCash = state.accounts.tradingCents + amount
+  if (!Number.isSafeInteger(amount) || !Number.isSafeInteger(nextCash)) {
+    throw new Error(`backstop amount is not a safe integer, received ${describeValue(amount)}`)
+  }
+  state.accounts.tradingCents = nextCash
+  const floored = tradingEquity(state, defs)
+  if (floored.equity !== 0) {
+    throw new Error(`backstop left equity at ${floored.equity}`)
+  }
+  const writeOff: BackstopWriteOffEvent = { kind: 'backstopWriteOff', day, amount }
+  events.push(writeOff)
+}
+
+/**
+ * The liquidation check after one bar. Only the liquidation mark applies: at or below it,
+ * positions close until the ratio is above the warning mark. Returns what happened.
+ */
+export function settleIntradayMargin(
+  state: GameState,
+  defs: MarketDefinitions,
+  time: string,
+): Array<LiquidationEvent | BackstopWriteOffEvent> {
+  if (Object.keys(state.positions).length === 0) return []
+  const book = tradingEquity(state, defs)
+  if (book.gross === 0) return []
+  const liquidate =
+    compareRatio(book.equity, marginBase(book), MARGIN_LIQUIDATION_RATIO_NUMERATOR, MARGIN_LIQUIDATION_RATIO_DENOMINATOR) <= 0
+  if (!liquidate) return []
+  const events: MarginLogEvent[] = []
+  const day = state.market.day
+  liquidateUnderWarning(state, defs, day, events, time)
+  floorAtZero(state, defs, day, events)
+  return events.filter(
+    (event): event is LiquidationEvent | BackstopWriteOffEvent => event.kind === 'liquidation' || event.kind === 'backstopWriteOff',
+  )
+}
+
 /**
  * Margin check, warning, liquidation, backstop, and wipe-out flag.
  * `equityAtDayStart` is trading equity before the market step.
@@ -236,50 +339,12 @@ export function settleMargin(state: GameState, defs: MarketDefinitions, equityAt
   }
 
   if (liquidate) {
-    const limit = defs.assets.length
-    if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('liquidation needs at least one asset')
-    let closed = 0
-    while (closed <= limit) {
-      const current = tradingEquity(state, defs)
-      if (current.gross === 0) break
-      const stillUnder =
-        compareRatio(current.equity, marginBase(current), MARGIN_WARNING_RATIO_NUMERATOR, MARGIN_WARNING_RATIO_DENOMINATOR) <=
-        0
-      if (!stillUnder) break
-      const asset = worstAsset(state, defs)
-      const close = closeWholePosition(state, defs, asset)
-      closed += 1
-      const after = tradingEquity(state, defs)
-      const logged: LiquidationEvent = {
-        kind: 'liquidation',
-        day,
-        asset: close.asset,
-        quantity: close.quantity,
-        fill: close.fillPrice,
-        ratioAfter: ratio(after.equity, marginBase(after)),
-      }
-      events.push(logged)
-    }
-    if (closed > limit) throw new Error('liquidation did not finish within the asset count')
+    liquidateUnderWarning(state, defs, day, events)
     const finished = tradingEquity(state, defs)
     events.push(checkEvent(day, finished.equity, finished.gross, marginBase(finished)))
   }
 
-  const afterClose = tradingEquity(state, defs)
-  if (afterClose.equity < 0) {
-    const amount = -afterClose.equity
-    const nextCash = state.accounts.tradingCents + amount
-    if (!Number.isSafeInteger(amount) || !Number.isSafeInteger(nextCash)) {
-      throw new Error(`backstop amount is not a safe integer, received ${describeValue(amount)}`)
-    }
-    state.accounts.tradingCents = nextCash
-    const floored = tradingEquity(state, defs)
-    if (floored.equity !== 0) {
-      throw new Error(`backstop left equity at ${floored.equity}`)
-    }
-    const writeOff: BackstopWriteOffEvent = { kind: 'backstopWriteOff', day, amount }
-    events.push(writeOff)
-  }
+  floorAtZero(state, defs, day, events)
 
   const endEquity = tradingEquity(state, defs).equity
   if (endEquity < 0) throw new Error(`trading equity stayed negative at ${endEquity}`)

@@ -3,14 +3,20 @@ import { SESSION_STEPS, SLEEP_HOURS } from '../sim/constants.ts'
 import { dayBlocks, sectionClock } from '../sim/day.ts'
 import { activeJob } from '../sim/jobs.ts'
 import { clockTime } from '../sim/session.ts'
-import type { DaySection, GameState } from '../sim/types.ts'
+import type { DaySection, GameState, LiquidationEvent } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
+import { formatUsd } from './money.ts'
 import { dispatch, endDay } from './store.ts'
 
 function skipReasonText(reason: string): string {
   if (reason === 'cannotSkip') return 'Nothing to skip.'
   if (reason === 'notStarted') return 'Start a game first.'
   return reason
+}
+
+/** Liquidations the log holds so far, oldest first. The log keeps every command since the last close. */
+function liquidationsIn(game: GameState): LiquidationEvent[] {
+  return game.log.filter((event): event is LiquidationEvent => event.kind === 'liquidation')
 }
 
 export function DayTimeline({ game }: { game: GameState | null }) {
@@ -53,9 +59,17 @@ export function DayTimeline({ game }: { game: GameState | null }) {
 
   function onTick(steps: number): void {
     if (game === null) return
+    const seen = liquidationsIn(game).length
     const outcome = dispatch({ type: 'tick', steps })
     if (outcome.accepted) {
-      setMessage(null)
+      const fresh = liquidationsIn(game).slice(seen)
+      setMessage(
+        fresh.length === 0
+          ? null
+          : fresh
+              .map((event) => `Liquidated ${event.asset} at ${event.time ?? 'the close'} for a ${formatUsd(event.fee ?? 0, 'liquidation fee')} fee.`)
+              .join(' '),
+      )
       return
     }
     const reason = outcome.reason ?? 'rejected'

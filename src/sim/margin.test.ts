@@ -306,7 +306,7 @@ describe('leverage, margin, and the loss cap', () => {
       aboveRatio(check.equity, check.positionValue, MARGIN_LIQUIDATION_RATIO_NUMERATOR, MARGIN_LIQUIDATION_RATIO_DENOMINATOR),
     ).toBe(true)
     expect(game.positions.NOVA?.signedShares).toBe(-quantity)
-    expect(events.some((event) => event.kind === 'borrowFee')).toBe(true)
+    expect(events.some((event) => event.kind === 'funding')).toBe(true)
     expect(tradingEquity(game, defs).equity).toBeGreaterThan(0)
     printEvents('one forced +8% short day', events)
     debugMargin(

@@ -13,7 +13,6 @@ import {
 } from './constants.ts'
 import { settleBorrowFees } from './trading.ts'
 import type {
-  BorrowFeeEvent,
   CalendarDefinitions,
   CalendarEffectCell,
   CalendarItemKind,
@@ -555,38 +554,34 @@ describe('orders, fees, and borrow', () => {
     )
   })
 
-  it('charges a short a daily borrow fee after the market step and logs an unpaid remainder', () => {
+  it('charges funding on every open position after the market step, and the old borrow fee still works on its own', () => {
     const defs = market()
     const held = createGame(defs, 'borrow')
     place(held, defs, order('NOVA', 'buy', 1))
     endDay(held, defs)
     expect(held.log.some((event) => event.kind === 'borrowFee')).toBe(false)
+    const longFunding = held.log.find((event) => event.kind === 'funding')
+    expect(longFunding).toMatchObject({ side: 'long', notional: quote(held, 'NOVA') })
     expect(held.accounts.cashCents).toBe(STARTING_CASH_CENTS)
-    debugTrading('long borrow fees=0')
 
     const opened = createGame(defs, 'demo')
-    const priceBefore = quote(opened, 'NOVA')
     place(opened, defs, order('NOVA', 'sell', 10))
     const cashBefore = opened.accounts.cashCents
     const savingsBefore = opened.accounts.savingsCents
     endDay(opened, defs)
     const priceAfter = quote(opened, 'NOVA')
-    const borrow = opened.log.find((event): event is BorrowFeeEvent => event.kind === 'borrowFee')
-    if (borrow === undefined) throw new Error('[DEBUG trading] missing end-of-day borrow fee')
-    expect(borrow.day).toBe(1)
-    expect(borrow.price).toBe(priceAfter)
-    expect(borrow.shares).toBe(10)
-    expect(borrow.ratePpm).toBe(300)
-    expect(borrow.assessed).toBe(roundDivHalfAway(10 * priceAfter * 300, RATE_PPM_SCALE))
-    expect(borrow.paid).toBe(borrow.assessed)
-    expect(borrow.unpaid).toBe(0)
+    const funding = opened.log.find((event) => event.kind === 'funding')
+    if (funding?.kind !== 'funding') throw new Error('[DEBUG trading] missing end-of-day funding')
+    expect(funding.day).toBe(1)
+    expect(funding.side).toBe('short')
+    expect(funding.notional).toBe(10 * priceAfter)
+    expect(funding.ratePpm).toBeGreaterThanOrEqual(100)
+    expect(funding.amount).toBe(Math.round((10 * priceAfter * funding.ratePpm) / RATE_PPM_SCALE))
     expect(opened.accounts.cashCents).toBe(cashBefore)
     expect(opened.accounts.savingsCents).toBe(savingsBefore)
-    expect(opened.accounts.tradingCents).toBeGreaterThanOrEqual(0)
     const day1 = opened.realized.find((row) => row.day === 1)
-    expect(day1?.cents).toBe(-borrow.assessed)
-    debugTrading(formatEvent(borrow))
-    debugTrading(`borrow uses post-step price ${priceBefore}->${priceAfter} assessed=${borrow.assessed}`)
+    expect(day1?.cents).toBe(-funding.amount)
+    debugTrading(formatEvent(funding))
 
     const short = createGame(defs, 'unpaid')
     const asset = short.market.assets.NOVA

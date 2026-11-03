@@ -791,6 +791,7 @@ export function dispatch(cmd: unknown): DispatchResult {
   }
   debugLog('[store]', `dispatch ${label} -> accepted`)
   run.marks = newMarks(run.game, added, signsBefore, run.marks)
+  if (added.some((event) => event.kind === 'liquidation')) run.liquidations = readLiquidations(run.game)
   const barTime = clockTime(Math.min(Math.max(run.game.session.clock - 1, 0), SESSION_STEPS - 1))
   const fills = collectFills(added, heldBefore, barTime, run.history.length + 1)
   if (fills.length > 0) run.history = [...run.history, ...fills]

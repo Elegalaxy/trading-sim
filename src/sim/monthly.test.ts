@@ -126,8 +126,13 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
     expect(game.accounts.cashCents).toBe(0)
     expect(game.accounts.savingsCents).toBe(STARTING_CASH_CENTS)
 
+    let funding = 0
+    const addFunding = (): void => {
+      for (const event of game.log) if (event.kind === 'funding') funding += event.amount
+    }
     for (let day = 1; day <= 29; day += 1) {
       endDay(game, defs)
+      addFunding()
       endDay(twin, defs)
       expect(stateHash(game.market)).toBe(stateHash(twin.market))
       expect(positionOf(game)).toEqual(opened)
@@ -136,12 +141,15 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
     const savingsBefore = game.accounts.savingsCents
     const accruedBefore = game.accounts.accruedSavingsCents
     endDay(game, defs)
+    addFunding()
     endDay(twin, defs)
     expect(game.market.day).toBe(30)
     expect(stateHash(game.market)).toBe(stateHash(twin.market))
     expect(game.section).toBe('sleep')
     expect(positionOf(game)).toEqual(opened)
-    expect(game.accounts.tradingCents).toBe(tradingAfterBuy)
+    // The long held through the month only paid funding, one charge a day.
+    expect(funding).toBeGreaterThan(0)
+    expect(game.accounts.tradingCents).toBe(tradingAfterBuy - funding)
     expect(game.accounts.cashCents).toBe(0)
     const paid = eventKind(game, 'savingsInterestPaid')
     if (paid?.kind !== 'savingsInterestPaid') throw new Error('[DEBUG monthly] missing savings interest')

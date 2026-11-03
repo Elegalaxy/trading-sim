@@ -109,7 +109,7 @@ Added 2026-10-31 at the user's request: the player can trade at intraday prices,
 - `[PROVISIONAL]` The day's close is still decided when the day is stepped, exactly as today, from fair value, events and noise. The intraday path is a bridge from the previous close (the open) to that close, with noise that scales with the asset's volatility. The path is fixed and hidden at the start of the day. The player sees only bars up to the current clock time.
 - `[PROVISIONAL]` The path uses its own seeded stream, so adding it does not change the daily price, event or rumour draws, and a seeded run still gives the same market whatever the player does. The existing daily golden fixtures should not change.
 - `[PROVISIONAL]` The 8% daily move cap applies to the close against the previous close. Intraday bars may swing past 8% from the open but are clamped to a wider band (suggested 12%), so the loss cap guarantee in section 7 is not weakened.
-- `[PROVISIONAL]` Margin, liquidation, the warning, the wipe-out check, interest and borrow fees are still checked once per day at the close (end-of-day check). Intraday checks stay out. The margin meter during the session uses the current intraday price and is information only. Order sizing against the 5x cap uses the current intraday price.
+- `[PROVISIONAL]` The warning, the wipe-out check and funding are checked once per day at the close (end-of-day check). Liquidation is also checked after every 15-minute bar (section 7, Leverage and margin). The margin meter during the session uses the current intraday price. Order sizing against the margin rule uses the current intraday price.
 - `[PROVISIONAL]` Spread and fee are unchanged. An event day still widens the spread.
 - `[PROVISIONAL]` Volume is cosmetic: a per-bar figure that is higher on event days and on larger moves, plus noise, from a separate seeded stream. It does not change prices, spread or fills. The player can see it per bar and per day.
 - `[PROVISIONAL]` The day's high and low in the header and the candle are the session path's high and low. Daily closes, scores and the FI ledger are unchanged.
@@ -126,7 +126,7 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 - `[PROVISIONAL]` A take profit or stop loss belongs to one position and closes all of it. For a long the take profit is above the price and the stop below, for a short the other way round. A stop fills at the stop, or at the bar's open if that is worse. A take profit fills at the target, or at a better open. If one bar touches both, the stop wins. Exits are not margin-checked, like any close. The fee applies, the spread does not. Closing or flipping the position removes its exits.
 - `[PROVISIONAL]` A limit order can carry a take profit and a stop loss. They are set when it fills and are live from the next bar. A market order can set them right after it fills.
 - `[PROVISIONAL]` Orders are placed in the market section. Cancelling works at any time. Limit orders do not reserve buying power. The 5x check is made when placing (as a hint) and again when filling.
-- `[PROVISIONAL]` Bars are the only price path, so an exit can trigger on a bar's wick, which the player sees on the chart. Margin and liquidation are still checked once a day at the close.
+- `[PROVISIONAL]` Bars are the only price path, so an exit can trigger on a bar's wick, which the player sees on the chart. Liquidation is also checked after every bar. The warning, wipe-out check and funding are still once a day at the close.
 - `[PROVISIONAL]` Open orders and exits of the charted asset are drawn as dashed lines with a price tag on the right axis: gold for a limit, green for a take profit, red for a stop loss. A level outside the visible range sits at the chart edge with an arrow.
 
 ### Events
@@ -210,7 +210,7 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 - `[CONFIRMED]` Trades cost a percentage fee plus a spread.
 - `[PROVISIONAL]` Orders are market orders that fill at the current price during a trade session. No limit or stop orders in the first playable.
 - `[PROVISIONAL]` The fee is a global percentage per trade. The spread is set per asset and widens on event days.
-- `[PROVISIONAL]` Short positions pay a per-asset daily borrow fee. Leveraged positions pay daily interest on the borrowed amount, at the policy rate plus a margin. Both reduce trading profit.
+- `[PROVISIONAL]` Changed 2026-11-03: margin interest and the short borrow fee are replaced by funding (section 7, Funding). A bank loan (section 6) still pays its own interest.
 
 ### Leverage and margin
 
@@ -222,6 +222,14 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 - `[CONFIRMED]` A warning appears at a 15% ratio, shown on a visible margin meter. Liquidation happens when the end-of-day ratio is 10% or lower.
 - `[PROVISIONAL]` Liquidation closes the worst-performing position first, and continues until the ratio is back above the warning level.
 - `[PROVISIONAL]` Limit orders carry their leverage and open the position at it when they fill.
+- `[PROVISIONAL]` Changed 2026-11-03, like a perpetual future: after every 15-minute bar of the session, if the ratio is at or below the 10% liquidation mark, whole positions close at that bar's quote, worst result first, until the ratio is above the warning mark. No warning or check event is logged inside the session. The end-of-day check still runs. A bar moves far less than a day, so a high-leverage position is closed before it gaps below zero.
+- `[PROVISIONAL]` Liquidation fee: a position closed by liquidation also pays 0.5% of its value, on top of the trade fee. It is charged to trading cash and the realized ledger.
+
+### Funding `[PROVISIONAL]`
+
+- `[PROVISIONAL]` Every open position pays funding once a day, after the market step, on its value at the new price. It does not depend on leverage and it replaces margin interest and the short borrow fee.
+- `[PROVISIONAL]` The rate is a base of 0.01% a day for both sides, plus a crowd charge for the side the day's move favoured: a rising day charges longs, a falling day charges shorts, at 5% of the move up to 0.2% a day. Examples: a long on a +8% day pays 0.21%, a short on that day pays 0.01%.
+- `[PROVISIONAL]` The player only pays. There is no counterparty, so funding is never received. It is booked to trading cash (which may go negative) and to the realized ledger.
 
 ### Loss cap guarantee
 
@@ -427,17 +435,31 @@ Free trading, trading loops, a free option on extreme leverage, and farming smal
 
 ### High leverage and the backstop `[PROVISIONAL]`
 
-Measured 2026-11-03 with the harness bots `longNova10`, `longNova20`, `longNova50` and `shortNova50` (one NOVA position as large as the margin allows, opened again after a liquidation; 100 runs of 120 days, seed `abc`). The start is $3,000 of trading equity.
+Measured 2026-11-03 with the harness bots `longNova10`, `longNova20`, `longNova50` and `shortNova50` (one NOVA position as large as the margin allows, opened again after a liquidation; 120 days, trading equity $3,000 at the start).
 
-| Bot | Runs liquidated at least once | Mean final equity | Median | Backstop write-offs, 100 runs |
+Before intraday liquidation and the fee (liquidation once a day, no fee, margin interest), 100 runs, seed `abc`:
+
+| Bot | Mean final equity | Median | Backstop write-offs, 100 runs |
+|---|---|---|---|
+| longNova10 | $468 | $2 | $919 |
+| longNova20 | $284 | $0 | $19,464 |
+| longNova50 | $118 | $0 | $127,184 |
+| shortNova50 | $5,139 | $0 | $108,853 |
+
+The 50x short bot's mean was above the start (and $5,984 over 300 runs, seed `xyz`). The backstop turned every gap below zero into a free write-off while gains stayed uncapped, which is the "free option on extreme leverage" risk in section 16.
+
+After intraday liquidation, the 0.5% fee and funding:
+
+| Bot | Mean final equity | Median | 95th percentile | Backstop write-offs |
 |---|---|---|---|---|
-| random (1 share, 5x) | 0% | $2,967 | $2,940 | $0 |
-| longNova10 | 96% | $468 | $2 | $919 |
-| longNova20 | 97% | $284 | $0 | $19,464 |
-| longNova50 | 99% | $118 | $0 | $127,184 |
-| shortNova50 | 91% | $5,139 | $0 | $108,853 |
+| random (1 share, 5x), 100 runs | $2,880 | $2,892 | $4,032 | $0 |
+| longNova10, 100 runs | $270 | $3 | $1,325 | $0 |
+| longNova20, 100 runs | $185 | $1 | $485 | $0 |
+| longNova50, 100 runs | $0 | $0 | $0 | $22,476 |
+| shortNova50, 100 runs | $3,041 | $0 | $53,177 | $22,915 |
+| shortNova50, 300 runs (seed `xyz`) | $2,635 | $0 | $23,735 | $74,781 |
 
-A larger run of 300 (seed `xyz`) gave longNova50 a mean of $103 and shortNova50 a mean of $5,984 with a median of $0, a 95th percentile of $55,019 and a best run of $99,741. So 50x loses the account in most runs, but the short bot's mean is above the start. The backstop turns every gap below zero into a free write-off while gains stay uncapped, which is the "free option on extreme leverage" risk in section 16. `[OPEN]` Whether to cap leverage per asset by volatility, charge a liquidation fee, or stop writing off the shortfall. Default: leave as is until the playtests.
+The backstop is no longer used at 10x and 20x and its use at 50x fell by about 80%. The short bot's mean is now at or below the start, so the free option is mostly closed, but its tail is still fat (the best runs end near $20,000 to $50,000). `[OPEN]` Whether that tail is acceptable. The remaining gap-throughs come from event bars that move more than the 1% margin. Default: accept until the playtests.
 
 ### Leverage plus distortion in a 30-minute run
 
@@ -511,6 +533,7 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 
 ## 19. Changelog
 
+- 2026-11-03 (later): Made leveraged trading more like a perpetual future. Liquidation is also checked after every 15-minute bar, a liquidation costs a 0.5% fee, and funding (0.01% a day plus a crowd charge) replaces margin interest and the short borrow fee. Old saves still load.
 - 2026-11-03: Leverage is now chosen per position, 1x to 50x (user decision), replacing the account-wide 5x cap. Margin is value over leverage. The 15% and 10% marks, read against the required margin, are unchanged. Above about 10x the backstop can be used.
 - 2026-11-01: Added limit orders, take profit and stop loss (plan Step 32), and order sizing by quantity, cost or value in the order panel. Old saves are rejected as damaged again.
 - 2026-10-31: Built the intraday session (plan Step 28). Added `tick`, 15m and 1H candles, a volume panel and per-bar volume. Orders fill at the clock quote. Old saves are rejected as damaged.

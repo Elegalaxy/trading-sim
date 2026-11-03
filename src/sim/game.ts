@@ -60,7 +60,8 @@ import {
   pruneExits,
 } from './resting.ts'
 import { buildSession, assertSession, createSessionStreams, interpretTick } from './session.ts'
-import { settleMargin, settleMarginInterest } from './margin.ts'
+import { settleFunding } from './funding.ts'
+import { settleMargin } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
 import { applyMonthlyCycle, interpretPayBill, isMonthlyCycleDay, reviewCoverable } from './monthly.ts'
 import {
@@ -73,7 +74,7 @@ import {
   interpretReadNews,
   interpretVerify,
 } from './stats.ts'
-import { interpretOrder, settleBorrowFees, tradingEquity } from './trading.ts'
+import { interpretOrder, tradingEquity } from './trading.ts'
 import {
   RUN_OUTCOMES,
   type AccountLogEvent,
@@ -138,7 +139,9 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'lifestyleChange' &&
       kind !== 'coursePurchased' &&
       kind !== 'loanTaken' &&
-      kind !== 'loanRepaid'
+      kind !== 'loanRepaid' &&
+      kind !== 'liquidation' &&
+      kind !== 'backstopWriteOff'
     ) {
       throw new Error(`pending account event must be a command, received ${describeValue(kind)}`)
     }
@@ -592,11 +595,9 @@ export function settleTradingAccount(
 ): AccountLogEvent[] {
   assertDefinitionsObject(defs)
   assertGame(state)
-  const policyRate = readPolicyRatePercent(state.market, defs)
-  const interest = settleMarginInterest(state, policyRate)
-  const borrow = settleBorrowFees(state, defs)
+  const funding = settleFunding(state, defs)
   const margin = settleMargin(state, defs, equityAtDayStart)
-  return [interest, ...borrow, ...margin]
+  return [...funding, ...margin]
 }
 
 function savingsInterestReceived(events: readonly AccountLogEvent[]): number {

@@ -343,6 +343,44 @@ const TOPICS: readonly Topic[] = [
     ),
   },
   {
+    id: 'participants',
+    title: 'Who else trades',
+    body: (
+      <>
+        <p>
+          You are not alone in the market. Prices move because other people buy and sell, and the sizes and timing differ
+          from run to run. None of this is a rule. It is the cast.
+        </p>
+        <ul>
+          <li>
+            <strong>Funds that hear early.</strong> Some news leaks. Now and then a fund buys or sells in the day or two
+            before an announcement, so part of the move is already in the price.
+          </li>
+          <li>
+            <strong>Fast traders.</strong> Professionals react to news the moment it prints, usually before you can read
+            it. How fully they react changes from market to market.
+          </li>
+          <li>
+            <strong>The crowd.</strong> Small traders chase rumours and good headlines, and some sell when the news
+            arrives. A thin stock feels the crowd more than a big one. The posts under the news are the crowd talking.
+          </li>
+          <li>
+            <strong>Trend followers.</strong> They buy what has been rising and sell what has been falling, until the
+            trend turns.
+          </li>
+          <li>
+            <strong>Level hunters.</strong> Prices sometimes poke through obvious levels, such as round numbers or a
+            recent high or low, and come back.
+          </li>
+        </ul>
+        <p>
+          Big stocks are deep and shrug off orders. Small stocks are thin, so the same money moves them more, yours
+          included.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'orders',
     title: 'Orders and positions',
     body: (

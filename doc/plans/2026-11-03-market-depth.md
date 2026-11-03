@@ -301,16 +301,18 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M11: Cap review
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M6
 - What changes: compare capped-day share with M0. If the user picks K2, K3 or K4, implement it as its own change with a fixture regeneration.
+- Progress: done 2026-11-04. Capped stock-days are 1.2% (seed abc, 300 runs) against 0.08% at M0 and the 3% mark, so K1 stays and no change is brought to the user. The largest gap between price and fair value is 11.4%.
 
 ### Step M12: Design doc, Guide and playtest
 
-- Status: `todo`
+- Status: `done`
 - Depends on: the steps the user takes
 - Files to create or change: `doc/GAME_DESIGN.md` (sections 5, 7, 9, 12, changelog, only rules the user decided), `src/ui/Guide.tsx` (rough terms: who trades, consensus, slippage as an account rule)
 - Verification: a seeded playtest records whether patterns felt readable, unfair or invisible.
+- Progress: done 2026-11-04 apart from the playtest. GAME_DESIGN section 5 (price rules, social feed, consensus), section 12 (ideas marked built), section 15 criterion 9 and section 16 are updated, and the Guide has a Who else trades page plus lines on consensus, posts, slippage and large orders, with no market numbers beyond account rules. The seeded playtest (readable, unfair or invisible) needs a person and is still open; record it here and in section 15.
 
 ## 10. Risks
 

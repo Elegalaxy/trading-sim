@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import { applyCommand, createGame, endDay } from './game.ts'
 import { stateHash } from './hash.ts'
-import { MAX_RESTING_ORDERS } from './resting.ts'
+import { formatEvent } from './log.ts'
+import { assertResting, MAX_EXIT_LEVELS, MAX_RESTING_ORDERS, upgradeResting } from './resting.ts'
 import type { GameState, MarketDefinitions, RestingEvent } from './types.ts'
 
 const defs: MarketDefinitions = {
@@ -35,6 +36,15 @@ function opened(spec: Record<number, Bar> = {}): GameState {
 
 function resting(game: GameState): RestingEvent[] {
   return game.log.filter((event): event is RestingEvent => event.kind === 'resting')
+}
+
+/** NOVA exit levels as [price, quantity] pairs per kind, in stored order. */
+function prices(game: GameState): { side: string; takeProfit: Array<[number, number | null]>; stopLoss: Array<[number, number | null]> } | null {
+  const exit = game.resting.exits.NOVA
+  if (exit === undefined) return null
+  const pick = (kind: string) =>
+    exit.levels.filter((level) => level.kind === kind).map((level): [number, number | null] => [level.priceCents, level.quantity])
+  return { side: exit.side, takeProfit: pick('takeProfit'), stopLoss: pick('stopLoss') }
 }
 
 function rejection(game: GameState): string | null {
@@ -150,7 +160,7 @@ describe('take profit and stop loss', () => {
 
   it('closes the whole position at the take profit', () => {
     const game = longOpen({ 2: [4800, 5100, 4800, 5000] })
-    expect(game.resting.exits.NOVA).toEqual({ side: 'long', tpCents: 5000, slCents: 4600 })
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [[5000, null]], stopLoss: [[4600, null]] })
     applyCommand(game, defs, { type: 'tick', steps: 3 })
     expect(game.positions.NOVA).toBeUndefined()
     expect(game.resting.exits.NOVA).toBeUndefined()
@@ -190,7 +200,7 @@ describe('take profit and stop loss', () => {
   it('clears an exit with null and drops exits when the position closes or flips', () => {
     const game = longOpen({})
     applyCommand(game, defs, { type: 'setExits', asset: 'NOVA', tpCents: null })
-    expect(game.resting.exits.NOVA).toEqual({ side: 'long', tpCents: null, slCents: 4600 })
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [], stopLoss: [[4600, null]] })
     applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'sell', quantity: 20 })
     expect(game.positions.NOVA.signedShares).toBe(-10)
     expect(game.resting.exits.NOVA).toBeUndefined()
@@ -210,8 +220,211 @@ describe('take profit and stop loss', () => {
     applyCommand(game, defs, { type: 'tick', steps: 2 })
     // The bar that filled the limit also dipped to 4500, but the stop was not live yet.
     expect(game.positions.NOVA.signedShares).toBe(10)
-    expect(game.resting.exits.NOVA).toEqual({ side: 'long', tpCents: null, slCents: 4600 })
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [], stopLoss: [[4600, null]] })
   })
+})
+
+describe('partial and multi-level exits', () => {
+  function long10(spec: Record<number, Bar>): GameState {
+    const game = opened(spec)
+    applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'buy', quantity: 10 })
+    return game
+  }
+
+  function addExit(game: GameState, kind: string, priceCents: number, quantity?: number): void {
+    applyCommand(game, defs, { type: 'addExit', asset: 'NOVA', kind, priceCents, ...(quantity === undefined ? {} : { quantity }) })
+  }
+
+  function realizedAfter(game: GameState, filled: RestingEvent): number | null {
+    const index = game.log.indexOf(filled)
+    const next = game.log[index + 1]
+    return next?.kind === 'realized' ? next.amount : null
+  }
+
+  it('closes only its quantity, keeps the entry average, then the next level closes the rest', () => {
+    const game = long10({ 2: [4800, 5100, 4800, 5000], 4: [5000, 5300, 5000, 5200] })
+    addExit(game, 'takeProfit', 5000, 4)
+    addExit(game, 'takeProfit', 5200)
+    applyCommand(game, defs, { type: 'setExits', asset: 'NOVA', slCents: 4600 })
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [[5000, 4], [5200, null]], stopLoss: [[4600, null]] })
+    const cost = game.positions.NOVA.costCents
+    const cash = game.accounts.tradingCents
+
+    applyCommand(game, defs, { type: 'tick', steps: 3 })
+    expect(game.positions.NOVA.signedShares).toBe(6)
+    expect(game.positions.NOVA.costCents).toBe(cost - Math.round((cost * 4) / 10))
+    expect(game.accounts.tradingCents).toBe(cash + 20000 - 20)
+    const first = resting(game).at(-1) as RestingEvent
+    expect(first).toMatchObject({ action: 'filled', detail: 'takeProfit', quantity: 4, priceCents: 5000, fee: 20, time: '17:30' })
+    expect(realizedAfter(game, first)).toBe(20000 - Math.round((cost * 4) / 10))
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [[5200, null]], stopLoss: [[4600, null]] })
+
+    applyCommand(game, defs, { type: 'tick', steps: 2 })
+    expect(game.positions.NOVA).toBeUndefined()
+    expect(game.resting.exits.NOVA).toBeUndefined()
+    expect(resting(game).at(-1)).toMatchObject({ detail: 'takeProfit', quantity: 6, priceCents: 5200 })
+  })
+
+  it('fills every level one bar reaches, nearest the open first, at the better open on a gap', () => {
+    const swept = long10({ 0: [4800, 5300, 4800, 5250] })
+    addExit(swept, 'takeProfit', 5200, 3)
+    addExit(swept, 'takeProfit', 5000, 4)
+    applyCommand(swept, defs, { type: 'tick', steps: 1 })
+    expect(resting(swept).slice(-2).map((event) => [event.priceCents, event.quantity])).toEqual([
+      [5000, 4],
+      [5200, 3],
+    ])
+    expect(swept.positions.NOVA.signedShares).toBe(3)
+    expect(swept.resting.exits.NOVA).toBeUndefined()
+
+    const gapped = long10({ 0: [5400, 5400, 5400, 5400] })
+    addExit(gapped, 'takeProfit', 5000, 4)
+    addExit(gapped, 'takeProfit', 5200, 4)
+    applyCommand(gapped, defs, { type: 'tick', steps: 1 })
+    expect(resting(gapped).slice(-2).map((event) => event.priceCents)).toEqual([5400, 5400])
+    expect(gapped.positions.NOVA.signedShares).toBe(2)
+  })
+
+  it('fills only the stops when one bar touches both kinds, highest stop first for a long', () => {
+    const game = long10({ 0: [4800, 5100, 4400, 4800] })
+    addExit(game, 'takeProfit', 5000, 4)
+    addExit(game, 'stopLoss', 4500, 3)
+    addExit(game, 'stopLoss', 4600, 3)
+    applyCommand(game, defs, { type: 'tick', steps: 1 })
+    expect(resting(game).slice(-2).map((event) => [event.detail, event.priceCents, event.quantity])).toEqual([
+      ['stopLoss', 4600, 3],
+      ['stopLoss', 4500, 3],
+    ])
+    expect(game.positions.NOVA.signedShares).toBe(4)
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [[5000, 4]], stopLoss: [] })
+  })
+
+  it('works for a short, lowest target first', () => {
+    const game = opened({ 1: [4800, 4800, 4400, 4500] })
+    applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'sell', quantity: 10 })
+    addExit(game, 'takeProfit', 4600, 5)
+    addExit(game, 'takeProfit', 4500, 5)
+    addExit(game, 'stopLoss', 5000, 5)
+    applyCommand(game, defs, { type: 'tick', steps: 2 })
+    expect(resting(game).slice(-2).map((event) => [event.priceCents, event.side])).toEqual([
+      [4600, 'buy'],
+      [4500, 'buy'],
+    ])
+    expect(game.positions.NOVA).toBeUndefined()
+    expect(game.resting.exits.NOVA).toBeUndefined()
+  })
+
+  it('rejects a bad kind, size, side or too many levels', () => {
+    const game = long10({})
+    addExit(game, 'trailing', 5000)
+    expect(rejection(game)).toBe('exitKindInvalid')
+    addExit(game, 'takeProfit', 5000, 11)
+    expect(rejection(game)).toBe('exitQuantityTooLarge')
+    addExit(game, 'takeProfit', 5000, 0)
+    expect(rejection(game)).toBe('quantityNotInteger')
+    addExit(game, 'stopLoss', 4900, 2)
+    expect(rejection(game)).toBe('stopLossWrongSide')
+    for (let i = 0; i < MAX_EXIT_LEVELS; i += 1) addExit(game, 'takeProfit', 5000 + i * 100, 1)
+    addExit(game, 'takeProfit', 6000, 1)
+    expect(rejection(game)).toBe('tooManyExits')
+    applyCommand(game, defs, { type: 'setExits', asset: 'NOVA', tpCents: 6000 })
+    expect(rejection(game)).toBe('tooManyExits')
+    applyCommand(game, defs, { type: 'setExits', asset: 'NOVA', slCents: 4600 })
+    expect(prices(game)?.stopLoss).toEqual([[4600, null]])
+  })
+
+  it('cancels one level by id', () => {
+    const game = long10({})
+    addExit(game, 'takeProfit', 5000, 4)
+    addExit(game, 'stopLoss', 4600)
+    const [tp, sl] = game.resting.exits.NOVA.levels
+    applyCommand(game, defs, { type: 'cancelExit', asset: 'NOVA', id: tp.id })
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [], stopLoss: [[4600, null]] })
+    expect(resting(game).at(-1)).toMatchObject({ action: 'cancelled', detail: 'takeProfit', quantity: 4 })
+    applyCommand(game, defs, { type: 'cancelExit', asset: 'NOVA', id: tp.id })
+    expect(rejection(game)).toBe('noSuchExit')
+    applyCommand(game, defs, { type: 'cancelExit', asset: 'NOVA', id: sl.id })
+    expect(game.resting.exits.NOVA).toBeUndefined()
+  })
+
+  it('shrinks levels when the position is reduced, keeps them when it grows, drops them on close or flip', () => {
+    const game = long10({})
+    addExit(game, 'takeProfit', 5000, 8)
+    addExit(game, 'stopLoss', 4600, 3)
+    applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'sell', quantity: 5 })
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [[5000, 5]], stopLoss: [[4600, 3]] })
+    const resized = resting(game).at(-1) as RestingEvent
+    expect(resized).toMatchObject({ action: 'resized', detail: 'takeProfit', quantity: 5, reason: 'positionReduced' })
+    expect(formatEvent(resized)).toBe('day=0 kind=resting action=resized asset=NOVA detail=takeProfit side=sell quantity=5 price=5000 fee=0 reason=positionReduced')
+    applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'buy', quantity: 5 })
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [[5000, 5]], stopLoss: [[4600, 3]] })
+    applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'sell', quantity: 10 })
+    expect(game.resting.exits.NOVA).toBeUndefined()
+    expect(resting(game).filter((event) => event.reason === 'positionClosed')).toHaveLength(2)
+
+    const flipped = long10({})
+    addExit(flipped, 'takeProfit', 5000, 4)
+    applyCommand(flipped, defs, { type: 'order', asset: 'NOVA', side: 'sell', quantity: 20 })
+    expect(flipped.positions.NOVA.signedShares).toBe(-10)
+    expect(flipped.resting.exits.NOVA).toBeUndefined()
+  })
+
+  it('shrinks the rest after a partial stop, so a later level never closes more than is open', () => {
+    const game = long10({ 1: [4800, 4800, 4550, 4600] })
+    addExit(game, 'stopLoss', 4600, 6)
+    addExit(game, 'takeProfit', 5000, 8)
+    applyCommand(game, defs, { type: 'tick', steps: 2 })
+    expect(game.positions.NOVA.signedShares).toBe(4)
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [[5000, 4]], stopLoss: [] })
+  })
+
+  it('attaches a partial take profit from a filled limit', () => {
+    const game = opened({ 1: [4800, 4800, 4700, 4700], 3: [4700, 5100, 4700, 5000] })
+    const limit = { type: 'limitOrder', asset: 'NOVA', side: 'buy', quantity: 10, limitCents: 4700, tpCents: 5000, slCents: 4600 }
+    applyCommand(game, defs, { ...limit, tpQuantity: 11 })
+    expect(rejection(game)).toBe('exitQuantityTooLarge')
+    applyCommand(game, defs, { ...limit, tpQuantity: 4 })
+    expect(game.resting.orders[0]).toMatchObject({ tpQuantity: 4 })
+    applyCommand(game, defs, { type: 'tick', steps: 2 })
+    expect(prices(game)).toEqual({ side: 'long', takeProfit: [[5000, 4]], stopLoss: [[4600, null]] })
+    applyCommand(game, defs, { type: 'tick', steps: 2 })
+    expect(game.positions.NOVA.signedShares).toBe(6)
+    expect(resting(game).at(-1)).toMatchObject({ detail: 'takeProfit', quantity: 4, priceCents: 5000 })
+  })
+})
+
+describe('exits from old saves', () => {
+  it('reads a level without a quantity as the whole position', () => {
+    const game = long10Plain()
+    game.resting.exits.NOVA = { side: 'long', levels: [{ id: game.resting.nextId, kind: 'takeProfit', priceCents: 5000, quantity: null }] }
+    game.resting.nextId += 1
+    applyCommand(game, defs, { type: 'tick', steps: 3 })
+    expect(game.positions.NOVA).toBeUndefined()
+    expect(resting(game).at(-1)).toMatchObject({ detail: 'takeProfit', quantity: 10 })
+  })
+
+  it('upgrades the old one-TP-one-SL shape to whole-position levels', () => {
+    const game = long10Plain()
+    const legacy = { nextId: 3, orders: [], exits: { NOVA: { side: 'long', tpCents: 5000, slCents: null } } }
+    expect(() => assertResting(legacy as unknown as GameState['resting'])).toThrow('resting exit for NOVA is not valid')
+    const upgraded = upgradeResting(legacy)
+    expect(upgraded).toEqual({
+      nextId: 4,
+      orders: [],
+      exits: { NOVA: { side: 'long', levels: [{ id: 3, kind: 'takeProfit', priceCents: 5000, quantity: null }] } },
+    })
+    expect(legacy.exits.NOVA).toEqual({ side: 'long', tpCents: 5000, slCents: null })
+    game.resting = upgraded
+    applyCommand(game, defs, { type: 'tick', steps: 3 })
+    expect(game.positions.NOVA).toBeUndefined()
+    expect(upgradeResting(game.resting)).toEqual(game.resting)
+  })
+
+  function long10Plain(): GameState {
+    const game = opened({ 2: [4800, 5100, 4800, 5000] })
+    applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'buy', quantity: 10 })
+    return game
+  }
 })
 
 describe('resting orders and the market', () => {

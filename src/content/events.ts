@@ -31,6 +31,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
     duration: 3,
     decay: 'frontLoaded',
     headline: '{target} earnings {direction}',
+    directionWords: { up: 'beat', down: 'miss', none: 'in line' },
     modifiers: [
       modifier('growth', 2, 0.001, 0.02, -0.02),
       modifier('inflation', 3, 0, -0.01, 0.01),
@@ -127,7 +128,8 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
     magnitudeMax: 3,
     duration: 2,
     decay: 'linear',
-    headline: 'Market sentiment {direction}',
+    headline: 'Market mood {direction}',
+    directionWords: { up: 'turns upbeat', down: 'turns gloomy', none: 'is mixed' },
     modifiers: [
       modifier('growth', 2, 0.001, 0.02, -0.02),
       modifier('inflation', 3, 0, -0.02, 0.02),
@@ -143,7 +145,8 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
     magnitudeMax: 4,
     duration: 2,
     decay: 'frontLoaded',
-    headline: '{target} guidance {direction}',
+    headline: '{target} {direction} guidance',
+    directionWords: { up: 'raises', down: 'cuts', none: 'reaffirms' },
     modifiers: [modifier('growth', 2, 0.001, 0.02, -0.02)],
   },
   {
@@ -195,7 +198,8 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
     magnitudeMax: 3,
     duration: 2,
     decay: 'linear',
-    headline: '{target} dividend {direction}',
+    headline: '{target} {direction} its dividend',
+    directionWords: { up: 'raises', down: 'cuts', none: 'holds' },
     modifiers: [modifier('growth', 2, 0.001, 0.02, -0.02)],
   },
   {
@@ -209,6 +213,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
     duration: 3,
     decay: 'linear',
     headline: 'Inflation data {direction}',
+    directionWords: { up: 'cooler than expected', down: 'hotter than expected', none: 'as expected' },
     modifiers: [modifier('inflation', 3, 0.001, -0.02, 0.02)],
   },
   {
@@ -222,6 +227,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
     duration: 3,
     decay: 'linear',
     headline: 'Growth data {direction}',
+    directionWords: { up: 'stronger than expected', down: 'weaker than expected', none: 'as expected' },
     modifiers: [modifier('growth', 2, 0.001, 0.02, -0.02)],
   },
   {

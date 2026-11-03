@@ -151,12 +151,12 @@
 [DEBUG market] day=0 kind=eventRoll eventDay=3 type=growthDataShock target=market roll=0.35823973 chance=0.08 fired=false
 [DEBUG market] day=0 kind=eventRoll eventDay=3 type=inputCostShock target=A roll=0.46688642 chance=0.05 fired=false
 [DEBUG market] day=0 kind=eventRoll eventDay=3 type=inputCostShock target=B roll=0.97893931 chance=0.05 fired=false
-[DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=cityDesk tier=high truthRoll=0.83515114 truth=true claim="HRBU dividend up" leadDays=3 target=dividendChange:HRBU:3 noise=false
-[DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=floorWire tier=high truthRoll=0.60394012 truth=true claim="BLSW earnings down" leadDays=1 target=earningsBeat:BLSW:1 noise=false
+[DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=cityDesk tier=high truthRoll=0.83515114 truth=true claim="HRBU raises its dividend" leadDays=3 target=dividendChange:HRBU:3 noise=false
+[DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=floorWire tier=high truthRoll=0.60394012 truth=true claim="BLSW earnings miss" leadDays=1 target=earningsBeat:BLSW:1 noise=false
 [DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=sectorNote tier=medium truthRoll=0.07433984 truth=true claim="Sector A supply shock" leadDays=1 target=supplyShock:A:1 noise=false
 [DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=marketBrief tier=medium truthRoll=0.42237557 truth=true claim="Sector A supply shock" leadDays=1 target=supplyShock:A:1 noise=false
 [DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=streetTalk tier=low truthRoll=0.381187 truth=false claim="Sector B demand shift" leadDays=3 target=demandShift:B:3 noise=true
-[DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=openChatter tier=low truthRoll=0.54234819 truth=false claim="HRBU earnings up" leadDays=3 target=earningsBeat:HRBU:3 noise=true
+[DEBUG market] day=0 kind=rumourGenerated feedDay=1 source=openChatter tier=low truthRoll=0.54234819 truth=false claim="HRBU earnings beat" leadDays=3 target=earningsBeat:HRBU:3 noise=true
 [DEBUG market] day=1 kind=effectApplied asset=BLSW effect=earningsBeat:BLSW:1 dayIndex=0 delta=-327.54970901
 [DEBUG market] day=1 kind=effectApplied asset=NOVA effect=supplyShock:A:1 dayIndex=0 delta=-53.27299154
 [DEBUG market] day=1 kind=effectApplied asset=BLSW effect=supplyShock:A:1 dayIndex=0 delta=-124.30364692
@@ -229,16 +229,16 @@
 [DEBUG market] day=1 kind=eventRoll eventDay=4 type=growthDataShock target=market roll=0.60988729 chance=0.07999015 fired=false
 [DEBUG market] day=1 kind=eventRoll eventDay=4 type=inputCostShock target=A roll=0.80199452 chance=0.05000979 fired=false
 [DEBUG market] day=1 kind=eventRoll eventDay=4 type=inputCostShock target=B roll=0.14138338 chance=0.05000979 fired=false
-[DEBUG market] day=1 kind=headline feedDay=2 event=earningsBeat:BLSW:1 magnitude=5.84910195 top=true text="BLSW earnings down"
+[DEBUG market] day=1 kind=headline feedDay=2 event=earningsBeat:BLSW:1 magnitude=5.84910195 top=true text="BLSW earnings miss"
 [DEBUG market] day=1 kind=headline feedDay=2 event=supplyShock:A:1 magnitude=2.21970798 top=false text="Sector A supply shock"
 [DEBUG market] day=1 kind=headline feedDay=2 event=lawsuit:KSR:1 magnitude=3.65961637 top=false text="KSR lawsuit"
 [DEBUG market] day=1 kind=headline feedDay=2 event=buyback:HRBU:1 magnitude=2.39986999 top=false text="HRBU share buyback"
-[DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=cityDesk tier=high truthRoll=0.13423078 truth=true claim="BLSW dividend up" leadDays=2 target=dividendChange:BLSW:3 noise=false
+[DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=cityDesk tier=high truthRoll=0.13423078 truth=true claim="BLSW raises its dividend" leadDays=2 target=dividendChange:BLSW:3 noise=false
 [DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=floorWire tier=high truthRoll=0.9010691 truth=false claim="HRBU product launch" leadDays=3 target=productLaunch:HRBU:4 noise=false
-[DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=sectorNote tier=medium truthRoll=0.6174463 truth=false claim="Inflation data down" leadDays=2 target=inflationDataShock:market:3 noise=false
+[DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=sectorNote tier=medium truthRoll=0.6174463 truth=false claim="Inflation data hotter than expected" leadDays=2 target=inflationDataShock:market:3 noise=false
 [DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=marketBrief tier=medium truthRoll=0.65180365 truth=false claim="BLSW management change" leadDays=2 target=managementChange:BLSW:3 noise=false
 [DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=streetTalk tier=low truthRoll=0.5051806 truth=false claim="Sector A supply shock" leadDays=3 target=supplyShock:A:4 noise=true
-[DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=openChatter tier=low truthRoll=0.78609367 truth=false claim="BLSW earnings up" leadDays=1 target=earningsBeat:BLSW:2 noise=true
+[DEBUG market] day=1 kind=rumourGenerated feedDay=2 source=openChatter tier=low truthRoll=0.78609367 truth=false claim="BLSW earnings beat" leadDays=1 target=earningsBeat:BLSW:2 noise=true
 [DEBUG market] day=2 kind=effectApplied asset=BLSW effect=earningsBeat:BLSW:1 dayIndex=1 delta=-218.36647268
 [DEBUG market] day=2 kind=effectApplied asset=NOVA effect=supplyShock:A:1 dayIndex=1 delta=-35.51532769
 [DEBUG market] day=2 kind=effectApplied asset=BLSW effect=supplyShock:A:1 dayIndex=1 delta=-82.86909795
@@ -312,11 +312,11 @@
 [DEBUG market] day=2 kind=eventRoll eventDay=5 type=inputCostShock target=A roll=0.4663282 chance=0.05002633 fired=false
 [DEBUG market] day=2 kind=eventRoll eventDay=5 type=inputCostShock target=B roll=0.24842524 chance=0.05002633 fired=false
 [DEBUG market] day=2 kind=rumourGenerated feedDay=3 source=cityDesk tier=high truthRoll=0.15385962 truth=true claim="Sector B demand shift" leadDays=2 target=demandShift:B:4 noise=false
-[DEBUG market] day=2 kind=rumourGenerated feedDay=3 source=floorWire tier=high truthRoll=0.7088081 truth=true claim="BLSW dividend up" leadDays=1 target=dividendChange:BLSW:3 noise=false
+[DEBUG market] day=2 kind=rumourGenerated feedDay=3 source=floorWire tier=high truthRoll=0.7088081 truth=true claim="BLSW raises its dividend" leadDays=1 target=dividendChange:BLSW:3 noise=false
 [DEBUG market] day=2 kind=rumourGenerated feedDay=3 source=sectorNote tier=medium truthRoll=0.04916592 truth=true claim="Sector B demand shift" leadDays=2 target=demandShift:B:4 noise=false
 [DEBUG market] day=2 kind=rumourGenerated feedDay=3 source=marketBrief tier=medium truthRoll=0.24150335 truth=true claim="Sector B demand shift" leadDays=2 target=demandShift:B:4 noise=false
 [DEBUG market] day=2 kind=rumourGenerated feedDay=3 source=streetTalk tier=low truthRoll=0.14339066 truth=true claim="Sector A demand shift" leadDays=2 target=demandShift:A:4 noise=false
-[DEBUG market] day=2 kind=rumourGenerated feedDay=3 source=openChatter tier=low truthRoll=0.16146481 truth=true claim="HRBU dividend up" leadDays=1 target=dividendChange:HRBU:3 noise=false
+[DEBUG market] day=2 kind=rumourGenerated feedDay=3 source=openChatter tier=low truthRoll=0.16146481 truth=true claim="HRBU raises its dividend" leadDays=1 target=dividendChange:HRBU:3 noise=false
 [DEBUG market] day=3 kind=effectApplied asset=BLSW effect=earningsBeat:BLSW:1 dayIndex=2 delta=-109.18323634
 [DEBUG market] day=3 kind=effectApplied asset=NOVA effect=supplyShock:A:1 dayIndex=2 delta=-17.75766385
 [DEBUG market] day=3 kind=effectApplied asset=BLSW effect=supplyShock:A:1 dayIndex=2 delta=-41.43454897
@@ -386,13 +386,13 @@
 [DEBUG market] day=3 kind=eventRoll eventDay=6 type=growthDataShock target=market roll=0.84860974 chance=0.07997485 fired=false
 [DEBUG market] day=3 kind=eventRoll eventDay=6 type=inputCostShock target=A roll=0.40001986 chance=0.05001814 fired=false
 [DEBUG market] day=3 kind=eventRoll eventDay=6 type=inputCostShock target=B roll=0.65897893 chance=0.05001814 fired=false
-[DEBUG market] day=3 kind=headline feedDay=4 event=dividendChange:BLSW:3 magnitude=2.70647304 top=true text="BLSW dividend up"
-[DEBUG market] day=3 kind=headline feedDay=4 event=dividendChange:HRBU:3 magnitude=1.21398982 top=false text="HRBU dividend up"
-[DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=cityDesk tier=high truthRoll=0.54925765 truth=true claim="KSR guidance down" leadDays=2 target=guidanceUpdate:KSR:5 noise=false
-[DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=floorWire tier=high truthRoll=0.51713831 truth=true claim="KSR guidance down" leadDays=2 target=guidanceUpdate:KSR:5 noise=false
+[DEBUG market] day=3 kind=headline feedDay=4 event=dividendChange:BLSW:3 magnitude=2.70647304 top=true text="BLSW raises its dividend"
+[DEBUG market] day=3 kind=headline feedDay=4 event=dividendChange:HRBU:3 magnitude=1.21398982 top=false text="HRBU raises its dividend"
+[DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=cityDesk tier=high truthRoll=0.54925765 truth=true claim="KSR cuts guidance" leadDays=2 target=guidanceUpdate:KSR:5 noise=false
+[DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=floorWire tier=high truthRoll=0.51713831 truth=true claim="KSR cuts guidance" leadDays=2 target=guidanceUpdate:KSR:5 noise=false
 [DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=sectorNote tier=medium truthRoll=0.37429117 truth=true claim="Sector A demand shift" leadDays=1 target=demandShift:A:4 noise=false
 [DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=marketBrief tier=medium truthRoll=0.25400545 truth=true claim="Sector B demand shift" leadDays=1 target=demandShift:B:4 noise=false
-[DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=streetTalk tier=low truthRoll=0.92943568 truth=false claim="HRBU earnings up" leadDays=3 target=earningsBeat:HRBU:6 noise=true
+[DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=streetTalk tier=low truthRoll=0.92943568 truth=false claim="HRBU earnings beat" leadDays=3 target=earningsBeat:HRBU:6 noise=true
 [DEBUG market] day=3 kind=rumourGenerated feedDay=4 source=openChatter tier=low truthRoll=0.54341859 truth=false claim="BLSW lawsuit" leadDays=3 target=lawsuit:BLSW:6 noise=true
 [DEBUG market] day=4 kind=effectApplied asset=BLSW effect=dividendChange:BLSW:3 dayIndex=1 delta=141.37141588
 [DEBUG market] day=4 kind=effectApplied asset=HRBU effect=dividendChange:HRBU:3 dayIndex=1 delta=18.36526246
@@ -469,12 +469,12 @@
 [DEBUG market] day=4 kind=eventRoll eventDay=7 type=inputCostShock target=B roll=0.09872262 chance=0.05002356 fired=false
 [DEBUG market] day=4 kind=headline feedDay=5 event=demandShift:A:4 magnitude=2.22476764 top=false text="Sector A demand shift"
 [DEBUG market] day=4 kind=headline feedDay=5 event=demandShift:B:4 magnitude=2.51846836 top=true text="Sector B demand shift"
-[DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=cityDesk tier=high truthRoll=0.10355326 truth=true claim="KSR guidance down" leadDays=1 target=guidanceUpdate:KSR:5 noise=false
+[DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=cityDesk tier=high truthRoll=0.10355326 truth=true claim="KSR cuts guidance" leadDays=1 target=guidanceUpdate:KSR:5 noise=false
 [DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=floorWire tier=high truthRoll=0.41617798 truth=true claim="BLSW contract award" leadDays=3 target=contractAward:BLSW:7 noise=false
 [DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=sectorNote tier=medium truthRoll=0.7594841 truth=false claim="KSR management change" leadDays=1 target=managementChange:KSR:5 noise=false
 [DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=marketBrief tier=medium truthRoll=0.9271282 truth=false claim="KSR contract award" leadDays=1 target=contractAward:KSR:5 noise=false
-[DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=streetTalk tier=low truthRoll=0.20551307 truth=true claim="KSR guidance down" leadDays=1 target=guidanceUpdate:KSR:5 noise=false
-[DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=openChatter tier=low truthRoll=0.2846732 truth=true claim="NOVA dividend up" leadDays=3 target=dividendChange:NOVA:7 noise=false
+[DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=streetTalk tier=low truthRoll=0.20551307 truth=true claim="KSR cuts guidance" leadDays=1 target=guidanceUpdate:KSR:5 noise=false
+[DEBUG market] day=4 kind=rumourGenerated feedDay=5 source=openChatter tier=low truthRoll=0.2846732 truth=true claim="NOVA raises its dividend" leadDays=3 target=dividendChange:NOVA:7 noise=false
 [DEBUG market] day=5 kind=effectApplied asset=NOVA effect=demandShift:A:4 dayIndex=1 delta=34.80614877
 [DEBUG market] day=5 kind=effectApplied asset=BLSW effect=demandShift:A:4 dayIndex=1 delta=77.40459567
 [DEBUG market] day=5 kind=effectApplied asset=HRBU effect=demandShift:B:4 dayIndex=1 delta=25.55380119
@@ -548,13 +548,13 @@
 [DEBUG market] day=5 kind=eventRoll eventDay=8 type=growthDataShock target=market roll=0.2870421 chance=0.0799724 fired=false
 [DEBUG market] day=5 kind=eventRoll eventDay=8 type=inputCostShock target=A roll=0.96115521 chance=0.04999836 fired=false
 [DEBUG market] day=5 kind=eventRoll eventDay=8 type=inputCostShock target=B roll=0.95837316 chance=0.04999836 fired=false
-[DEBUG market] day=5 kind=headline feedDay=6 event=guidanceUpdate:KSR:5 magnitude=1.42571822 top=false text="KSR guidance down"
+[DEBUG market] day=5 kind=headline feedDay=6 event=guidanceUpdate:KSR:5 magnitude=1.42571822 top=false text="KSR cuts guidance"
 [DEBUG market] day=5 kind=headline feedDay=6 event=lawsuit:BLSW:5 magnitude=4.36642749 top=true text="BLSW lawsuit"
-[DEBUG market] day=5 kind=rumourGenerated feedDay=6 source=cityDesk tier=high truthRoll=0.97370061 truth=false claim="NOVA earnings down" leadDays=1 target=earningsBeat:NOVA:6 noise=false
+[DEBUG market] day=5 kind=rumourGenerated feedDay=6 source=cityDesk tier=high truthRoll=0.97370061 truth=false claim="NOVA earnings miss" leadDays=1 target=earningsBeat:NOVA:6 noise=false
 [DEBUG market] day=5 kind=rumourGenerated feedDay=6 source=floorWire tier=high truthRoll=0.25171387 truth=true claim="BLSW contract award" leadDays=2 target=contractAward:BLSW:7 noise=false
 [DEBUG market] day=5 kind=rumourGenerated feedDay=6 source=sectorNote tier=medium truthRoll=0.4047519 truth=true claim="NOVA lawsuit" leadDays=3 target=lawsuit:NOVA:8 noise=false
 [DEBUG market] day=5 kind=rumourGenerated feedDay=6 source=marketBrief tier=medium truthRoll=0.94927772 truth=false claim="HRBU share buyback" leadDays=1 target=buyback:HRBU:6 noise=false
-[DEBUG market] day=5 kind=rumourGenerated feedDay=6 source=streetTalk tier=low truthRoll=0.68333624 truth=false claim="BLSW dividend up" leadDays=2 target=dividendChange:BLSW:7 noise=true
+[DEBUG market] day=5 kind=rumourGenerated feedDay=6 source=streetTalk tier=low truthRoll=0.68333624 truth=false claim="BLSW raises its dividend" leadDays=2 target=dividendChange:BLSW:7 noise=true
 [DEBUG market] day=5 kind=rumourGenerated feedDay=6 source=openChatter tier=low truthRoll=0.55882967 truth=false claim="Sector B input cost shock" leadDays=2 target=inputCostShock:B:7 noise=true
 [DEBUG market] day=6 kind=effectApplied asset=NOVA effect=demandShift:A:4 dayIndex=2 delta=34.80614877
 [DEBUG market] day=6 kind=effectApplied asset=BLSW effect=demandShift:A:4 dayIndex=2 delta=77.40459567
@@ -629,7 +629,7 @@
 [DEBUG market] day=6 kind=eventRoll eventDay=9 type=inputCostShock target=B roll=0.69724668 chance=0.04998431 fired=false
 [DEBUG market] day=6 kind=rumourGenerated feedDay=7 source=cityDesk tier=high truthRoll=0.99732694 truth=false claim="BLSW product launch" leadDays=1 target=productLaunch:BLSW:7 noise=false
 [DEBUG market] day=6 kind=rumourGenerated feedDay=7 source=floorWire tier=high truthRoll=0.22920072 truth=true claim="NOVA lawsuit" leadDays=2 target=lawsuit:NOVA:8 noise=false
-[DEBUG market] day=6 kind=rumourGenerated feedDay=7 source=sectorNote tier=medium truthRoll=0.98851383 truth=false claim="KSR guidance down" leadDays=1 target=guidanceUpdate:KSR:7 noise=false
+[DEBUG market] day=6 kind=rumourGenerated feedDay=7 source=sectorNote tier=medium truthRoll=0.98851383 truth=false claim="KSR cuts guidance" leadDays=1 target=guidanceUpdate:KSR:7 noise=false
 [DEBUG market] day=6 kind=rumourGenerated feedDay=7 source=marketBrief tier=medium truthRoll=0.08781357 truth=true claim="NOVA lawsuit" leadDays=2 target=lawsuit:NOVA:8 noise=false
 [DEBUG market] day=6 kind=rumourGenerated feedDay=7 source=streetTalk tier=low truthRoll=0.05244346 truth=true claim="NOVA lawsuit" leadDays=2 target=lawsuit:NOVA:8 noise=false
 [DEBUG market] day=6 kind=rumourGenerated feedDay=7 source=openChatter tier=low truthRoll=0.67472603 truth=false claim="Sector B input cost shock" leadDays=1 target=inputCostShock:B:7 noise=true
@@ -698,13 +698,13 @@
 [DEBUG market] day=7 kind=eventRoll eventDay=10 type=inputCostShock target=A roll=0.10190984 chance=0.04999164 fired=false
 [DEBUG market] day=7 kind=eventRoll eventDay=10 type=inputCostShock target=B roll=0.30434798 chance=0.04999164 fired=false
 [DEBUG market] day=7 kind=headline feedDay=8 event=contractAward:BLSW:7 magnitude=3.79699907 top=true text="BLSW contract award"
-[DEBUG market] day=7 kind=headline feedDay=8 event=dividendChange:NOVA:7 magnitude=1.55912729 top=false text="NOVA dividend up"
-[DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=cityDesk tier=high truthRoll=0.76649122 truth=true claim="HRBU earnings down" leadDays=2 target=earningsBeat:HRBU:9 noise=false
-[DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=floorWire tier=high truthRoll=0.94822828 truth=false claim="KSR guidance up" leadDays=2 target=guidanceUpdate:KSR:9 noise=false
-[DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=sectorNote tier=medium truthRoll=0.61123439 truth=false claim="KSR earnings down" leadDays=1 target=earningsBeat:KSR:8 noise=false
+[DEBUG market] day=7 kind=headline feedDay=8 event=dividendChange:NOVA:7 magnitude=1.55912729 top=false text="NOVA raises its dividend"
+[DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=cityDesk tier=high truthRoll=0.76649122 truth=true claim="HRBU earnings miss" leadDays=2 target=earningsBeat:HRBU:9 noise=false
+[DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=floorWire tier=high truthRoll=0.94822828 truth=false claim="KSR raises guidance" leadDays=2 target=guidanceUpdate:KSR:9 noise=false
+[DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=sectorNote tier=medium truthRoll=0.61123439 truth=false claim="KSR earnings miss" leadDays=1 target=earningsBeat:KSR:8 noise=false
 [DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=marketBrief tier=medium truthRoll=0.12827021 truth=true claim="NOVA lawsuit" leadDays=1 target=lawsuit:NOVA:8 noise=false
 [DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=streetTalk tier=low truthRoll=0.60799679 truth=false claim="KSR management change" leadDays=2 target=managementChange:KSR:9 noise=true
-[DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=openChatter tier=low truthRoll=0.95868913 truth=false claim="Inflation data up" leadDays=2 target=inflationDataShock:market:9 noise=true
+[DEBUG market] day=7 kind=rumourGenerated feedDay=8 source=openChatter tier=low truthRoll=0.95868913 truth=false claim="Inflation data cooler than expected" leadDays=2 target=inflationDataShock:market:9 noise=true
 [DEBUG market] day=8 kind=effectApplied asset=BLSW effect=contractAward:BLSW:7 dayIndex=1 delta=-131.92667079
 [DEBUG market] day=8 kind=effectApplied asset=NOVA effect=dividendChange:NOVA:7 dayIndex=1 delta=37.40246937
 [DEBUG market] day=8 kind=effectApplied asset=NOVA effect=lawsuit:NOVA:8 dayIndex=0 delta=-95.835778
@@ -773,11 +773,11 @@
 [DEBUG market] day=8 kind=eventRoll eventDay=11 type=inputCostShock target=B roll=0.22100049 chance=0.04998753 fired=false
 [DEBUG market] day=8 kind=headline feedDay=9 event=lawsuit:NOVA:8 magnitude=3.96402601 top=true text="NOVA lawsuit"
 [DEBUG market] day=8 kind=rumourGenerated feedDay=9 source=cityDesk tier=high truthRoll=0.17584039 truth=true claim="HRBU scandal" leadDays=3 target=scandal:HRBU:11 noise=false
-[DEBUG market] day=8 kind=rumourGenerated feedDay=9 source=floorWire tier=high truthRoll=0.45235816 truth=true claim="HRBU earnings down" leadDays=1 target=earningsBeat:HRBU:9 noise=false
+[DEBUG market] day=8 kind=rumourGenerated feedDay=9 source=floorWire tier=high truthRoll=0.45235816 truth=true claim="HRBU earnings miss" leadDays=1 target=earningsBeat:HRBU:9 noise=false
 [DEBUG market] day=8 kind=rumourGenerated feedDay=9 source=sectorNote tier=medium truthRoll=0.65086245 truth=false claim="HRBU lawsuit" leadDays=2 target=lawsuit:HRBU:10 noise=false
 [DEBUG market] day=8 kind=rumourGenerated feedDay=9 source=marketBrief tier=medium truthRoll=0.928995 truth=false claim="HRBU management change" leadDays=1 target=managementChange:HRBU:9 noise=false
 [DEBUG market] day=8 kind=rumourGenerated feedDay=9 source=streetTalk tier=low truthRoll=0.7754064 truth=false claim="HRBU contract award" leadDays=1 target=contractAward:HRBU:9 noise=true
-[DEBUG market] day=8 kind=rumourGenerated feedDay=9 source=openChatter tier=low truthRoll=0.21721333 truth=true claim="HRBU earnings down" leadDays=1 target=earningsBeat:HRBU:9 noise=false
+[DEBUG market] day=8 kind=rumourGenerated feedDay=9 source=openChatter tier=low truthRoll=0.21721333 truth=true claim="HRBU earnings miss" leadDays=1 target=earningsBeat:HRBU:9 noise=false
 [DEBUG market] day=9 kind=effectApplied asset=NOVA effect=lawsuit:NOVA:8 dayIndex=1 delta=-63.89051867
 [DEBUG market] day=9 kind=effectApplied asset=HRBU effect=earningsBeat:HRBU:9 dayIndex=0 delta=-84.9317372
 [DEBUG market] day=9 kind=fairValueChange asset=NOVA before=4776.84162397 total=-63.89051867 clipped=-63.89051867 after=4712.9511053
@@ -847,10 +847,10 @@
 [DEBUG market] day=9 kind=eventRoll eventDay=12 type=growthDataShock target=market roll=0.44726405 chance=0.07994698 fired=false
 [DEBUG market] day=9 kind=eventRoll eventDay=12 type=inputCostShock target=A roll=0.59036855 chance=0.04998089 fired=false
 [DEBUG market] day=9 kind=eventRoll eventDay=12 type=inputCostShock target=B roll=0.39881614 chance=0.04998089 fired=false
-[DEBUG market] day=9 kind=headline feedDay=10 event=earningsBeat:HRBU:9 magnitude=5.41139513 top=true text="HRBU earnings down"
+[DEBUG market] day=9 kind=headline feedDay=10 event=earningsBeat:HRBU:9 magnitude=5.41139513 top=true text="HRBU earnings miss"
 [DEBUG market] day=9 kind=rumourGenerated feedDay=10 source=cityDesk tier=high truthRoll=0.5754686 truth=true claim="Sector A demand shift" leadDays=3 target=demandShift:A:12 noise=false
-[DEBUG market] day=9 kind=rumourGenerated feedDay=10 source=floorWire tier=high truthRoll=0.04929074 truth=true claim="KSR dividend down" leadDays=3 target=dividendChange:KSR:12 noise=false
-[DEBUG market] day=9 kind=rumourGenerated feedDay=10 source=sectorNote tier=medium truthRoll=0.13619527 truth=true claim="KSR dividend down" leadDays=3 target=dividendChange:KSR:12 noise=false
+[DEBUG market] day=9 kind=rumourGenerated feedDay=10 source=floorWire tier=high truthRoll=0.04929074 truth=true claim="KSR cuts its dividend" leadDays=3 target=dividendChange:KSR:12 noise=false
+[DEBUG market] day=9 kind=rumourGenerated feedDay=10 source=sectorNote tier=medium truthRoll=0.13619527 truth=true claim="KSR cuts its dividend" leadDays=3 target=dividendChange:KSR:12 noise=false
 [DEBUG market] day=9 kind=rumourGenerated feedDay=10 source=marketBrief tier=medium truthRoll=0.4477491 truth=true claim="Sector A demand shift" leadDays=3 target=demandShift:A:12 noise=false
 [DEBUG market] day=9 kind=rumourGenerated feedDay=10 source=streetTalk tier=low truthRoll=0.15018448 truth=true claim="HRBU scandal" leadDays=2 target=scandal:HRBU:11 noise=false
 [DEBUG market] day=9 kind=rumourGenerated feedDay=10 source=openChatter tier=low truthRoll=0.54367998 truth=false claim="NOVA product launch" leadDays=2 target=productLaunch:NOVA:11 noise=true
@@ -929,11 +929,11 @@
 [DEBUG market] day=10 kind=eventRoll eventDay=13 type=inputCostShock target=A roll=0.18327572 chance=0.04998562 fired=false
 [DEBUG market] day=10 kind=eventRoll eventDay=13 type=inputCostShock target=B roll=0.90400531 chance=0.04998562 fired=false
 [DEBUG market] day=10 kind=headline feedDay=11 event=calendar:growthRelease:10 magnitude=0.4 top=true text="Growth release inline"
-[DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=cityDesk tier=high truthRoll=0.94906798 truth=false claim="BLSW earnings up" leadDays=3 target=earningsBeat:BLSW:13 noise=false
+[DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=cityDesk tier=high truthRoll=0.94906798 truth=false claim="BLSW earnings beat" leadDays=3 target=earningsBeat:BLSW:13 noise=false
 [DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=floorWire tier=high truthRoll=0.04625373 truth=true claim="KSR lawsuit" leadDays=3 target=lawsuit:KSR:13 noise=false
 [DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=sectorNote tier=medium truthRoll=0.55903419 truth=true claim="Sector A demand shift" leadDays=2 target=demandShift:A:12 noise=false
-[DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=marketBrief tier=medium truthRoll=0.62884264 truth=false claim="HRBU earnings down" leadDays=2 target=earningsBeat:HRBU:12 noise=false
-[DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=streetTalk tier=low truthRoll=0.52899362 truth=false claim="NOVA earnings down" leadDays=3 target=earningsBeat:NOVA:13 noise=true
+[DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=marketBrief tier=medium truthRoll=0.62884264 truth=false claim="HRBU earnings miss" leadDays=2 target=earningsBeat:HRBU:12 noise=false
+[DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=streetTalk tier=low truthRoll=0.52899362 truth=false claim="NOVA earnings miss" leadDays=3 target=earningsBeat:NOVA:13 noise=true
 [DEBUG market] day=10 kind=rumourGenerated feedDay=11 source=openChatter tier=low truthRoll=0.88279313 truth=false claim="KSR scandal" leadDays=2 target=scandal:KSR:12 noise=true
 [DEBUG market] day=11 kind=effectApplied asset=HRBU effect=earningsBeat:HRBU:9 dayIndex=2 delta=-28.31057907
 [DEBUG market] day=11 kind=effectApplied asset=HRBU effect=scandal:HRBU:11 dayIndex=0 delta=-41.08161947
@@ -1004,9 +1004,9 @@
 [DEBUG market] day=11 kind=headline feedDay=12 event=scandal:HRBU:11 magnitude=3.41942062 top=true text="HRBU scandal"
 [DEBUG market] day=11 kind=rumourGenerated feedDay=12 source=cityDesk tier=high truthRoll=0.24945569 truth=true claim="Sector B demand shift" leadDays=1 target=demandShift:B:12 noise=false
 [DEBUG market] day=11 kind=rumourGenerated feedDay=12 source=floorWire tier=high truthRoll=0.79187738 truth=true claim="BLSW share buyback" leadDays=2 target=buyback:BLSW:13 noise=false
-[DEBUG market] day=11 kind=rumourGenerated feedDay=12 source=sectorNote tier=medium truthRoll=0.10203264 truth=true claim="KSR dividend down" leadDays=1 target=dividendChange:KSR:12 noise=false
+[DEBUG market] day=11 kind=rumourGenerated feedDay=12 source=sectorNote tier=medium truthRoll=0.10203264 truth=true claim="KSR cuts its dividend" leadDays=1 target=dividendChange:KSR:12 noise=false
 [DEBUG market] day=11 kind=rumourGenerated feedDay=12 source=marketBrief tier=medium truthRoll=0.57187419 truth=true claim="Sector B demand shift" leadDays=1 target=demandShift:B:12 noise=false
-[DEBUG market] day=11 kind=rumourGenerated feedDay=12 source=streetTalk tier=low truthRoll=0.46630566 truth=false claim="BLSW guidance down" leadDays=3 target=guidanceUpdate:BLSW:14 noise=true
+[DEBUG market] day=11 kind=rumourGenerated feedDay=12 source=streetTalk tier=low truthRoll=0.46630566 truth=false claim="BLSW cuts guidance" leadDays=3 target=guidanceUpdate:BLSW:14 noise=true
 [DEBUG market] day=11 kind=rumourGenerated feedDay=12 source=openChatter tier=low truthRoll=0.54618763 truth=false claim="BLSW lawsuit" leadDays=1 target=lawsuit:BLSW:12 noise=true
 [DEBUG market] day=12 kind=effectApplied asset=HRBU effect=scandal:HRBU:11 dayIndex=1 delta=-30.8112146
 [DEBUG market] day=12 kind=effectApplied asset=NOVA effect=demandShift:A:12 dayIndex=0 delta=-59.75556752
@@ -1083,9 +1083,9 @@
 [DEBUG market] day=12 kind=eventRoll eventDay=15 type=inputCostShock target=B roll=0.45119042 chance=0.04997285 fired=false
 [DEBUG market] day=12 kind=headline feedDay=13 event=demandShift:A:12 magnitude=3.81430068 top=true text="Sector A demand shift"
 [DEBUG market] day=12 kind=headline feedDay=13 event=demandShift:B:12 magnitude=2.8349133 top=false text="Sector B demand shift"
-[DEBUG market] day=12 kind=headline feedDay=13 event=dividendChange:KSR:12 magnitude=1.54193098 top=false text="KSR dividend down"
+[DEBUG market] day=12 kind=headline feedDay=13 event=dividendChange:KSR:12 magnitude=1.54193098 top=false text="KSR cuts its dividend"
 [DEBUG market] day=12 kind=rumourGenerated feedDay=13 source=cityDesk tier=high truthRoll=0.88488134 truth=false claim="Sector B faces regulation" leadDays=2 target=regulation:B:14 noise=false
-[DEBUG market] day=12 kind=rumourGenerated feedDay=13 source=floorWire tier=high truthRoll=0.4701039 truth=true claim="BLSW dividend down" leadDays=2 target=dividendChange:BLSW:14 noise=false
+[DEBUG market] day=12 kind=rumourGenerated feedDay=13 source=floorWire tier=high truthRoll=0.4701039 truth=true claim="BLSW cuts its dividend" leadDays=2 target=dividendChange:BLSW:14 noise=false
 [DEBUG market] day=12 kind=rumourGenerated feedDay=13 source=sectorNote tier=medium truthRoll=0.04433591 truth=true claim="KSR lawsuit" leadDays=1 target=lawsuit:KSR:13 noise=false
 [DEBUG market] day=12 kind=rumourGenerated feedDay=13 source=marketBrief tier=medium truthRoll=0.98719662 truth=false claim="Sector A supply shock" leadDays=1 target=supplyShock:A:13 noise=false
 [DEBUG market] day=12 kind=rumourGenerated feedDay=13 source=streetTalk tier=low truthRoll=0.78368873 truth=false claim="Sector B demand shift" leadDays=1 target=demandShift:B:13 noise=true
@@ -1165,10 +1165,10 @@
 [DEBUG market] day=13 kind=eventRoll eventDay=16 type=inputCostShock target=B roll=0.55465787 chance=0.04997789 fired=false
 [DEBUG market] day=13 kind=headline feedDay=14 event=lawsuit:KSR:13 magnitude=3.39539297 top=true text="KSR lawsuit"
 [DEBUG market] day=13 kind=headline feedDay=14 event=buyback:BLSW:13 magnitude=1.31715498 top=false text="BLSW share buyback"
-[DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=cityDesk tier=high truthRoll=0.06480507 truth=true claim="BLSW dividend down" leadDays=1 target=dividendChange:BLSW:14 noise=false
-[DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=floorWire tier=high truthRoll=0.46126254 truth=true claim="BLSW dividend down" leadDays=1 target=dividendChange:BLSW:14 noise=false
+[DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=cityDesk tier=high truthRoll=0.06480507 truth=true claim="BLSW cuts its dividend" leadDays=1 target=dividendChange:BLSW:14 noise=false
+[DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=floorWire tier=high truthRoll=0.46126254 truth=true claim="BLSW cuts its dividend" leadDays=1 target=dividendChange:BLSW:14 noise=false
 [DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=sectorNote tier=medium truthRoll=0.70839917 truth=false claim="BLSW share buyback" leadDays=1 target=buyback:BLSW:14 noise=false
-[DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=marketBrief tier=medium truthRoll=0.99272705 truth=false claim="Inflation data up" leadDays=1 target=inflationDataShock:market:14 noise=false
+[DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=marketBrief tier=medium truthRoll=0.99272705 truth=false claim="Inflation data cooler than expected" leadDays=1 target=inflationDataShock:market:14 noise=false
 [DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=streetTalk tier=low truthRoll=0.08936022 truth=true claim="HRBU lawsuit" leadDays=3 target=lawsuit:HRBU:16 noise=false
 [DEBUG market] day=13 kind=rumourGenerated feedDay=14 source=openChatter tier=low truthRoll=0.41585002 truth=false claim="NOVA contract award" leadDays=3 target=contractAward:NOVA:16 noise=true
 [DEBUG market] day=14 kind=effectApplied asset=HRBU effect=scandal:HRBU:11 dayIndex=3 delta=-10.27040487
@@ -1252,13 +1252,13 @@
 [DEBUG market] day=14 kind=eventRoll eventDay=17 type=growthDataShock target=market roll=0.95822899 chance=0.07996268 fired=false
 [DEBUG market] day=14 kind=eventRoll eventDay=17 type=inputCostShock target=A roll=0.42599011 chance=0.04998518 fired=false
 [DEBUG market] day=14 kind=eventRoll eventDay=17 type=inputCostShock target=B roll=0.29396838 chance=0.04998518 fired=false
-[DEBUG market] day=14 kind=headline feedDay=15 event=dividendChange:BLSW:14 magnitude=1.60523214 top=true text="BLSW dividend down"
-[DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=cityDesk tier=high truthRoll=0.86553153 truth=false claim="NOVA earnings up" leadDays=3 target=earningsBeat:NOVA:17 noise=false
+[DEBUG market] day=14 kind=headline feedDay=15 event=dividendChange:BLSW:14 magnitude=1.60523214 top=true text="BLSW cuts its dividend"
+[DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=cityDesk tier=high truthRoll=0.86553153 truth=false claim="NOVA earnings beat" leadDays=3 target=earningsBeat:NOVA:17 noise=false
 [DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=floorWire tier=high truthRoll=0.41180436 truth=true claim="NOVA lawsuit" leadDays=3 target=lawsuit:NOVA:17 noise=false
 [DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=sectorNote tier=medium truthRoll=0.74417946 truth=false claim="Sector A supply shock" leadDays=2 target=supplyShock:A:16 noise=false
 [DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=marketBrief tier=medium truthRoll=0.64205453 truth=false claim="Sector A input cost shock" leadDays=3 target=inputCostShock:A:17 noise=false
-[DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=streetTalk tier=low truthRoll=0.61655282 truth=false claim="Inflation data up" leadDays=3 target=inflationDataShock:market:17 noise=true
-[DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=openChatter tier=low truthRoll=0.60097902 truth=false claim="BLSW dividend down" leadDays=3 target=dividendChange:BLSW:17 noise=true
+[DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=streetTalk tier=low truthRoll=0.61655282 truth=false claim="Inflation data cooler than expected" leadDays=3 target=inflationDataShock:market:17 noise=true
+[DEBUG market] day=14 kind=rumourGenerated feedDay=15 source=openChatter tier=low truthRoll=0.60097902 truth=false claim="BLSW cuts its dividend" leadDays=3 target=dividendChange:BLSW:17 noise=true
 [DEBUG market] day=15 kind=effectApplied asset=KSR effect=lawsuit:KSR:13 dayIndex=2 delta=-38.09076702
 [DEBUG market] day=15 kind=effectApplied asset=BLSW effect=dividendChange:BLSW:14 dayIndex=1 delta=-78.66350561
 [DEBUG market] day=15 kind=effectApplied asset=HRBU effect=earningsBeat:HRBU:15 dayIndex=0 delta=39.56535971
@@ -1330,12 +1330,12 @@
 [DEBUG market] day=15 kind=eventRoll eventDay=18 type=growthDataShock target=market roll=0.81043314 chance=0.07997931 fired=false
 [DEBUG market] day=15 kind=eventRoll eventDay=18 type=inputCostShock target=A roll=0.8949153 chance=0.04998451 fired=false
 [DEBUG market] day=15 kind=eventRoll eventDay=18 type=inputCostShock target=B roll=0.66733713 chance=0.04998451 fired=false
-[DEBUG market] day=15 kind=headline feedDay=16 event=earningsBeat:HRBU:15 magnitude=2.67720854 top=false text="HRBU earnings up"
+[DEBUG market] day=15 kind=headline feedDay=16 event=earningsBeat:HRBU:15 magnitude=2.67720854 top=false text="HRBU earnings beat"
 [DEBUG market] day=15 kind=headline feedDay=16 event=buyback:NOVA:15 magnitude=2.89576427 top=true text="NOVA share buyback"
-[DEBUG market] day=15 kind=rumourGenerated feedDay=16 source=cityDesk tier=high truthRoll=0.27828998 truth=true claim="KSR earnings down" leadDays=2 target=earningsBeat:KSR:17 noise=false
+[DEBUG market] day=15 kind=rumourGenerated feedDay=16 source=cityDesk tier=high truthRoll=0.27828998 truth=true claim="KSR earnings miss" leadDays=2 target=earningsBeat:KSR:17 noise=false
 [DEBUG market] day=15 kind=rumourGenerated feedDay=16 source=floorWire tier=high truthRoll=0.9696776 truth=false claim="Sector B input cost shock" leadDays=3 target=inputCostShock:B:18 noise=false
 [DEBUG market] day=15 kind=rumourGenerated feedDay=16 source=sectorNote tier=medium truthRoll=0.46650331 truth=true claim="NOVA scandal" leadDays=2 target=scandal:NOVA:17 noise=false
-[DEBUG market] day=15 kind=rumourGenerated feedDay=16 source=marketBrief tier=medium truthRoll=0.09779863 truth=true claim="BLSW guidance down" leadDays=2 target=guidanceUpdate:BLSW:17 noise=false
+[DEBUG market] day=15 kind=rumourGenerated feedDay=16 source=marketBrief tier=medium truthRoll=0.09779863 truth=true claim="BLSW cuts guidance" leadDays=2 target=guidanceUpdate:BLSW:17 noise=false
 [DEBUG market] day=15 kind=rumourGenerated feedDay=16 source=streetTalk tier=low truthRoll=0.90112058 truth=false claim="BLSW share buyback" leadDays=1 target=buyback:BLSW:16 noise=true
 [DEBUG market] day=15 kind=rumourGenerated feedDay=16 source=openChatter tier=low truthRoll=0.89409999 truth=false claim="Sector B supply shock" leadDays=2 target=supplyShock:B:17 noise=true
 [DEBUG market] day=16 kind=effectApplied asset=HRBU effect=earningsBeat:HRBU:15 dayIndex=1 delta=26.37690647
@@ -1411,10 +1411,10 @@
 [DEBUG market] day=16 kind=headline feedDay=17 event=lawsuit:HRBU:16 magnitude=4.12665153 top=true text="HRBU lawsuit"
 [DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=cityDesk tier=high truthRoll=0.01608122 truth=true claim="NOVA lawsuit" leadDays=1 target=lawsuit:NOVA:17 noise=false
 [DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=floorWire tier=high truthRoll=0.19548514 truth=true claim="NOVA lawsuit" leadDays=1 target=lawsuit:NOVA:17 noise=false
-[DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=sectorNote tier=medium truthRoll=0.48517956 truth=true claim="BLSW guidance down" leadDays=1 target=guidanceUpdate:BLSW:17 noise=false
+[DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=sectorNote tier=medium truthRoll=0.48517956 truth=true claim="BLSW cuts guidance" leadDays=1 target=guidanceUpdate:BLSW:17 noise=false
 [DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=marketBrief tier=medium truthRoll=0.84508649 truth=false claim="Sector A input cost shock" leadDays=3 target=inputCostShock:A:19 noise=false
-[DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=streetTalk tier=low truthRoll=0.06831053 truth=true claim="KSR earnings down" leadDays=1 target=earningsBeat:KSR:17 noise=false
-[DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=openChatter tier=low truthRoll=0.82233234 truth=false claim="NOVA dividend down" leadDays=2 target=dividendChange:NOVA:18 noise=true
+[DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=streetTalk tier=low truthRoll=0.06831053 truth=true claim="KSR earnings miss" leadDays=1 target=earningsBeat:KSR:17 noise=false
+[DEBUG market] day=16 kind=rumourGenerated feedDay=17 source=openChatter tier=low truthRoll=0.82233234 truth=false claim="NOVA cuts its dividend" leadDays=2 target=dividendChange:NOVA:18 noise=true
 [DEBUG market] day=17 kind=effectApplied asset=HRBU effect=earningsBeat:HRBU:15 dayIndex=2 delta=13.18845324
 [DEBUG market] day=17 kind=effectApplied asset=HRBU effect=lawsuit:HRBU:16 dayIndex=1 delta=-41.20162763
 [DEBUG market] day=17 kind=effectApplied asset=KSR effect=earningsBeat:KSR:17 dayIndex=0 delta=-166.10619464
@@ -1485,15 +1485,15 @@
 [DEBUG market] day=17 kind=eventRoll eventDay=20 type=growthDataShock target=market roll=0.20578522 chance=0.07996918 fired=false
 [DEBUG market] day=17 kind=eventRoll eventDay=20 type=inputCostShock target=A roll=0.60282759 chance=0.04998319 fired=false
 [DEBUG market] day=17 kind=eventRoll eventDay=20 type=inputCostShock target=B roll=0.52230227 chance=0.04998319 fired=false
-[DEBUG market] day=17 kind=headline feedDay=18 event=earningsBeat:KSR:17 magnitude=5.05061372 top=false text="KSR earnings down"
+[DEBUG market] day=17 kind=headline feedDay=18 event=earningsBeat:KSR:17 magnitude=5.05061372 top=false text="KSR earnings miss"
 [DEBUG market] day=17 kind=headline feedDay=18 event=productLaunch:KSR:17 magnitude=2.80994724 top=false text="KSR product launch"
 [DEBUG market] day=17 kind=headline feedDay=18 event=scandal:NOVA:17 magnitude=7.50752351 top=true text="NOVA scandal"
-[DEBUG market] day=17 kind=headline feedDay=18 event=guidanceUpdate:BLSW:17 magnitude=2.0697548 top=false text="BLSW guidance down"
+[DEBUG market] day=17 kind=headline feedDay=18 event=guidanceUpdate:BLSW:17 magnitude=2.0697548 top=false text="BLSW cuts guidance"
 [DEBUG market] day=17 kind=headline feedDay=18 event=lawsuit:NOVA:17 magnitude=3.57190816 top=false text="NOVA lawsuit"
 [DEBUG market] day=17 kind=rumourGenerated feedDay=18 source=cityDesk tier=high truthRoll=0.30780275 truth=true claim="HRBU share buyback" leadDays=1 target=buyback:HRBU:18 noise=false
 [DEBUG market] day=17 kind=rumourGenerated feedDay=18 source=floorWire tier=high truthRoll=0.25725827 truth=true claim="HRBU scandal" leadDays=2 target=scandal:HRBU:19 noise=false
 [DEBUG market] day=17 kind=rumourGenerated feedDay=18 source=sectorNote tier=medium truthRoll=0.93709138 truth=false claim="BLSW lawsuit" leadDays=3 target=lawsuit:BLSW:20 noise=false
-[DEBUG market] day=17 kind=rumourGenerated feedDay=18 source=marketBrief tier=medium truthRoll=0.84962893 truth=false claim="HRBU guidance down" leadDays=3 target=guidanceUpdate:HRBU:20 noise=false
+[DEBUG market] day=17 kind=rumourGenerated feedDay=18 source=marketBrief tier=medium truthRoll=0.84962893 truth=false claim="HRBU cuts guidance" leadDays=3 target=guidanceUpdate:HRBU:20 noise=false
 [DEBUG market] day=17 kind=rumourGenerated feedDay=18 source=streetTalk tier=low truthRoll=0.03434927 truth=true claim="HRBU share buyback" leadDays=1 target=buyback:HRBU:18 noise=false
 [DEBUG market] day=17 kind=rumourGenerated feedDay=18 source=openChatter tier=low truthRoll=0.1836565 truth=true claim="HRBU scandal" leadDays=2 target=scandal:HRBU:19 noise=false
 [DEBUG market] day=18 kind=effectApplied asset=HRBU effect=lawsuit:HRBU:16 dayIndex=2 delta=-20.60081382
@@ -1569,12 +1569,12 @@
 [DEBUG market] day=18 kind=eventRoll eventDay=21 type=inputCostShock target=A roll=0.55392025 chance=0.04999025 fired=false
 [DEBUG market] day=18 kind=eventRoll eventDay=21 type=inputCostShock target=B roll=0.62378793 chance=0.04999025 fired=false
 [DEBUG market] day=18 kind=headline feedDay=19 event=buyback:HRBU:18 magnitude=2.97200168 top=true text="HRBU share buyback"
-[DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=cityDesk tier=high truthRoll=0.67019661 truth=true claim="NOVA guidance down" leadDays=3 target=guidanceUpdate:NOVA:21 noise=false
+[DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=cityDesk tier=high truthRoll=0.67019661 truth=true claim="NOVA cuts guidance" leadDays=3 target=guidanceUpdate:NOVA:21 noise=false
 [DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=floorWire tier=high truthRoll=0.89065434 truth=false claim="NOVA scandal" leadDays=1 target=scandal:NOVA:19 noise=false
 [DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=sectorNote tier=medium truthRoll=0.6497636 truth=false claim="HRBU lawsuit" leadDays=3 target=lawsuit:HRBU:21 noise=false
-[DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=marketBrief tier=medium truthRoll=0.68236017 truth=false claim="KSR guidance up" leadDays=3 target=guidanceUpdate:KSR:21 noise=false
+[DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=marketBrief tier=medium truthRoll=0.68236017 truth=false claim="KSR raises guidance" leadDays=3 target=guidanceUpdate:KSR:21 noise=false
 [DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=streetTalk tier=low truthRoll=0.94893623 truth=false claim="NOVA scandal" leadDays=1 target=scandal:NOVA:19 noise=true
-[DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=openChatter tier=low truthRoll=0.31737248 truth=true claim="NOVA guidance down" leadDays=3 target=guidanceUpdate:NOVA:21 noise=false
+[DEBUG market] day=18 kind=rumourGenerated feedDay=19 source=openChatter tier=low truthRoll=0.31737248 truth=true claim="NOVA cuts guidance" leadDays=3 target=guidanceUpdate:NOVA:21 noise=false
 [DEBUG market] day=19 kind=effectApplied asset=KSR effect=earningsBeat:KSR:17 dayIndex=2 delta=-55.36873155
 [DEBUG market] day=19 kind=effectApplied asset=NOVA effect=scandal:NOVA:17 dayIndex=2 delta=-69.84244025
 [DEBUG market] day=19 kind=effectApplied asset=NOVA effect=lawsuit:NOVA:17 dayIndex=2 delta=-27.69119777
@@ -1647,10 +1647,10 @@
 [DEBUG market] day=19 kind=headline feedDay=20 event=scandal:HRBU:19 magnitude=3.83367564 top=true text="HRBU scandal"
 [DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=cityDesk tier=high truthRoll=0.36495701 truth=true claim="KSR contract award" leadDays=3 target=contractAward:KSR:22 noise=false
 [DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=floorWire tier=high truthRoll=0.79877048 truth=true claim="KSR contract award" leadDays=3 target=contractAward:KSR:22 noise=false
-[DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=sectorNote tier=medium truthRoll=0.35872125 truth=true claim="NOVA guidance down" leadDays=2 target=guidanceUpdate:NOVA:21 noise=false
+[DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=sectorNote tier=medium truthRoll=0.35872125 truth=true claim="NOVA cuts guidance" leadDays=2 target=guidanceUpdate:NOVA:21 noise=false
 [DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=marketBrief tier=medium truthRoll=0.21362895 truth=true claim="KSR contract award" leadDays=3 target=contractAward:KSR:22 noise=false
-[DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=streetTalk tier=low truthRoll=0.29564841 truth=true claim="NOVA guidance down" leadDays=2 target=guidanceUpdate:NOVA:21 noise=false
-[DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=openChatter tier=low truthRoll=0.97321206 truth=false claim="NOVA guidance down" leadDays=1 target=guidanceUpdate:NOVA:20 noise=true
+[DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=streetTalk tier=low truthRoll=0.29564841 truth=true claim="NOVA cuts guidance" leadDays=2 target=guidanceUpdate:NOVA:21 noise=false
+[DEBUG market] day=19 kind=rumourGenerated feedDay=20 source=openChatter tier=low truthRoll=0.97321206 truth=false claim="NOVA cuts guidance" leadDays=1 target=guidanceUpdate:NOVA:20 noise=true
 [DEBUG market] day=20 kind=calendarItem item=inflationRelease roll=0.04703726 outcome=above growth=1.95471576->1.95471576 growthReleased=1.94698111->1.94698111 inflation=2.99877399->2.99877399 inflationReleased=none->2.99877399 policyRate=4->4 policyRateReleased=none->none
 [DEBUG market] day=20 kind=effectApplied asset=NOVA effect=scandal:NOVA:17 dayIndex=3 delta=-34.92122012
 [DEBUG market] day=20 kind=effectApplied asset=HRBU effect=scandal:HRBU:19 dayIndex=1 delta=-33.98335504
@@ -1730,7 +1730,7 @@
 [DEBUG market] day=20 kind=rumourGenerated feedDay=21 source=floorWire tier=high truthRoll=0.84024132 truth=true claim="KSR contract award" leadDays=2 target=contractAward:KSR:22 noise=false
 [DEBUG market] day=20 kind=rumourGenerated feedDay=21 source=sectorNote tier=medium truthRoll=0.89875088 truth=false claim="BLSW contract award" leadDays=3 target=contractAward:BLSW:23 noise=false
 [DEBUG market] day=20 kind=rumourGenerated feedDay=21 source=marketBrief tier=medium truthRoll=0.14186118 truth=true claim="BLSW share buyback" leadDays=3 target=buyback:BLSW:23 noise=false
-[DEBUG market] day=20 kind=rumourGenerated feedDay=21 source=streetTalk tier=low truthRoll=0.66700442 truth=false claim="HRBU earnings up" leadDays=1 target=earningsBeat:HRBU:21 noise=true
+[DEBUG market] day=20 kind=rumourGenerated feedDay=21 source=streetTalk tier=low truthRoll=0.66700442 truth=false claim="HRBU earnings beat" leadDays=1 target=earningsBeat:HRBU:21 noise=true
 [DEBUG market] day=20 kind=rumourGenerated feedDay=21 source=openChatter tier=low truthRoll=0.34480811 truth=true claim="KSR contract award" leadDays=2 target=contractAward:KSR:22 noise=false
 [DEBUG market] day=21 kind=effectApplied asset=HRBU effect=scandal:HRBU:19 dayIndex=2 delta=-22.65557003
 [DEBUG market] day=21 kind=effectApplied asset=NOVA effect=guidanceUpdate:NOVA:21 dayIndex=0 delta=-48.25922208
@@ -1801,10 +1801,10 @@
 [DEBUG market] day=21 kind=eventMagnitude eventDay=24 type=growthDataShock target=market roll=0.66586718 min=1 max=4 magnitude=2.99760154
 [DEBUG market] day=21 kind=eventRoll eventDay=24 type=inputCostShock target=A roll=0.05623515 chance=0.04998007 fired=false
 [DEBUG market] day=21 kind=eventRoll eventDay=24 type=inputCostShock target=B roll=0.53523958 chance=0.04998007 fired=false
-[DEBUG market] day=21 kind=headline feedDay=22 event=guidanceUpdate:NOVA:21 magnitude=1.76798462 top=true text="NOVA guidance down"
+[DEBUG market] day=21 kind=headline feedDay=22 event=guidanceUpdate:NOVA:21 magnitude=1.76798462 top=true text="NOVA cuts guidance"
 [DEBUG market] day=21 kind=rumourGenerated feedDay=22 source=cityDesk tier=high truthRoll=0.66084962 truth=true claim="KSR scandal" leadDays=3 target=scandal:KSR:24 noise=false
-[DEBUG market] day=21 kind=rumourGenerated feedDay=22 source=floorWire tier=high truthRoll=0.21218661 truth=true claim="KSR guidance down" leadDays=3 target=guidanceUpdate:KSR:24 noise=false
-[DEBUG market] day=21 kind=rumourGenerated feedDay=22 source=sectorNote tier=medium truthRoll=0.49152009 truth=true claim="KSR guidance down" leadDays=3 target=guidanceUpdate:KSR:24 noise=false
+[DEBUG market] day=21 kind=rumourGenerated feedDay=22 source=floorWire tier=high truthRoll=0.21218661 truth=true claim="KSR cuts guidance" leadDays=3 target=guidanceUpdate:KSR:24 noise=false
+[DEBUG market] day=21 kind=rumourGenerated feedDay=22 source=sectorNote tier=medium truthRoll=0.49152009 truth=true claim="KSR cuts guidance" leadDays=3 target=guidanceUpdate:KSR:24 noise=false
 [DEBUG market] day=21 kind=rumourGenerated feedDay=22 source=marketBrief tier=medium truthRoll=0.26017601 truth=true claim="KSR scandal" leadDays=3 target=scandal:KSR:24 noise=false
 [DEBUG market] day=21 kind=rumourGenerated feedDay=22 source=streetTalk tier=low truthRoll=0.79297186 truth=false claim="Sector A demand shift" leadDays=2 target=demandShift:A:23 noise=true
 [DEBUG market] day=21 kind=rumourGenerated feedDay=22 source=openChatter tier=low truthRoll=0.7958523 truth=false claim="Sector A input cost shock" leadDays=1 target=inputCostShock:A:22 noise=true
@@ -1883,7 +1883,7 @@
 [DEBUG market] day=22 kind=rumourGenerated feedDay=23 source=sectorNote tier=medium truthRoll=0.72885047 truth=false claim="Sector B demand shift" leadDays=1 target=demandShift:B:23 noise=false
 [DEBUG market] day=22 kind=rumourGenerated feedDay=23 source=marketBrief tier=medium truthRoll=0.76967703 truth=false claim="NOVA lawsuit" leadDays=2 target=lawsuit:NOVA:24 noise=false
 [DEBUG market] day=22 kind=rumourGenerated feedDay=23 source=streetTalk tier=low truthRoll=0.29637967 truth=true claim="KSR scandal" leadDays=2 target=scandal:KSR:24 noise=false
-[DEBUG market] day=22 kind=rumourGenerated feedDay=23 source=openChatter tier=low truthRoll=0.03967156 truth=true claim="KSR guidance down" leadDays=2 target=guidanceUpdate:KSR:24 noise=false
+[DEBUG market] day=22 kind=rumourGenerated feedDay=23 source=openChatter tier=low truthRoll=0.03967156 truth=true claim="KSR cuts guidance" leadDays=2 target=guidanceUpdate:KSR:24 noise=false
 [DEBUG market] day=23 kind=effectApplied asset=KSR effect=contractAward:KSR:22 dayIndex=1 delta=73.93499597
 [DEBUG market] day=23 kind=effectApplied asset=NOVA effect=managementChange:NOVA:23 dayIndex=0 delta=47.71636463
 [DEBUG market] day=23 kind=effectApplied asset=BLSW effect=buyback:BLSW:23 dayIndex=0 delta=116.36387644
@@ -1953,12 +1953,12 @@
 [DEBUG market] day=23 kind=eventRoll eventDay=26 type=inputCostShock target=B roll=0.05325656 chance=0.04997293 fired=false
 [DEBUG market] day=23 kind=headline feedDay=24 event=managementChange:NOVA:23 magnitude=2.37274571 top=false text="NOVA management change"
 [DEBUG market] day=23 kind=headline feedDay=24 event=buyback:BLSW:23 magnitude=2.5053165 top=true text="BLSW share buyback"
-[DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=cityDesk tier=high truthRoll=0.84449641 truth=true claim="KSR guidance down" leadDays=1 target=guidanceUpdate:KSR:24 noise=false
+[DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=cityDesk tier=high truthRoll=0.84449641 truth=true claim="KSR cuts guidance" leadDays=1 target=guidanceUpdate:KSR:24 noise=false
 [DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=floorWire tier=high truthRoll=0.91378198 truth=false claim="KSR product launch" leadDays=1 target=productLaunch:KSR:24 noise=false
 [DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=sectorNote tier=medium truthRoll=0.24303372 truth=true claim="Sector A faces regulation" leadDays=2 target=regulation:A:25 noise=false
-[DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=marketBrief tier=medium truthRoll=0.50667701 truth=true claim="KSR guidance down" leadDays=1 target=guidanceUpdate:KSR:24 noise=false
-[DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=streetTalk tier=low truthRoll=0.85957311 truth=false claim="Market sentiment up" leadDays=3 target=sentimentSwing:market:26 noise=true
-[DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=openChatter tier=low truthRoll=0.91359733 truth=false claim="BLSW dividend up" leadDays=2 target=dividendChange:BLSW:25 noise=true
+[DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=marketBrief tier=medium truthRoll=0.50667701 truth=true claim="KSR cuts guidance" leadDays=1 target=guidanceUpdate:KSR:24 noise=false
+[DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=streetTalk tier=low truthRoll=0.85957311 truth=false claim="Market mood turns upbeat" leadDays=3 target=sentimentSwing:market:26 noise=true
+[DEBUG market] day=23 kind=rumourGenerated feedDay=24 source=openChatter tier=low truthRoll=0.91359733 truth=false claim="BLSW raises its dividend" leadDays=2 target=dividendChange:BLSW:25 noise=true
 [DEBUG market] day=24 kind=effectApplied asset=NOVA effect=managementChange:NOVA:23 dayIndex=1 delta=47.71636463
 [DEBUG market] day=24 kind=effectApplied asset=BLSW effect=buyback:BLSW:23 dayIndex=1 delta=116.36387644
 [DEBUG market] day=24 kind=effectApplied asset=KSR effect=scandal:KSR:24 dayIndex=0 delta=-178.38076602
@@ -2037,14 +2037,14 @@
 [DEBUG market] day=24 kind=eventRoll eventDay=27 type=inputCostShock target=A roll=0.27220371 chance=0.04996644 fired=false
 [DEBUG market] day=24 kind=eventRoll eventDay=27 type=inputCostShock target=B roll=0.80181335 chance=0.04996644 fired=false
 [DEBUG market] day=24 kind=headline feedDay=25 event=scandal:KSR:24 magnitude=6.86996402 top=true text="KSR scandal"
-[DEBUG market] day=24 kind=headline feedDay=25 event=guidanceUpdate:KSR:24 magnitude=3.80088995 top=false text="KSR guidance down"
-[DEBUG market] day=24 kind=headline feedDay=25 event=growthDataShock:market:24 magnitude=2.99760154 top=false text="Growth data down"
-[DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=cityDesk tier=high truthRoll=0.93194531 truth=false claim="Growth data up" leadDays=2 target=growthDataShock:market:26 noise=false
+[DEBUG market] day=24 kind=headline feedDay=25 event=guidanceUpdate:KSR:24 magnitude=3.80088995 top=false text="KSR cuts guidance"
+[DEBUG market] day=24 kind=headline feedDay=25 event=growthDataShock:market:24 magnitude=2.99760154 top=false text="Growth data weaker than expected"
+[DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=cityDesk tier=high truthRoll=0.93194531 truth=false claim="Growth data stronger than expected" leadDays=2 target=growthDataShock:market:26 noise=false
 [DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=floorWire tier=high truthRoll=0.33696635 truth=true claim="Sector A supply shock" leadDays=3 target=supplyShock:A:27 noise=false
 [DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=sectorNote tier=medium truthRoll=0.03434013 truth=true claim="Sector A supply shock" leadDays=3 target=supplyShock:A:27 noise=false
 [DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=marketBrief tier=medium truthRoll=0.80512345 truth=false claim="KSR share buyback" leadDays=1 target=buyback:KSR:25 noise=false
-[DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=streetTalk tier=low truthRoll=0.49687463 truth=false claim="NOVA dividend down" leadDays=3 target=dividendChange:NOVA:27 noise=true
-[DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=openChatter tier=low truthRoll=0.19156294 truth=true claim="NOVA earnings down" leadDays=1 target=earningsBeat:NOVA:25 noise=false
+[DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=streetTalk tier=low truthRoll=0.49687463 truth=false claim="NOVA cuts its dividend" leadDays=3 target=dividendChange:NOVA:27 noise=true
+[DEBUG market] day=24 kind=rumourGenerated feedDay=25 source=openChatter tier=low truthRoll=0.19156294 truth=true claim="NOVA earnings miss" leadDays=1 target=earningsBeat:NOVA:25 noise=false
 [DEBUG market] day=25 kind=calendarItem item=policyDecision roll=0.4042022 outcome=down growth=1.98914667->1.98914667 growthReleased=1.94698111->1.94698111 inflation=2.96643751->2.96643751 inflationReleased=2.99877399->2.99877399 policyRate=4->3.75 policyRateReleased=none->none
 [DEBUG market] day=25 kind=effectApplied asset=KSR effect=scandal:KSR:24 dayIndex=1 delta=-133.78557451
 [DEBUG market] day=25 kind=effectApplied asset=KSR effect=guidanceUpdate:KSR:24 dayIndex=1 delta=-82.24274762
@@ -2130,15 +2130,15 @@
 [DEBUG market] day=25 kind=eventRoll eventDay=28 type=growthDataShock target=market roll=0.39752472 chance=0.08000328 fired=false
 [DEBUG market] day=25 kind=eventRoll eventDay=28 type=inputCostShock target=A roll=0.51431359 chance=0.04996323 fired=false
 [DEBUG market] day=25 kind=eventRoll eventDay=28 type=inputCostShock target=B roll=0.07724977 chance=0.04996323 fired=false
-[DEBUG market] day=25 kind=headline feedDay=26 event=earningsBeat:NOVA:25 magnitude=2.72122542 top=false text="NOVA earnings down"
+[DEBUG market] day=25 kind=headline feedDay=26 event=earningsBeat:NOVA:25 magnitude=2.72122542 top=false text="NOVA earnings miss"
 [DEBUG market] day=25 kind=headline feedDay=26 event=regulation:A:25 magnitude=3.6707673 top=true text="Sector A faces regulation"
 [DEBUG market] day=25 kind=headline feedDay=26 event=calendar:policyDecision:25 magnitude=3 top=false text="Policy rate down"
 [DEBUG market] day=25 kind=rumourGenerated feedDay=26 source=cityDesk tier=high truthRoll=0.67736803 truth=true claim="KSR share buyback" leadDays=2 target=buyback:KSR:27 noise=false
 [DEBUG market] day=25 kind=rumourGenerated feedDay=26 source=floorWire tier=high truthRoll=0.61567245 truth=true claim="Sector A supply shock" leadDays=2 target=supplyShock:A:27 noise=false
 [DEBUG market] day=25 kind=rumourGenerated feedDay=26 source=sectorNote tier=medium truthRoll=0.00622606 truth=true claim="KSR share buyback" leadDays=2 target=buyback:KSR:27 noise=false
-[DEBUG market] day=25 kind=rumourGenerated feedDay=26 source=marketBrief tier=medium truthRoll=0.40761648 truth=true claim="BLSW dividend up" leadDays=3 target=dividendChange:BLSW:28 noise=false
+[DEBUG market] day=25 kind=rumourGenerated feedDay=26 source=marketBrief tier=medium truthRoll=0.40761648 truth=true claim="BLSW raises its dividend" leadDays=3 target=dividendChange:BLSW:28 noise=false
 [DEBUG market] day=25 kind=rumourGenerated feedDay=26 source=streetTalk tier=low truthRoll=0.32713819 truth=true claim="KSR share buyback" leadDays=2 target=buyback:KSR:27 noise=false
-[DEBUG market] day=25 kind=rumourGenerated feedDay=26 source=openChatter tier=low truthRoll=0.62025326 truth=false claim="NOVA earnings down" leadDays=2 target=earningsBeat:NOVA:27 noise=true
+[DEBUG market] day=25 kind=rumourGenerated feedDay=26 source=openChatter tier=low truthRoll=0.62025326 truth=false claim="NOVA earnings miss" leadDays=2 target=earningsBeat:NOVA:27 noise=true
 [DEBUG market] day=26 kind=effectApplied asset=KSR effect=scandal:KSR:24 dayIndex=2 delta=-89.19038301
 [DEBUG market] day=26 kind=effectApplied asset=NOVA effect=growthDataShock:market:24 dayIndex=2 delta=-40.66500447
 [DEBUG market] day=26 kind=effectApplied asset=BLSW effect=growthDataShock:market:24 dayIndex=2 delta=-93.98199488
@@ -2219,10 +2219,10 @@
 [DEBUG market] day=26 kind=eventRoll eventDay=29 type=inputCostShock target=A roll=0.31903192 chance=0.0499547 fired=false
 [DEBUG market] day=26 kind=eventRoll eventDay=29 type=inputCostShock target=B roll=0.42402854 chance=0.0499547 fired=false
 [DEBUG market] day=26 kind=rumourGenerated feedDay=27 source=cityDesk tier=high truthRoll=0.54796448 truth=true claim="NOVA lawsuit" leadDays=3 target=lawsuit:NOVA:29 noise=false
-[DEBUG market] day=26 kind=rumourGenerated feedDay=27 source=floorWire tier=high truthRoll=0.45942624 truth=true claim="BLSW dividend up" leadDays=2 target=dividendChange:BLSW:28 noise=false
+[DEBUG market] day=26 kind=rumourGenerated feedDay=27 source=floorWire tier=high truthRoll=0.45942624 truth=true claim="BLSW raises its dividend" leadDays=2 target=dividendChange:BLSW:28 noise=false
 [DEBUG market] day=26 kind=rumourGenerated feedDay=27 source=sectorNote tier=medium truthRoll=0.60476196 truth=false claim="Sector B input cost shock" leadDays=1 target=inputCostShock:B:27 noise=false
 [DEBUG market] day=26 kind=rumourGenerated feedDay=27 source=marketBrief tier=medium truthRoll=0.80123193 truth=false claim="Sector A input cost shock" leadDays=2 target=inputCostShock:A:28 noise=false
-[DEBUG market] day=26 kind=rumourGenerated feedDay=27 source=streetTalk tier=low truthRoll=0.92917523 truth=false claim="KSR guidance up" leadDays=1 target=guidanceUpdate:KSR:27 noise=true
+[DEBUG market] day=26 kind=rumourGenerated feedDay=27 source=streetTalk tier=low truthRoll=0.92917523 truth=false claim="KSR raises guidance" leadDays=1 target=guidanceUpdate:KSR:27 noise=true
 [DEBUG market] day=26 kind=rumourGenerated feedDay=27 source=openChatter tier=low truthRoll=0.45878612 truth=false claim="HRBU contract award" leadDays=3 target=contractAward:HRBU:29 noise=true
 [DEBUG market] day=27 kind=effectApplied asset=KSR effect=scandal:KSR:24 dayIndex=3 delta=-44.5951915
 [DEBUG market] day=27 kind=effectApplied asset=NOVA effect=earningsBeat:NOVA:25 dayIndex=2 delta=-18.48984474
@@ -2299,11 +2299,11 @@
 [DEBUG market] day=27 kind=eventRoll eventDay=30 type=inputCostShock target=B roll=0.55697503 chance=0.04993865 fired=false
 [DEBUG market] day=27 kind=headline feedDay=28 event=supplyShock:A:27 magnitude=2.53397554 top=true text="Sector A supply shock"
 [DEBUG market] day=27 kind=headline feedDay=28 event=buyback:KSR:27 magnitude=1.96891131 top=false text="KSR share buyback"
-[DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=cityDesk tier=high truthRoll=0.49708989 truth=true claim="BLSW guidance down" leadDays=2 target=guidanceUpdate:BLSW:29 noise=false
-[DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=floorWire tier=high truthRoll=0.51497068 truth=true claim="BLSW guidance down" leadDays=2 target=guidanceUpdate:BLSW:29 noise=false
-[DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=sectorNote tier=medium truthRoll=0.96162545 truth=false claim="KSR earnings up" leadDays=1 target=earningsBeat:KSR:28 noise=false
+[DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=cityDesk tier=high truthRoll=0.49708989 truth=true claim="BLSW cuts guidance" leadDays=2 target=guidanceUpdate:BLSW:29 noise=false
+[DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=floorWire tier=high truthRoll=0.51497068 truth=true claim="BLSW cuts guidance" leadDays=2 target=guidanceUpdate:BLSW:29 noise=false
+[DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=sectorNote tier=medium truthRoll=0.96162545 truth=false claim="KSR earnings beat" leadDays=1 target=earningsBeat:KSR:28 noise=false
 [DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=marketBrief tier=medium truthRoll=0.85963428 truth=false claim="NOVA product launch" leadDays=2 target=productLaunch:NOVA:29 noise=false
-[DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=streetTalk tier=low truthRoll=0.96383653 truth=false claim="NOVA earnings up" leadDays=3 target=earningsBeat:NOVA:30 noise=true
+[DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=streetTalk tier=low truthRoll=0.96383653 truth=false claim="NOVA earnings beat" leadDays=3 target=earningsBeat:NOVA:30 noise=true
 [DEBUG market] day=27 kind=rumourGenerated feedDay=28 source=openChatter tier=low truthRoll=0.73055002 truth=false claim="KSR share buyback" leadDays=1 target=buyback:KSR:28 noise=true
 [DEBUG market] day=28 kind=effectApplied asset=NOVA effect=regulation:A:25 dayIndex=3 delta=-29.93000879
 [DEBUG market] day=28 kind=effectApplied asset=BLSW effect=regulation:A:25 dayIndex=3 delta=-69.21673056
@@ -2385,12 +2385,12 @@
 [DEBUG market] day=28 kind=eventMagnitude eventDay=31 type=growthDataShock target=market roll=0.33879966 min=1 max=4 magnitude=2.01639899
 [DEBUG market] day=28 kind=eventRoll eventDay=31 type=inputCostShock target=A roll=0.79273092 chance=0.04995039 fired=false
 [DEBUG market] day=28 kind=eventRoll eventDay=31 type=inputCostShock target=B roll=0.73152486 chance=0.04995039 fired=false
-[DEBUG market] day=28 kind=headline feedDay=29 event=dividendChange:BLSW:28 magnitude=2.77999281 top=true text="BLSW dividend up"
-[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=cityDesk tier=high truthRoll=0.81399225 truth=true claim="Market sentiment up" leadDays=2 target=sentimentSwing:market:30 noise=false
-[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=floorWire tier=high truthRoll=0.82198642 truth=true claim="BLSW guidance down" leadDays=1 target=guidanceUpdate:BLSW:29 noise=false
-[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=sectorNote tier=medium truthRoll=0.14211163 truth=true claim="BLSW earnings down" leadDays=3 target=earningsBeat:BLSW:31 noise=false
-[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=marketBrief tier=medium truthRoll=0.43582096 truth=true claim="HRBU dividend up" leadDays=3 target=dividendChange:HRBU:31 noise=false
-[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=streetTalk tier=low truthRoll=0.36301716 truth=false claim="NOVA dividend down" leadDays=1 target=dividendChange:NOVA:29 noise=true
+[DEBUG market] day=28 kind=headline feedDay=29 event=dividendChange:BLSW:28 magnitude=2.77999281 top=true text="BLSW raises its dividend"
+[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=cityDesk tier=high truthRoll=0.81399225 truth=true claim="Market mood turns upbeat" leadDays=2 target=sentimentSwing:market:30 noise=false
+[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=floorWire tier=high truthRoll=0.82198642 truth=true claim="BLSW cuts guidance" leadDays=1 target=guidanceUpdate:BLSW:29 noise=false
+[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=sectorNote tier=medium truthRoll=0.14211163 truth=true claim="BLSW earnings miss" leadDays=3 target=earningsBeat:BLSW:31 noise=false
+[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=marketBrief tier=medium truthRoll=0.43582096 truth=true claim="HRBU raises its dividend" leadDays=3 target=dividendChange:HRBU:31 noise=false
+[DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=streetTalk tier=low truthRoll=0.36301716 truth=false claim="NOVA cuts its dividend" leadDays=1 target=dividendChange:NOVA:29 noise=true
 [DEBUG market] day=28 kind=rumourGenerated feedDay=29 source=openChatter tier=low truthRoll=0.81560746 truth=false claim="KSR lawsuit" leadDays=1 target=lawsuit:KSR:29 noise=true
 [DEBUG market] day=29 kind=effectApplied asset=NOVA effect=regulation:A:25 dayIndex=4 delta=-29.93000879
 [DEBUG market] day=29 kind=effectApplied asset=BLSW effect=regulation:A:25 dayIndex=4 delta=-69.21673056
@@ -2465,15 +2465,15 @@
 [DEBUG market] day=29 kind=eventRoll eventDay=32 type=growthDataShock target=market roll=0.27022864 chance=0.08003198 fired=false
 [DEBUG market] day=29 kind=eventRoll eventDay=32 type=inputCostShock target=A roll=0.37915228 chance=0.0499315 fired=false
 [DEBUG market] day=29 kind=eventRoll eventDay=32 type=inputCostShock target=B roll=0.15537471 chance=0.0499315 fired=false
-[DEBUG market] day=29 kind=headline feedDay=30 event=earningsBeat:NOVA:29 magnitude=2.61402178 top=false text="NOVA earnings down"
-[DEBUG market] day=29 kind=headline feedDay=30 event=guidanceUpdate:BLSW:29 magnitude=1.4854501 top=false text="BLSW guidance down"
+[DEBUG market] day=29 kind=headline feedDay=30 event=earningsBeat:NOVA:29 magnitude=2.61402178 top=false text="NOVA earnings miss"
+[DEBUG market] day=29 kind=headline feedDay=30 event=guidanceUpdate:BLSW:29 magnitude=1.4854501 top=false text="BLSW cuts guidance"
 [DEBUG market] day=29 kind=headline feedDay=30 event=lawsuit:NOVA:29 magnitude=4.86879458 top=true text="NOVA lawsuit"
-[DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=cityDesk tier=high truthRoll=0.07283099 truth=true claim="HRBU dividend up" leadDays=2 target=dividendChange:HRBU:31 noise=false
+[DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=cityDesk tier=high truthRoll=0.07283099 truth=true claim="HRBU raises its dividend" leadDays=2 target=dividendChange:HRBU:31 noise=false
 [DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=floorWire tier=high truthRoll=0.80489905 truth=true claim="Sector B demand shift" leadDays=2 target=demandShift:B:31 noise=false
 [DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=sectorNote tier=medium truthRoll=0.62762691 truth=false claim="NOVA scandal" leadDays=1 target=scandal:NOVA:30 noise=false
-[DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=marketBrief tier=medium truthRoll=0.17192496 truth=true claim="Market sentiment up" leadDays=1 target=sentimentSwing:market:30 noise=false
-[DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=streetTalk tier=low truthRoll=0.3286332 truth=true claim="NOVA dividend down" leadDays=2 target=dividendChange:NOVA:31 noise=false
-[DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=openChatter tier=low truthRoll=0.12806165 truth=true claim="HRBU dividend up" leadDays=2 target=dividendChange:HRBU:31 noise=false
+[DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=marketBrief tier=medium truthRoll=0.17192496 truth=true claim="Market mood turns upbeat" leadDays=1 target=sentimentSwing:market:30 noise=false
+[DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=streetTalk tier=low truthRoll=0.3286332 truth=true claim="NOVA cuts its dividend" leadDays=2 target=dividendChange:NOVA:31 noise=false
+[DEBUG market] day=29 kind=rumourGenerated feedDay=30 source=openChatter tier=low truthRoll=0.12806165 truth=true claim="HRBU raises its dividend" leadDays=2 target=dividendChange:HRBU:31 noise=false
 [DEBUG market] day=30 kind=effectApplied asset=NOVA effect=earningsBeat:NOVA:29 dayIndex=1 delta=-32.44497273
 [DEBUG market] day=30 kind=effectApplied asset=BLSW effect=guidanceUpdate:BLSW:29 dayIndex=1 delta=-44.5070894
 [DEBUG market] day=30 kind=effectApplied asset=NOVA effect=lawsuit:NOVA:29 dayIndex=1 delta=-60.43098355
@@ -2554,10 +2554,10 @@
 [DEBUG market] day=30 kind=eventRoll eventDay=33 type=growthDataShock target=market roll=0.40077473 chance=0.08004088 fired=false
 [DEBUG market] day=30 kind=eventRoll eventDay=33 type=inputCostShock target=A roll=0.33848833 chance=0.04994687 fired=false
 [DEBUG market] day=30 kind=eventRoll eventDay=33 type=inputCostShock target=B roll=0.82410842 chance=0.04994687 fired=false
-[DEBUG market] day=30 kind=headline feedDay=31 event=sentimentSwing:market:30 magnitude=1.50025147 top=true text="Market sentiment up"
+[DEBUG market] day=30 kind=headline feedDay=31 event=sentimentSwing:market:30 magnitude=1.50025147 top=true text="Market mood turns upbeat"
 [DEBUG market] day=30 kind=rumourGenerated feedDay=31 source=cityDesk tier=high truthRoll=0.08270384 truth=true claim="HRBU contract award" leadDays=2 target=contractAward:HRBU:32 noise=false
 [DEBUG market] day=30 kind=rumourGenerated feedDay=31 source=floorWire tier=high truthRoll=0.78229086 truth=true claim="Sector B demand shift" leadDays=1 target=demandShift:B:31 noise=false
 [DEBUG market] day=30 kind=rumourGenerated feedDay=31 source=sectorNote tier=medium truthRoll=0.18462116 truth=true claim="HRBU contract award" leadDays=2 target=contractAward:HRBU:32 noise=false
-[DEBUG market] day=30 kind=rumourGenerated feedDay=31 source=marketBrief tier=medium truthRoll=0.75270414 truth=false claim="Inflation data up" leadDays=2 target=inflationDataShock:market:32 noise=false
+[DEBUG market] day=30 kind=rumourGenerated feedDay=31 source=marketBrief tier=medium truthRoll=0.75270414 truth=false claim="Inflation data cooler than expected" leadDays=2 target=inflationDataShock:market:32 noise=false
 [DEBUG market] day=30 kind=rumourGenerated feedDay=31 source=streetTalk tier=low truthRoll=0.00586314 truth=true claim="KSR lawsuit" leadDays=3 target=lawsuit:KSR:33 noise=false
 [DEBUG market] day=30 kind=rumourGenerated feedDay=31 source=openChatter tier=low truthRoll=0.58294245 truth=false claim="KSR contract award" leadDays=1 target=contractAward:KSR:31 noise=true

@@ -264,6 +264,11 @@ export type EventTypeDefinition = {
   decay: DecayShape
   /** Placeholders: `{target}`, `{direction}`, `{magnitude}`. */
   headline: string
+  /**
+   * Words for `{direction}`, keyed by the price direction. They describe the fact
+   * ("beat", "hotter than expected"), not the price move. Omitted, the key itself is used.
+   */
+  directionWords?: Readonly<Record<EventDirection, string>>
   modifiers: readonly EnvironmentModifier[]
 }
 
@@ -816,15 +821,27 @@ export type RestingOrder = {
   /** Exits set on the position once this order fills. Null means none. */
   tpCents: number | null
   slCents: number | null
+  /** Shares the attached take profit or stop loss closes. Missing means the whole position. */
+  tpQuantity?: number
+  slQuantity?: number
   /** Leverage for the position this order opens. Missing means the open position's, else the default. */
   leverage?: number
 }
 
-/** Take profit and stop loss for one open position. A hit closes the whole position. */
+export type ExitKind = 'takeProfit' | 'stopLoss'
+
+/** One take profit or stop loss level. A hit closes `quantity` shares, or the whole position when null. */
+export type ExitLevel = {
+  id: number
+  kind: ExitKind
+  priceCents: number
+  quantity: number | null
+}
+
+/** Take profit and stop loss levels for one open position. Never empty. */
 export type PositionExit = {
   side: 'long' | 'short'
-  tpCents: number | null
-  slCents: number | null
+  levels: ExitLevel[]
 }
 
 export type RestingState = {
@@ -835,12 +852,12 @@ export type RestingState = {
 
 /**
  * Something happened to a limit order or an exit. Fills carry the bar time. Cents are
- * prices. `reason` is set when an order is dropped or an exit is removed by the sim.
+ * prices. `reason` is set when an order is dropped or an exit is removed or resized by the sim.
  */
 export type RestingEvent = {
   kind: 'resting'
   day: number
-  action: 'placed' | 'filled' | 'cancelled' | 'dropped'
+  action: 'placed' | 'filled' | 'cancelled' | 'dropped' | 'resized'
   asset: string
   detail: RestingKind
   side: OrderSide | null

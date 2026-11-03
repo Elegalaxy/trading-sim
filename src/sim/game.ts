@@ -57,6 +57,8 @@ import {
   interpretCancelOrder,
   interpretLimitOrder,
   interpretSetExits,
+  interpretAddExit,
+  interpretCancelExit,
   pruneExits,
 } from './resting.ts'
 import { buildSession, assertSession, createSessionStreams, interpretTick } from './session.ts'
@@ -516,15 +518,22 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
       for (const event of outcome.events) state.pending.push(event)
       for (const event of pruneExits(state)) state.pending.push(event)
     }
-  } else if (type === 'limitOrder' || type === 'setExits') {
+  } else if (type === 'limitOrder' || type === 'setExits' || type === 'addExit') {
     if (state.section !== 'market') {
       state.pending.push({ kind: 'commandRejected', day: state.market.day, command: type, reason: 'marketClosed' })
     } else {
-      const events = type === 'limitOrder' ? interpretLimitOrder(state, defs, cmd) : interpretSetExits(state, defs, cmd)
+      const events =
+        type === 'limitOrder'
+          ? interpretLimitOrder(state, defs, cmd)
+          : type === 'setExits'
+            ? interpretSetExits(state, defs, cmd)
+            : interpretAddExit(state, defs, cmd)
       for (const event of events) state.pending.push(event)
     }
   } else if (type === 'cancelOrder') {
     for (const event of interpretCancelOrder(state, cmd)) state.pending.push(event)
+  } else if (type === 'cancelExit') {
+    for (const event of interpretCancelExit(state, cmd)) state.pending.push(event)
   } else if (type === 'skip') {
     const outcome = interpretSkip(state.section, state.market.day, playerIsJobless(state.job))
     if (outcome.accepted) state.section = outcome.section

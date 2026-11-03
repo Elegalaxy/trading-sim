@@ -1,5 +1,5 @@
-import { upcomingCalendar } from '../sim/calendar.ts'
 import type { CalendarItemKind, MarketState } from '../sim/types.ts'
+import { playerCalendar } from './days.ts'
 
 const CALENDAR_HORIZON_DAYS = 30
 
@@ -10,7 +10,7 @@ const LABELS: Record<CalendarItemKind, string> = {
 }
 
 export function CalendarPanel({ market }: { market: MarketState | null }) {
-  const items = market === null ? [] : upcomingCalendar(market, CALENDAR_HORIZON_DAYS)
+  const items = market === null ? [] : playerCalendar(market, CALENDAR_HORIZON_DAYS)
 
   return (
     <section className="panel">

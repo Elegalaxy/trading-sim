@@ -1040,6 +1040,35 @@ dl.estimate dd {
   width: 110px;
 }
 
+.exit-levels {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exit-levels li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.exit-levels li button {
+  margin-left: auto;
+}
+
+.exit-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.exit-size select {
+  width: 100%;
+}
+
 .open-orders ul {
   margin: 0;
   padding: 0;

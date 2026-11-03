@@ -123,11 +123,14 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 
 - `[PROVISIONAL]` Besides market orders there are limit orders and, for an open position, a take profit and a stop loss. All of them rest on the game state and are checked against the 15-minute bars as the clock moves, and against the rest of the day's bars when End day is pressed. They carry over to the next day. Nothing about them is random and nothing moves a price.
 - `[PROVISIONAL]` A limit buy must sit below the price at the clock and a limit sell above it. A bar fills it when the bar's low (buy) or high (sell) reaches the limit. The fill is at the limit, or at the bar's open if the bar opened past it. There is no spread. The 0.1% fee and the 5x check apply at fill time. An order that fails the check then is dropped and logged. At most 8 limit orders at once.
-- `[PROVISIONAL]` A take profit or stop loss belongs to one position and closes all of it. For a long the take profit is above the price and the stop below, for a short the other way round. A stop fills at the stop, or at the bar's open if that is worse. A take profit fills at the target, or at a better open. If one bar touches both, the stop wins. Exits are not margin-checked, like any close. The fee applies, the spread does not. Closing or flipping the position removes its exits.
-- `[PROVISIONAL]` A limit order can carry a take profit and a stop loss. They are set when it fills and are live from the next bar. A market order can set them right after it fills.
+- `[PROVISIONAL]` A take profit or stop loss belongs to one position. For a long the take profit is above the price and the stop below, for a short the other way round. A stop fills at the stop, or at the bar's open if that is worse. A take profit fills at the target, or at a better open. Exits are not margin-checked, like any close. The fee applies, the spread does not. Closing or flipping the position removes its exits.
+- `[PROVISIONAL]` Partial exits (added 2026-11-03): each exit is a level that closes a set number of shares, or the whole position when no number is set. Exits from before this change, and ones set without a number, close the whole position. A position holds up to 4 take profit and 4 stop loss levels, for example TP1 closing half and TP2 the rest. A level never closes more than is open, and a filled level is removed.
+- `[PROVISIONAL]` Levels one bar reaches fill one after another, nearest the bar's open first, each at its own price or the open as above. If one bar touches a stop and a take profit, only the stops fill in that bar; the take profits stay for later bars.
+- `[PROVISIONAL]` Reducing a position with another order shrinks any level set to close more than is left. Adding to a position leaves the levels' share counts as they are. A level without a number keeps covering the whole position.
+- `[PROVISIONAL]` A limit order can carry a take profit and a stop loss, each closing all or a part of the order's shares. They are set when it fills and are live from the next bar. A whole-position level from a limit replaces the old whole-position level of its kind. A market order can set them right after it fills.
 - `[PROVISIONAL]` Orders are placed in the market section. Cancelling works at any time. Limit orders do not reserve buying power. The 5x check is made when placing (as a hint) and again when filling.
 - `[PROVISIONAL]` Bars are the only price path, so an exit can trigger on a bar's wick, which the player sees on the chart. Liquidation is also checked after every bar. The warning, wipe-out check and funding are still once a day at the close.
-- `[PROVISIONAL]` Open orders and exits of the charted asset are drawn as dashed lines with a price tag on the right axis: gold for a limit, green for a take profit, red for a stop loss. A level outside the visible range sits at the chart edge with an arrow.
+- `[PROVISIONAL]` Open orders and exits of the charted asset are drawn as dashed lines with a price tag on the right axis: gold for a limit, green for a take profit, red for a stop loss. Several levels of one kind are numbered from the price outwards (TP1, TP2), and a partial one shows the shares it closes. A level outside the visible range sits at the chart edge with an arrow.
 
 ### Events
 
@@ -137,11 +140,13 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 - `[PROVISIONAL]` An event type has: scope (one stock, one sector, or the whole market), a per-day chance, direction chances (up, down, no effect), a magnitude range, a duration and decay, and how it is shown (calendar, rumour, headline).
 - `[PROVISIONAL]` First playable: about 15 to 25 event types, for example earnings beat or miss, product launch, scandal, management change, regulation, supply shock, demand shift, policy rate decision, growth data, inflation data.
 - `[PROVISIONAL]` The player cannot change event rates.
+- `[PROVISIONAL]` Changed 2026-11-03 (user decision): headline and rumour wording describes the fact, not the price move: "NOVA earnings beat", "NOVA cuts guidance", "Inflation data hotter than expected", "Market mood turns gloomy". The player works out the price effect. Each event type maps its price direction to a fact word in content (`directionWords`). Events whose fact already implies a lean (scandal, lawsuit, buyback) name only the fact.
 
 ### Macro calendar
 
 - `[CONFIRMED]` The player sees a macro calendar.
 - `[PROVISIONAL]` Scheduled items show their date in advance but not their outcome: a monthly policy rate decision (hold, up, down) and monthly growth and inflation releases.
+- `[PROVISIONAL]` The outcome is rolled three days ahead but shown only from the day it happens, when its headline prints. Fixed 2026-11-03: the calendar panel used to show a rolled outcome up to three days early.
 
 ### Rumours and source reliability
 
@@ -328,6 +333,11 @@ This is the largest first-playable system after trading. Options and the reasoni
 ## 11. Teaching and Feedback
 
 - `[CONFIRMED]` The first playable teaches with a one-screen primer and an end-of-day "what moved prices" summary. The book is later (section 12).
+- `[PROVISIONAL]` Added 2026-11-03 at the user's request: a Guide (top bar) as a reference, not a strategy. It teaches what news facts usually mean for companies, the economy and prices, introduces each (fictional) company and what makes it worth more, and explains the account rules.
+  - Market behaviour (event sizes, durations, calendar effects, rumour reliability, stat thresholds) is described in rough terms (small, medium, large; a few days; leans bad) so following the guide is not a winning formula.
+  - Account rules the player controls (fees, limit orders, exits, leverage, margin marks, payday) keep exact numbers.
+  - A market psychology page teaches general concepts (expectations, pricing in, "buy the rumour, sell the news", overreaction, the player's own biases) as ideas real traders use. It never says when or whether the game's market behaves that way. The player learns the basics and combines them when market conditions support it.
+- `[PROVISIONAL]` After End day a short report shows equity and cash changes, energy and stress, money lines (salary, interest, bill, funding, fees) and warnings. Paydays, bills, liquidations and job changes always show it. The top bar counts down to payday.
 - `[PROVISIONAL]` The primer covers the basic news-to-price rules, sentiment, how rumour reliability works, the margin meter, and the warning state and tell.
 - `[PROVISIONAL]` The summary shows which events fired, which assets moved and by how much. It does not show the hidden fair value.
 - `[PROVISIONAL]` The summary shows true data even when the player's view is distorted. This makes it a free verify channel and weakens distortion, so the user may prefer that it costs a slot or is limited (Q 48).
@@ -346,10 +356,20 @@ The loan was going to wait for a later version. On 2026-10-22 it became one of t
 - `[CONFIRMED]` Missed interest forces selling: trading positions (worst-performing first), then savings. It does not downgrade lifestyle. A missed payment is a bill the player cannot cover, and lifestyle downgrade is not a way to pay one (section 6).
 - `[OPEN]` Loan size, term, the margin over the policy rate, early repayment, whether loan money can be used for trading, and the warning before a forced sale.
 
+### Market depth ideas `[OPEN]`
+
+Raised by the user on 2026-11-03. None is built. Each needs a design decision before work starts.
+
+- `[OPEN]` **Social feed rework ("Y").** Posts become an always-on feed of what other retail traders think, not only a stress effect. They can be true, fake or misleading. They are faster than the news (a post can hint at an event before its rumour or headline, and price may already be moving) but less reliable than rumours. Under stress the feed shows more emotionally loaded posts that agree with the player's positions, simulating traders filtering out signals against them. Constraint: posts still never change the market; the stress filter stays inside the bias cap and the tell.
+- `[OPEN]` **Player price impact, company size and liquidity.** A very large order could move the price. Each stock would get a size (market cap) and liquidity (daily volume, depth). Trade-off: if player orders move the market, a seeded run no longer gives the same market whatever the player does (section 15, criterion 9, and the determinism rule). Recommended default: temporary impact only. A large order fills worse (slippage grows with size against liquidity) and the market path is unchanged, so replays stay identical.
+- `[OPEN]` **Market participants.** Today prices move only from events, calendar releases, the environment's effect on event odds, a pull toward fair value and noise. Other parties (retail crowds, whales, institutions, governments, trading bots) do not exist. Idea: seeded parties with their own behaviour (news traders, momentum followers, dip buyers, stop hunters around obvious levels, informed money before events), so patterns such as pre-news drift, "sell the news", overreaction and liquidity grabs emerge from who is trading rather than being scripted per strategy. Constraint: parties draw only their own seeded streams, so a seed still replays the same market.
+- `[OPEN]` **Expectations and pricing in.** Calendar releases and earnings could be judged against a published consensus, and part of a coming event could be priced in early through informed flow, so "better than expected" matters more than "good". Likely built on the market participants idea.
+- `[OPEN]` **The 8% daily move cap.** It comes from the loss cap guarantee (section 7): with the old 5x limit a day could not take equity below zero before the end-of-day check. With per-position leverage up to 50x and intraday liquidation that reason is weaker. Options: keep it as a circuit breaker (default), widen it, or replace it with per-stock limits tied to volatility.
+
 ### Later systems
 
 - `[LATER]` FD and high-interest savings accounts. `[OPEN]` Their lock periods, penalties, rates and limits.
-- `[LATER]` The in-game book: teaches news-event impact, including sentiment and some rare cases. After the book, either the player judges direction alone or the game shows the possible directions. `[OPEN]` Which of those two (Q 27 and 32). Hint direction and percentage can also be skewed by bad stats.
+- `[LATER]` The in-game book (a first Guide exists since 2026-11-03, section 11): teaches news-event impact, including sentiment and some rare cases. After the book, either the player judges direction alone or the game shows the possible directions. `[OPEN]` Which of those two (Q 27 and 32). Hint direction and percentage can also be skewed by bad stats.
 - `[LATER]` Number distortion, candle distortion and UI order errors (section 9).
 - `[LATER]` Job loss through telegraphed layoffs.
 - `[LATER]` Meta-progression: there is none in the first playable, and unlocks may come later.
@@ -533,6 +553,9 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 
 ## 19. Changelog
 
+- 2026-11-03 (guide and wording): Headlines and rumours describe the fact ("earnings beat", "inflation hotter than expected") instead of "up" or "down" (section 5). The calendar no longer shows an outcome before its day. The Guide describes market behaviour in rough terms, adds company profiles and a market psychology page, and keeps exact numbers only for account rules (section 11). Recorded the social feed, price impact, market participants, expectations and 8% cap ideas as open questions (section 12).
+
+- 2026-11-03 (partial exits): Take profit and stop loss can close part of a position, and a position can hold up to 4 levels of each kind (section 5, "Limit orders and exits"). One bar touching a stop and a take profit fills only the stops. Old saves load, and their exits close the whole position.
 - 2026-11-03 (later): Made leveraged trading more like a perpetual future. Liquidation is also checked after every 15-minute bar, a liquidation costs a 0.5% fee, and funding (0.01% a day plus a crowd charge) replaces margin interest and the short borrow fee. Old saves still load.
 - 2026-11-03: Leverage is now chosen per position, 1x to 50x (user decision), replacing the account-wide 5x cap. Margin is value over leverage. The 15% and 10% marks, read against the required margin, are unchanged. Above about 10x the backstop can be used.
 - 2026-11-01: Added limit orders, take profit and stop loss (plan Step 32), and order sizing by quantity, cost or value in the order panel. Old saves are rejected as damaged again.

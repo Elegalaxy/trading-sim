@@ -8,12 +8,14 @@ import {
   RUMOUR_LEAD_MIN_DAYS,
   RUMOURS_PER_SOURCE_PER_DAY,
 } from './constants.ts'
+import { directionWord } from './events.ts'
 import { nextFloat, nextInt } from './rng.ts'
 import {
   SOURCE_TIERS,
   VISIBILITY_REQUIREMENTS,
   type DayFeed,
   type EventDirection,
+  type EventTypeDefinition,
   type HeadlineEvent,
   type HeadlineItem,
   type MarketDefinitions,
@@ -171,10 +173,10 @@ function leadMax(): number {
   return Math.min(RUMOUR_LEAD_MAX_DAYS, EVENT_LOOKAHEAD_DAYS)
 }
 
-function claimText(template: string, target: string, direction: EventDirection): string {
-  const text = template
+function claimText(eventType: EventTypeDefinition, target: string, direction: EventDirection): string {
+  const text = eventType.headline
     .replaceAll('{target}', target)
-    .replaceAll('{direction}', direction)
+    .replaceAll('{direction}', directionWord(eventType, direction))
     .replaceAll('{magnitude}', '')
   if (text.length === 0 || /[\r\n]/.test(text)) {
     throw new Error(`rumour claim must be one non-empty line, received ${describeValue(text)}`)
@@ -205,7 +207,7 @@ function falseSlots(defs: MarketDefinitions, taken: ReadonlySet<string>, day: nu
           slots.push({
             eventId,
             eventDay,
-            claim: claimText(eventType.headline, target, direction),
+            claim: claimText(eventType, target, direction),
           })
         }
       }

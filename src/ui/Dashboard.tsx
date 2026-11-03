@@ -154,9 +154,19 @@ export function Dashboard() {
       const entry = Math.round(held.costCents / Math.abs(held.signedShares))
       levels.push({ kind: 'entry', label: 'Entry', cents: entry })
     }
+    // One dashed line per exit level. Partial levels show the shares they close.
     const exit = run.game.resting.exits[asset]
-    if (exit?.tpCents != null) levels.push({ kind: 'takeProfit', label: 'TP', cents: exit.tpCents })
-    if (exit?.slCents != null) levels.push({ kind: 'stopLoss', label: 'SL', cents: exit.slCents })
+    for (const kind of ['takeProfit', 'stopLoss'] as const) {
+      // Numbered from the price outwards: a long's targets rise, its stops fall.
+      const up = (kind === 'takeProfit') === (exit?.side === 'long')
+      const own = (exit?.levels ?? [])
+        .filter((level) => level.kind === kind)
+        .sort((a, b) => (up ? a.priceCents - b.priceCents : b.priceCents - a.priceCents))
+      own.forEach((level, index) => {
+        const name = `${kind === 'takeProfit' ? 'TP' : 'SL'}${own.length > 1 ? index + 1 : ''}`
+        levels.push({ kind, label: level.quantity === null ? name : `${name} ×${level.quantity}`, cents: level.priceCents })
+      })
+    }
   }
   const events = run === null ? [] : [...run.game.market.log, ...run.game.log, ...run.game.perception.events]
   const payday = run === null ? null : nextPayday(run.game, MARKET_DEFINITIONS)

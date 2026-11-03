@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { sessionPrice } from '../sim/session.ts'
 import { leverageOf } from '../sim/trading.ts'
-import type { GameState } from '../sim/types.ts'
+import type { ExitKind, ExitLevel, GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatSignedUsd, formatUsd, parseUsdToCents } from './money.ts'
 import { unrealizedCents } from './account.ts'
 import { reasonText } from './reasons.ts'
-import { dispatch } from './store.ts'
+import { dispatch, parsePositiveInteger } from './store.ts'
 
 type PositionRow = {
   asset: string
@@ -71,66 +71,137 @@ function actionOrder(row: PositionRow, action: Action): { side: 'buy' | 'sell'; 
 }
 
 
-function dollarsText(cents: number | null): string {
-  return cents === null ? '' : (cents / 100).toFixed(2)
-}
-
 type Message = { ok: boolean; text: string }
-type ExitCents = { ok: true; cents: number | null } | { ok: false; reason: string }
 
-function parseExit(text: string, label: string): ExitCents {
-  if (text.trim().length === 0) return { ok: true, cents: null }
-  const parsed = parseUsdToCents(text, label)
-  return parsed.ok ? { ok: true, cents: parsed.cents } : { ok: false, reason: parsed.reason }
+const KIND_LABEL: Record<ExitKind, string> = { takeProfit: 'TP', stopLoss: 'SL' }
+
+/** Levels of one position, take profits then stop losses, each nearest the price first. */
+function sortedLevels(levels: readonly ExitLevel[], side: 'long' | 'short'): ExitLevel[] {
+  const rank = (level: ExitLevel) => (level.kind === 'takeProfit' ? 0 : 1)
+  return levels.slice().sort((a, b) => {
+    if (rank(a) !== rank(b)) return rank(a) - rank(b)
+    // A long's targets rise from the price and its stops fall from it. A short's the other way.
+    const up = (a.kind === 'takeProfit') === (side === 'long')
+    return up ? a.priceCents - b.priceCents : b.priceCents - a.priceCents
+  })
 }
 
-/** Inline take profit and stop loss editor for one position. An empty box clears that exit. */
+function sharesText(quantity: number | null): string {
+  return quantity === null ? 'all' : `${quantity} sh`
+}
+
+/** `TP $50.00 (4 sh), $52.00 (all) / SL $46.00 (all)` for the table cell. */
+function levelsSummary(levels: readonly ExitLevel[], side: 'long' | 'short'): string {
+  if (levels.length === 0) return '—'
+  const sorted = sortedLevels(levels, side)
+  const part = (kind: ExitKind) => {
+    const items = sorted.filter((level) => level.kind === kind)
+    if (items.length === 0) return `${KIND_LABEL[kind]} —`
+    return `${KIND_LABEL[kind]} ${items.map((level) => `${formatUsd(level.priceCents, 'exit')} (${sharesText(level.quantity)})`).join(', ')}`
+  }
+  return `${part('takeProfit')} / ${part('stopLoss')}`
+}
+
+/**
+ * Take profit and stop loss levels for one position. Each level closes its shares, or the
+ * whole position when the shares box is empty. Up to four of each kind.
+ */
 function ExitsEditor({
-  asset,
-  tp,
-  sl,
+  row,
+  levels,
   onDone,
 }: {
-  asset: string
-  tp: number | null
-  sl: number | null
+  row: PositionRow
+  levels: readonly ExitLevel[]
   onDone: (message: Message) => void
 }) {
-  const [tpText, setTpText] = useState(dollarsText(tp))
-  const [slText, setSlText] = useState(dollarsText(sl))
+  const [kind, setKind] = useState<ExitKind>('takeProfit')
+  const [priceText, setPriceText] = useState('')
+  const [sharesInput, setSharesInput] = useState('')
+  const asset = row.asset
 
-  function onSet(): void {
-    const nextTp = parseExit(tpText, 'Take profit')
-    const nextSl = parseExit(slText, 'Stop loss')
-    if (!nextTp.ok) return onDone({ ok: false, text: nextTp.reason })
-    if (!nextSl.ok) return onDone({ ok: false, text: nextSl.reason })
-    const cmd: { type: 'setExits'; asset: string; tpCents?: number | null; slCents?: number | null } = {
-      type: 'setExits',
-      asset,
+  function onAdd(): void {
+    const price = parseUsdToCents(priceText, kind === 'takeProfit' ? 'Take profit' : 'Stop loss')
+    if (!price.ok) return onDone({ ok: false, text: price.reason })
+    let quantity: number | undefined
+    if (sharesInput.trim().length > 0) {
+      const parsed = parsePositiveInteger(sharesInput, 'Shares')
+      if (!parsed.ok) return onDone({ ok: false, text: parsed.reason })
+      quantity = parsed.value
     }
-    if (nextTp.cents !== tp) cmd.tpCents = nextTp.cents
-    if (nextSl.cents !== sl) cmd.slCents = nextSl.cents
-    const outcome = dispatch(cmd)
+    const outcome = dispatch({ type: 'addExit', asset, kind, priceCents: price.cents, ...(quantity === undefined ? {} : { quantity }) })
+    if (!outcome.accepted) return onDone({ ok: false, text: `${asset}: ${reasonText(outcome.reason ?? 'rejected')}.` })
+    setPriceText('')
+    setSharesInput('')
+    onDone({ ok: true, text: `${asset} ${KIND_LABEL[kind]} added.` })
+  }
+
+  function onRemove(level: ExitLevel): void {
+    const outcome = dispatch({ type: 'cancelExit', asset, id: level.id })
     onDone(
       outcome.accepted
-        ? { ok: true, text: `${asset} exits updated.` }
+        ? { ok: true, text: `${asset} ${KIND_LABEL[level.kind]} ${formatUsd(level.priceCents, 'exit')} removed.` }
         : { ok: false, text: `${asset}: ${reasonText(outcome.reason ?? 'rejected')}.` },
     )
   }
 
   return (
     <div className="exits-editor">
-      <label>
-        Take profit ${' '}
-        <input value={tpText} onChange={(event) => setTpText(event.target.value)} inputMode="decimal" autoComplete="off" />
-      </label>
-      <label>
-        Stop loss ${' '}
-        <input value={slText} onChange={(event) => setSlText(event.target.value)} inputMode="decimal" autoComplete="off" />
-      </label>
-      <button type="button" onClick={onSet}>
-        Set
-      </button>
+      {levels.length > 0 ? (
+        <ul className="exit-levels">
+          {sortedLevels(levels, row.side).map((level) => (
+            <li key={level.id}>
+              <span className={level.kind === 'takeProfit' ? 'pnl-gain' : 'pnl-loss'}>
+                {KIND_LABEL[level.kind]} {formatUsd(level.priceCents, 'exit')}
+              </span>{' '}
+              closes {level.quantity === null ? 'the rest' : `${level.quantity} of ${row.shares}`}
+              <button type="button" onClick={() => onRemove(level)}>
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="day-note">No exits yet.</p>
+      )}
+      <div className="exit-add">
+        <div className="size-modes" role="group" aria-label="Exit kind">
+          {(['takeProfit', 'stopLoss'] as const).map((item) => (
+            <button key={item} type="button" aria-pressed={kind === item} onClick={() => setKind(item)}>
+              {item === 'takeProfit' ? 'Take profit' : 'Stop loss'}
+            </button>
+          ))}
+        </div>
+        <label>
+          Price ${' '}
+          <input value={priceText} onChange={(event) => setPriceText(event.target.value)} inputMode="decimal" autoComplete="off" />
+        </label>
+        <label>
+          Shares{' '}
+          <input
+            value={sharesInput}
+            placeholder="all"
+            onChange={(event) => setSharesInput(event.target.value)}
+            inputMode="numeric"
+            autoComplete="off"
+          />
+        </label>
+        <div className="size-modes" role="group" aria-label="Part of the position">
+          {[25, 50, 75].map((percent) => (
+            <button
+              key={percent}
+              type="button"
+              disabled={row.shares < 2}
+              onClick={() => setSharesInput(String(Math.max(1, Math.floor((row.shares * percent) / 100))))}
+            >
+              {percent}%
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={onAdd}>
+          Add
+        </button>
+      </div>
     </div>
   )
 }
@@ -244,10 +315,7 @@ export function Positions({
             <tbody>
               {rows.flatMap((row) => {
                 const exit = game?.resting.exits[row.asset]
-                const tp = exit?.tpCents ?? null
-                const sl = exit?.slCents ?? null
-                const tpText = tp === null ? '—' : formatUsd(tp, 'take profit')
-                const slText = sl === null ? '—' : formatUsd(sl, 'stop loss')
+                const levels = exit !== undefined && exit.side === row.side ? exit.levels : []
                 return [
                 <tr key={row.asset} aria-selected={row.asset === selected}>
                   <td>
@@ -267,7 +335,7 @@ export function Positions({
                   <td className={row.pnl > 0 ? 'pnl-gain' : row.pnl < 0 ? 'pnl-loss' : undefined}>
                     {formatSignedUsd(row.pnl, 'unrealized')}
                   </td>
-                  <td>{tp === null && sl === null ? '—' : `${tpText} / ${slText}`}</td>
+                  <td className="exit-summary">{levelsSummary(levels, row.side)}</td>
                   <td className="manage">
                     <button type="button" onClick={() => onAction(row, 'close')} disabled={!canTrade}>
                       Close
@@ -293,16 +361,7 @@ export function Positions({
                   ? [
                       <tr key={`${row.asset}-exits`}>
                         <td colSpan={9}>
-                          <ExitsEditor
-                            key={`${tp ?? ''}-${sl ?? ''}`}
-                            asset={row.asset}
-                            tp={tp}
-                            sl={sl}
-                            onDone={(result) => {
-                              setMessage(result)
-                              if (result.ok) setEditing(null)
-                            }}
-                          />
+                          <ExitsEditor row={row} levels={levels} onDone={setMessage} />
                         </td>
                       </tr>,
                     ]

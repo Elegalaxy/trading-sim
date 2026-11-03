@@ -106,7 +106,7 @@ function priceLog(): LogEvent[] {
       day: 1,
       feedDay: 2,
       eventId: 'earningsBeat:NOVA:1',
-      text: 'NOVA earnings up',
+      text: 'NOVA earnings beat',
       magnitude: 4,
       top: true,
     },

@@ -419,6 +419,8 @@ export type PositionClose = {
   halfSpread: number
   fillPrice: number
   fee: number
+  /** Close P&L before the fee. */
+  realizedCents: number
 }
 
 /**
@@ -436,9 +438,28 @@ export function closeWholePosition(
   if (position === undefined || position.signedShares === 0) {
     throw new Error(`no open position to close for ${assetId}`)
   }
-  const quantity = Math.abs(position.signedShares)
-  if (!Number.isSafeInteger(quantity) || quantity <= 0) {
-    throw new Error(`close quantity for ${assetId} must be a positive safe integer, received ${describeValue(position.signedShares)}`)
+  return closePartOfPosition(state, defs, assetId, Math.abs(position.signedShares), fixedFill)
+}
+
+/**
+ * Close `quantity` shares of one position, at most all of it, like `closeWholePosition`:
+ * no 5x check, and the realized ledger takes the close P&L and the fee. The rest of the
+ * position keeps its average entry and leverage.
+ */
+export function closePartOfPosition(
+  state: GameState,
+  defs: MarketDefinitions,
+  assetId: string,
+  quantity: number,
+  fixedFill?: number,
+): PositionClose {
+  const position = state.positions[assetId]
+  if (position === undefined || position.signedShares === 0) {
+    throw new Error(`no open position to close for ${assetId}`)
+  }
+  const open = Math.abs(position.signedShares)
+  if (!Number.isSafeInteger(quantity) || quantity <= 0 || quantity > open) {
+    throw new Error(`close quantity for ${assetId} must be a safe integer from 1 to ${open}, received ${describeValue(quantity)}`)
   }
   const side: OrderSide = position.signedShares > 0 ? 'sell' : 'buy'
   const def = findAsset(defs, assetId)
@@ -451,11 +472,12 @@ export function closeWholePosition(
   }
   const projection = projectPosition(position, side, quantity, quote.fillPrice)
   if (projection === 'overflow') throw new Error(`close of ${assetId} overflowed a safe integer`)
-  if (projection.signedShares !== 0) {
+  if (projection.signedShares !== position.signedShares + (side === 'buy' ? quantity : -quantity)) {
     throw new Error(`close of ${assetId} left ${projection.signedShares} shares`)
   }
   state.accounts.tradingCents = nextTrading
-  delete state.positions[assetId]
+  if (projection.signedShares === 0) delete state.positions[assetId]
+  else state.positions[assetId] = { ...position, signedShares: projection.signedShares, costCents: projection.costCents }
   if (projection.closedShares > 0) recordRealized(state, state.market.day, projection.realizedCents)
   recordRealized(state, state.market.day, -quote.fee)
   return {
@@ -466,6 +488,7 @@ export function closeWholePosition(
     halfSpread: quote.halfSpread,
     fillPrice: quote.fillPrice,
     fee: quote.fee,
+    realizedCents: projection.realizedCents,
   }
 }
 

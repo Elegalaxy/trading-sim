@@ -8,11 +8,12 @@
 // of 30 at or after the day being traded.
 
 import { readPolicyRatePercent } from '../sim/accounts.ts'
+import { upcomingCalendar } from '../sim/calendar.ts'
 import { RUN_LENGTH_DAYS, SAVINGS_PAY_INTERVAL_DAYS } from '../sim/constants.ts'
 import { activeJob } from '../sim/jobs.ts'
 import { projectedBillCents } from '../sim/lifestyle.ts'
 import { loanInterestCents } from '../sim/loan.ts'
-import type { GameState, MarketDefinitions } from '../sim/types.ts'
+import type { GameState, MarketDefinitions, MarketState, UpcomingCalendarItem } from '../sim/types.ts'
 
 /** The day the player is trading: the close the session leads to. */
 export function tradingDay(game: GameState): number {
@@ -57,4 +58,15 @@ export function nextPayday(game: GameState, defs: MarketDefinitions): Payday | n
     billCents: projectedBillCents(game),
     loanInterestCents: game.loan.balanceCents > 0 ? loanInterestCents(game.loan.balanceCents, policy) : 0,
   }
+}
+
+/**
+ * Upcoming dates as the player may see them. The sim rolls an outcome three days ahead, so an
+ * outcome is shown only from the day being traded (`market.day + 1`), when its headline prints.
+ */
+export function playerCalendar(market: MarketState, days: number): UpcomingCalendarItem[] {
+  const today = market.day + 1
+  return upcomingCalendar(market, days).map((item) =>
+    item.day <= today ? item : { kind: item.kind, day: item.day },
+  )
 }

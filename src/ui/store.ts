@@ -10,6 +10,7 @@ import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from
 import { SESSION_STEPS } from '../sim/constants.ts'
 import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
+import { assertResting, upgradeResting } from '../sim/resting.ts'
 import { clockTime, sessionPrice } from '../sim/session.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
 import type { AccountLogEvent, CommandLogEvent, ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
@@ -343,6 +344,9 @@ export function continueGame(save: SaveFile): string | null {
   let game: GameState
   try {
     game = cloneGame(checked.save.state)
+    // Saves from before partial exits hold one TP and one SL per position.
+    game.resting = upgradeResting(game.resting)
+    assertResting(game.resting)
   } catch (error) {
     console.error('[save] rejected reason=shape', error)
     debugLog('[save]', 'rejected reason=shape')
@@ -662,10 +666,8 @@ function recordEquity(): void {
   run.equity = [...kept, { day, clock, equityCents: equity }].slice(-4000)
 }
 
-type Held = Readonly<Record<string, { signedShares: number; costCents: number }>>
-
 /** Turn the fill events of one command (or of End day) into history rows. */
-function collectFills(events: ReadonlyArray<CommandLogEvent | AccountLogEvent>, held: Held, barTime: string, startN: number): TradeRecord[] {
+function collectFills(events: ReadonlyArray<CommandLogEvent | AccountLogEvent>, barTime: string, startN: number): TradeRecord[] {
   const out: TradeRecord[] = []
   const used = new Set<number>()
   for (let i = 0; i < events.length; i += 1) {
@@ -703,12 +705,9 @@ function collectFills(events: ReadonlyArray<CommandLogEvent | AccountLogEvent>, 
     if (event?.kind !== 'resting' || event.action !== 'filled' || used.has(i)) continue
     if (event.detail !== 'takeProfit' && event.detail !== 'stopLoss') continue
     if (event.side === null) continue
-    const before = held[event.asset]
-    let realized: number | null = null
-    if (before !== undefined && before.signedShares !== 0) {
-      const proceeds = event.priceCents * event.quantity
-      realized = before.signedShares > 0 ? proceeds - before.costCents : before.costCents - proceeds
-    }
+    // The sim logs the close P&L of an exit fill right after it.
+    const next = events[i + 1]
+    const realized = next?.kind === 'realized' && next.asset === event.asset ? next.amount : null
     out.push({
       n: startN + out.length,
       asset: event.asset,
@@ -721,14 +720,6 @@ function collectFills(events: ReadonlyArray<CommandLogEvent | AccountLogEvent>, 
       realizedCents: realized,
       via: event.detail,
     })
-  }
-  return out
-}
-
-function heldNow(game: GameState): Held {
-  const out: Record<string, { signedShares: number; costCents: number }> = {}
-  for (const [asset, position] of Object.entries(game.positions)) {
-    out[asset] = { signedShares: position.signedShares, costCents: position.costCents }
   }
   return out
 }
@@ -794,7 +785,6 @@ export function dispatch(cmd: unknown): DispatchResult {
   }
   const from = run.game.section
   const before = run.game.pending.length
-  const heldBefore = heldNow(run.game)
   const signsBefore: Record<string, number> = {}
   for (const [asset, position] of Object.entries(run.game.positions)) signsBefore[asset] = position.signedShares
   try {
@@ -826,7 +816,7 @@ export function dispatch(cmd: unknown): DispatchResult {
   run.marks = newMarks(run.game, added, signsBefore, run.marks)
   if (added.some((event) => event.kind === 'liquidation')) run.liquidations = readLiquidations(run.game)
   const barTime = clockTime(Math.min(Math.max(run.game.session.clock - 1, 0), SESSION_STEPS - 1))
-  const fills = collectFills(added, heldBefore, barTime, run.history.length + 1)
+  const fills = collectFills(added, barTime, run.history.length + 1)
   if (fills.length > 0) run.history = [...run.history, ...fills]
   recordEquity()
   logOrderOrTransfer(cmd, true, '')
@@ -860,7 +850,6 @@ export function endDay(): void {
   const dayBefore = run.game.market.day
   const sessionBars = run.game.session.bars
   const logStart = run.game.pending.length
-  const heldBefore = heldNow(run.game)
   const before = reportStart(run.game)
   try {
     simEndDay(run.game, definitions)
@@ -869,7 +858,7 @@ export function endDay(): void {
     throw error
   }
   if (run.game.log.length >= logStart) {
-    const fills = collectFills(run.game.log.slice(logStart), heldBefore, '20:45', run.history.length + 1)
+    const fills = collectFills(run.game.log.slice(logStart), '20:45', run.history.length + 1)
     if (fills.length > 0) run.history = [...run.history, ...fills]
   }
   logBill(run.game)

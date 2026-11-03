@@ -102,6 +102,14 @@ export function assertEventDefinitions(
     if (typeof eventType.headline !== 'string' || eventType.headline.length === 0) {
       throw new Error(`event ${eventType.id} headline must be a non-empty string, received ${describeValue(eventType.headline)}`)
     }
+    if (eventType.directionWords !== undefined) {
+      for (const key of ['up', 'down', 'none'] as const) {
+        const word = eventType.directionWords[key]
+        if (typeof word !== 'string' || word.length === 0 || /[\r\n]/.test(word)) {
+          throw new Error(`event ${eventType.id} direction word ${key} must be one non-empty line, received ${describeValue(word)}`)
+        }
+      }
+    }
     if (!Array.isArray(eventType.modifiers)) {
       throw new Error(`event ${eventType.id} modifiers must be an array, received ${describeValue(eventType.modifiers)}`)
     }
@@ -217,10 +225,15 @@ function directionOf(roll: number, up: number, down: number): EventDirection {
   return 'none'
 }
 
-function renderHeadline(template: string, target: string, direction: EventDirection, magnitude: number): string {
-  return template
+/** The word shown for a price direction: the event's own fact word, or the direction itself. */
+export function directionWord(eventType: EventTypeDefinition, direction: EventDirection): string {
+  return eventType.directionWords?.[direction] ?? direction
+}
+
+function renderHeadline(eventType: EventTypeDefinition, target: string, direction: EventDirection, magnitude: number): string {
+  return eventType.headline
     .replaceAll('{target}', target)
-    .replaceAll('{direction}', direction)
+    .replaceAll('{direction}', directionWord(eventType, direction))
     .replaceAll('{magnitude}', String(magnitude))
 }
 
@@ -299,7 +312,7 @@ export function rollEventsForDay(
         magnitudePercent: magnitude,
         duration: eventType.duration,
         decay: eventType.decay,
-        headline: renderHeadline(eventType.headline, target, result, magnitude),
+        headline: renderHeadline(eventType, target, result, magnitude),
       })
     }
   }

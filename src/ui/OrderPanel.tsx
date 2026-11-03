@@ -234,6 +234,37 @@ function Estimate({
   )
 }
 
+/** Share of the order an attached take profit or stop loss closes. 100 means the whole position. */
+const EXIT_SIZES = [100, 75, 50, 25] as const
+type ExitSize = (typeof EXIT_SIZES)[number]
+
+/** Shares for a partial exit, or undefined for the whole position. */
+function exitShares(size: ExitSize, quantity: number): number | undefined {
+  return size === 100 ? undefined : Math.max(1, Math.floor((quantity * size) / 100))
+}
+
+function ExitSizeSelect({ id, label, value, onChange }: { id: string; label: string; value: ExitSize; onChange: (size: ExitSize) => void }) {
+  return (
+    <label htmlFor={id} className="exit-size">
+      {label}{' '}
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => {
+          const next = EXIT_SIZES.find((size) => String(size) === event.target.value)
+          if (next !== undefined) onChange(next)
+        }}
+      >
+        {EXIT_SIZES.map((size) => (
+          <option key={size} value={size}>
+            {size === 100 ? 'all' : `${size}% of order`}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
 export function OrderPanel({ game, asset }: { game: GameState | null; asset: string }) {
   const [side, setSide] = useState<OrderSide>('buy')
   const [mode, setMode] = useState<SizeMode>('quantity')
@@ -242,6 +273,8 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
   const [limitText, setLimitText] = useState('')
   const [tpText, setTpText] = useState('')
   const [slText, setSlText] = useState('')
+  const [tpSize, setTpSize] = useState<ExitSize>(100)
+  const [slSize, setSlSize] = useState<ExitSize>(100)
   const [amountText, setAmountText] = useState('')
   const [attempted, setAttempted] = useState(false)
   const [resultMessage, setResultMessage] = useState<string | null>(null)
@@ -344,19 +377,44 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
     }
     const tpCents = tpParsed.ok ? tpParsed.cents : null
     const slCents = slParsed.ok ? slParsed.cents : null
+    const tpQuantity = tpCents === null ? undefined : exitShares(tpSize, sizing.quantity)
+    const slQuantity = slCents === null ? undefined : exitShares(slSize, sizing.quantity)
     if (orderType === 'limit') {
-      const placed = dispatch({ type: 'limitOrder', asset, side, quantity: sizing.quantity, limitCents, tpCents, slCents, leverage })
+      const placed = dispatch({
+        type: 'limitOrder',
+        asset,
+        side,
+        quantity: sizing.quantity,
+        limitCents,
+        tpCents,
+        slCents,
+        ...(tpQuantity === undefined ? {} : { tpQuantity }),
+        ...(slQuantity === undefined ? {} : { slQuantity }),
+        leverage,
+      })
       setResultMessage(placed.accepted ? 'Limit order placed.' : orderReasonText(placed.reason ?? 'rejected'))
       return
     }
     const outcome = dispatch({ type: 'order', asset, side, quantity: sizing.quantity, leverage })
     if (outcome.accepted) {
-      if (tpCents !== null || slCents !== null) {
-        const exits = dispatch({ type: 'setExits', asset, tpCents, slCents })
-        setResultMessage(
-          exits.accepted ? 'Order accepted.' : `Order filled, but the exits were not set: ${orderReasonText(exits.reason ?? 'rejected')}`,
-        )
-        return
+      // Whole-position exits go through setExits, partial ones are added as levels.
+      const commands: object[] = []
+      const whole: { tpCents?: number; slCents?: number } = {}
+      if (tpCents !== null && tpQuantity === undefined) whole.tpCents = tpCents
+      if (slCents !== null && slQuantity === undefined) whole.slCents = slCents
+      if (Object.keys(whole).length > 0) commands.push({ type: 'setExits', asset, ...whole })
+      if (tpCents !== null && tpQuantity !== undefined) {
+        commands.push({ type: 'addExit', asset, kind: 'takeProfit', priceCents: tpCents, quantity: tpQuantity })
+      }
+      if (slCents !== null && slQuantity !== undefined) {
+        commands.push({ type: 'addExit', asset, kind: 'stopLoss', priceCents: slCents, quantity: slQuantity })
+      }
+      for (const command of commands) {
+        const exits = dispatch(command)
+        if (!exits.accepted) {
+          setResultMessage(`Order filled, but the exits were not set: ${orderReasonText(exits.reason ?? 'rejected')}`)
+          return
+        }
       }
       setResultMessage('Order accepted.')
       return
@@ -466,6 +524,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
               onChange={(event) => setTpText(event.target.value)}
             />
           </label>
+          <ExitSizeSelect id="order-tp-size" label="TP closes" value={tpSize} onChange={setTpSize} />
           <label htmlFor="order-sl">
             Stop loss ${' '}
             <input
@@ -478,6 +537,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
               onChange={(event) => setSlText(event.target.value)}
             />
           </label>
+          <ExitSizeSelect id="order-sl-size" label="SL closes" value={slSize} onChange={setSlSize} />
         </div>
         <button
           type="submit"

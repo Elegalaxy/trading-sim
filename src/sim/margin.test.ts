@@ -87,8 +87,9 @@ function spreadOf(id: string): number {
   return ppm
 }
 
+/** A trial copy. The closed-day record and the ledger are left out: copying them 30 times a day is the slow part. */
 function cloneGame(game: GameState): GameState {
-  return JSON.parse(JSON.stringify(game)) as GameState
+  return JSON.parse(JSON.stringify({ ...game, past: [], fills: [] })) as GameState
 }
 
 /**

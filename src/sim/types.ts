@@ -1545,6 +1545,21 @@ export type GameState = {
   study: StudyState
   /** Every fill the book made, oldest first (section 5, the fill ledger). */
   fills: FillRecord[]
+  /** One row per closed day, oldest first: the session that led into the close and the closing equity. */
+  past: PastDay[]
+}
+
+/**
+ * A closed day, kept so a reloaded chart and equity curve still show it. `day` is the market
+ * day after the close (1 for the first close). `prices` are the closes in cents, `bars` the
+ * 15-minute session that led into them, and `equityCents` the trading equity at the close.
+ * A record only: nothing in the sim reads it back.
+ */
+export type PastDay = {
+  day: number
+  prices: Record<string, number>
+  bars: Record<string, SessionBar[]>
+  equityCents: number
 }
 
 /** How a fill happened. */

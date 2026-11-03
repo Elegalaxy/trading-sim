@@ -28,6 +28,7 @@ import { MAX_LEVERAGE, SESSION_STEPS } from './constants.ts'
 import { clockTime, sessionPrice } from './session.ts'
 import { settleIntradayMargin } from './margin.ts'
 import { recordFill } from './fills.ts'
+import { previewCopy } from './past.ts'
 import { closePartOfPosition, interpretOrder } from './trading.ts'
 import type {
   CommandLogEvent,
@@ -118,7 +119,7 @@ function marginProblem(
   fixedFill: number,
   leverage?: number,
 ): string | null {
-  const clone = structuredClone(state)
+  const clone = previewCopy(state)
   const outcome = interpretOrder(clone, defs, { type: 'order', asset, side, quantity, leverage }, fixedFill)
   if (outcome.accepted) return null
   const rejection = outcome.events.find((event) => event.kind === 'commandRejected')

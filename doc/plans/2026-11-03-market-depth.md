@@ -290,11 +290,13 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M13: Player orders join the order flow
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M3, M6
 - What changes: the player's net shares in a bar join the parties' demand, so a large order moves the price for the rest of the session and into the close. After each fill the day's close is previewed again with the player's flow included and the remaining bars are rebuilt from the clock to that close, reusing the day's pre-drawn session normals so no new draws happen. Slippage (M3) then becomes the cost inside the bar.
 - Must not change: same seed and same commands give the same run. A run with no orders, or only orders below a size threshold, gives today's market.
 - Verification: the strategies hash test becomes "idle bot equals idle bot, and small orders equal idle"; a pump-and-dump bot (buy big, sell into its own push) loses money over 300 seeds; the market hash differs only after a large order.
+- Progress: done 2026-11-04 on branch `market-depth-m7`, narrower than the text above: only market orders add flow (not limit fills, take profits, stops or liquidations, which fire inside the clock loop and would rebuild bars mid-iteration). `GameState.orderFlow` (net signed value per stock today, reset when the day ends); `effectiveOrderFlow` (free up to 2% of daily traded value, `PLAYER_FLOW_FREE_SHARE`) is passed as a third argument to `stepMarketDay` and into the close preview; `orderFlowMove` in `sim/participants.ts` is a sixth party `player` whose demand is a plain number (the module still reads no player state). `addOrderFlow` in `sim/session.ts` re-previews the close with the new flow and bends the remaining bars by a share of the change that grows to all of it at the close, so no draw and no stored normals are needed and the last bar still equals the close End day prints. An order at the close adds nothing.
+- Result: idle equals idle, a 20-share order equals idle (hash and bars), a 1,200-share order moves the later bars and the close up and leaves played bars alone, and End day prints the previewed close; a buy-1,000-then-sell-after-8-bars bot loses on average over 120 seeds. Batch (seed abc, 100 runs): backstop use as after M3, but the 50x short's 90th percentile is $23,561 again (was $0): its own push helps it. Flagged in GAME_DESIGN section 16 as open. The hash test in `strategies.test.ts` now says idle equals idle and small orders equal idle. GAME_DESIGN criterion 9 and the seeded-run rule are reworded.
 - Decision recorded: GAME_DESIGN section 15 criterion 9 and section 10 seeded mode are reworded to "same seed and same commands, same market" when this step lands.
 
 ### Step M11: Cap review

@@ -229,6 +229,30 @@ function moveFor(state: MarketState, def: AssetDefinition, p: ParticipantDefinit
   return (state.assets[def.id].priceCents * demand) / depthCents(def, p)
 }
 
+/**
+ * The move an outside order flow makes in one stock today: `demandCents` of net buying (negative
+ * sells) over the stock's depth. The caller owns where the demand comes from.
+ */
+export function orderFlowMove(
+  state: MarketState,
+  defs: MarketDefinitions,
+  def: AssetDefinition,
+  demandCents: number,
+): ParticipantFlowEvent | null {
+  const p = defs.participants
+  if (p === undefined || state.participants === undefined || demandCents === 0) return null
+  return {
+    kind: 'participantFlow',
+    day: state.day,
+    asset: def.id,
+    party: 'player',
+    demandCents,
+    depthCents: depthCents(def, p),
+    moveCents: moveFor(state, def, p, demandCents),
+    events: [],
+  }
+}
+
 /** What the crowd and the trend followers need worked out once a day, before any stock is priced. */
 export type PartyDay = { crowdDemand: Record<string, number> }
 

@@ -362,6 +362,12 @@ const TOPICS: readonly Topic[] = [
             first.
           </li>
           <li>
+            A very large market order is also real demand. Everyone else in the market sees it, so it can push the price
+            for the rest of the day and into the close, and the effect fades over the days after. Ordinary orders are
+            far too small to be noticed. A thin stock moves more than a deep one. Pushing the price rarely pays: the
+            slippage you pay going in is usually bigger than the push you get.
+          </li>
+          <li>
             A limit buy waits below the price, a limit sell above it. It fills when the price reaches it, at your price or
             better, with no spread. It stays until filled or cancelled. At most 8 at once.
           </li>

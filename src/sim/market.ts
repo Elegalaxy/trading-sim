@@ -30,6 +30,7 @@ import {
   informedFlow,
   momentumFlow,
   newsFlow,
+  orderFlowMove,
   startPartyDay,
 } from './participants.ts'
 import { assertFeedDefinitions, assertFeedState, publishFeed, type FiredHeadline } from './feed.ts'
@@ -377,7 +378,11 @@ function tagCalendarEffects(events: Array<EffectAppliedEvent | FairValueChangeEv
  * A calendar float, when day+3 is a calendar date, is drawn after that day's ordinary event rolls.
  * Rumours read only the info stream, after that pre-roll. Headlines do not draw.
  */
-export function stepMarketDay(state: MarketState, defs: MarketDefinitions): MarketState {
+export function stepMarketDay(
+  state: MarketState,
+  defs: MarketDefinitions,
+  orderFlow?: Readonly<Record<string, number>>,
+): MarketState {
   assertDefinitions(defs)
   assertState(state, defs)
   if (state.day >= Number.MAX_SAFE_INTEGER) {
@@ -410,6 +415,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
       crowdFlow(state, defs, def, partyDay),
       momentumFlow(state, defs, def),
       consensusFlow(state, defs, def),
+      orderFlowMove(state, defs, def, orderFlow?.[def.id] ?? 0),
     ].filter(
       (item): item is ParticipantFlowEvent => item !== null,
     )

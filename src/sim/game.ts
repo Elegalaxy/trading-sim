@@ -61,7 +61,7 @@ import {
   interpretCancelExit,
   pruneExits,
 } from './resting.ts'
-import { buildSession, assertSession, createSessionStreams, interpretTick } from './session.ts'
+import { addOrderFlow, buildSession, assertSession, createSessionStreams, effectiveOrderFlow, interpretTick } from './session.ts'
 import { assertSocial, buildSocialDay, createSocial } from './social.ts'
 import { settleFunding } from './funding.ts'
 import { settleMargin } from './margin.ts'
@@ -532,7 +532,13 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
       })
     } else {
       const outcome = interpretOrder(state, defs, cmd)
-      for (const event of outcome.events) state.pending.push(event)
+      for (const event of outcome.events) {
+        state.pending.push(event)
+        // A market order is real demand: it joins the day's order flow and can move the rest of the session.
+        if (event.kind === 'orderFill') {
+          addOrderFlow(state, defs, event.asset, (event.side === 'buy' ? 1 : -1) * event.quantity * event.fillPrice)
+        }
+      }
       for (const event of pruneExits(state)) state.pending.push(event)
     }
   } else if (type === 'limitOrder' || type === 'setExits' || type === 'addExit') {
@@ -689,7 +695,8 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   // Limits and exits keep working through the rest of today's session.
   const resting = advanceClock(state, defs, state.session.clock, SESSION_STEPS)
   assertPolicyRateEntry(state.market, defs)
-  stepMarketDay(state.market, defs)
+  stepMarketDay(state.market, defs, effectiveOrderFlow(state, defs))
+  state.orderFlow = {}
   state.session = buildSession(state.market, defs, state.session.streams)
   if (state.social !== undefined) buildSocialDay(state.social, state.market, state.session, defs)
   const traded = settleTradingAccount(state, defs, equityAtStart)

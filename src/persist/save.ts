@@ -286,11 +286,12 @@ function checkFills(value: unknown): string | null {
 
 function checkState(value: unknown): string | null {
   // Saves from before the fill ledger have no `fills`. They load with an empty one.
-  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'social'])) return 'shape:state'
+  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'social', 'orderFlow'])) return 'shape:state'
   if (value.fills !== undefined) {
     const fills = checkFills(value.fills)
     if (fills !== null) return fills
   }
+  if (value.orderFlow !== undefined && !isRecord(value.orderFlow)) return 'shape:state.orderFlow'
   if (value.social !== undefined) {
     const social = value.social
     if (!isRecord(social) || !sameKeys(social, ['stream', 'day', 'posts'])) return 'shape:state.social'

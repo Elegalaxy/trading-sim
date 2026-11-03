@@ -20,6 +20,7 @@ import {
   SESSION_BAND_NUMERATOR,
   SESSION_BASE_NOTIONAL_CENTS,
   SESSION_EVENT_VOLUME_BOOST,
+  PLAYER_FLOW_FREE_SHARE,
   SESSION_GRAB_CHANCE,
   SESSION_GRAB_OVERSHOOT_PPM,
   SESSION_GRAB_REACH_PPM,
@@ -81,10 +82,14 @@ type ClosePreview = {
  * The prices the next End day will print. Runs the real step on a copy and
  * reads nothing back into the market. Null when there is no next step.
  */
-function previewNextStep(market: MarketState, defs: MarketDefinitions): ClosePreview | null {
+function previewNextStep(
+  market: MarketState,
+  defs: MarketDefinitions,
+  orderFlow?: Readonly<Record<string, number>>,
+): ClosePreview | null {
   if (market.day >= RUN_LENGTH_DAYS) return null
   const copy = structuredClone(market)
-  stepMarketDay(copy, defs)
+  stepMarketDay(copy, defs, orderFlow)
   const closes: Record<string, number> = {}
   for (const def of defs.assets) closes[def.id] = copy.assets[def.id].priceCents
   const eventful = new Set<string>()
@@ -288,6 +293,64 @@ export function buildSession(
     applyGrab(bars[def.id], market.assets[def.id].priceCents, market.participants?.closes[def.id] ?? [], streams.levels)
   }
   return { day: market.day, clock: 0, bars, streams }
+}
+
+/**
+ * The player's net order flow after the free share, per stock, in cents. This is what the market
+ * step sees. Orders up to the free share leave the market exactly as it was.
+ */
+export function effectiveOrderFlow(state: GameState, defs: MarketDefinitions): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const def of defs.assets) {
+    const net = state.orderFlow?.[def.id] ?? 0
+    if (def.kind !== 'stock' || net === 0) continue
+    const free = (def.liquidityNotionalCents ?? SESSION_BASE_NOTIONAL_CENTS) * PLAYER_FLOW_FREE_SHARE
+    const excess = Math.abs(net) - free
+    if (excess > 0) out[def.id] = Math.sign(net) * excess
+  }
+  return out
+}
+
+/**
+ * Add a market order to the day's order flow and, if that changes the close, bend the rest of the
+ * session toward the new close. Bars already played stay as they were. The remaining bars keep
+ * their shape and move by a share of the change that grows to all of it at the close, so the
+ * close the session ends on is exactly the close End day will print. Draws nothing. An order at
+ * the close has no time left to be felt, so it adds nothing.
+ */
+export function addOrderFlow(state: GameState, defs: MarketDefinitions, assetId: string, signedCents: number): void {
+  if (defs.participants === undefined || signedCents === 0) return
+  const clock = state.session.clock
+  if (clock >= SESSION_STEPS) return
+  const flow = { ...(state.orderFlow ?? {}) }
+  flow[assetId] = (flow[assetId] ?? 0) + signedCents
+  state.orderFlow = flow
+  const preview = previewNextStep(state.market, defs, effectiveOrderFlow(state, defs))
+  if (preview === null) return
+  const remaining = SESSION_STEPS - clock
+  for (const def of defs.assets) {
+    const bars = state.session.bars[def.id]
+    const delta = preview.closes[def.id] - bars[SESSION_STEPS - 1].close
+    if (delta === 0) continue
+    const low = bandLow(bars[0].open)
+    const high = bandHigh(bars[0].open)
+    const shiftAt = (index: number): number => Math.round((delta * (index - clock)) / remaining)
+    for (let j = clock; j < SESSION_STEPS; j += 1) {
+      const bar = bars[j]
+      const before = shiftAt(j)
+      const after = shiftAt(j + 1)
+      const mid = Math.round((before + after) / 2)
+      const open = clampTo(bar.open + before, low, high)
+      const close = j === SESSION_STEPS - 1 ? preview.closes[def.id] : clampTo(bar.close + after, low, high)
+      bars[j] = {
+        open,
+        close,
+        high: Math.max(open, close, clampTo(bar.high + mid, low, high)),
+        low: Math.min(open, close, clampTo(bar.low + mid, low, high)),
+        volume: bar.volume,
+      }
+    }
+  }
 }
 
 /** Stock prices at step `i` as asset states, so the index formula can be reused. */

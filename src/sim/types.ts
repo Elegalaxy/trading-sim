@@ -401,7 +401,7 @@ export type ParticipantFlowEvent = {
   kind: 'participantFlow'
   day: number
   asset: string
-  party: 'informed' | 'news' | 'crowd' | 'momentum' | 'consensus'
+  party: 'informed' | 'news' | 'crowd' | 'momentum' | 'consensus' | 'player'
   /** Signed cents of demand. Positive buys. */
   demandCents: number
   depthCents: number
@@ -1655,6 +1655,12 @@ export type GameState = {
   fills: FillRecord[]
   /** Social feed. Absent when the definitions have none. Never read by the market. */
   social?: SocialState
+  /**
+   * Net value the player bought (positive) or sold (negative) with market orders in each stock
+   * today, in cents. It joins the market's order flow (plan market depth, Step M13) and is reset
+   * when the day ends. Absent means none.
+   */
+  orderFlow?: Record<string, number>
 }
 
 /** How a fill happened. */

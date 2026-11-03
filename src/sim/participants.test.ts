@@ -35,7 +35,8 @@ const DEEP: AssetDefinition = { ...NOVA, id: 'HRBU', sector: 'B', startPriceCent
 const INDEX: AssetDefinition = { id: 'M4X', kind: 'index', sector: null, startPriceCents: 100000, dailyVolatility: 0, spreadPpm: 1500, borrowFeePpm: 100 }
 
 // Crowd and trend followers are tiny here so the informed-money and news tests see only their own party.
-const PARTIES: Pick<ParticipantDefinitions, 'crowd' | 'momentum'> = {
+const PARTIES: Pick<ParticipantDefinitions, 'crowd' | 'momentum' | 'consensus'> = {
+  consensus: { capitalCents: 1, magnitudeRefPercent: 3 },
   crowd: { capitalCents: 1, heatMin: 1, heatMax: 1, tierWeight: { low: 0.3, medium: 0.6, high: 1 }, headlineWeight: 0.5, chaseDecay: 0.5 },
   momentum: { capitalCents: 1, lookbackDays: 3, thresholdPercent: 3 },
 }

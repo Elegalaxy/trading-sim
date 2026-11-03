@@ -258,7 +258,7 @@ const TOPICS: readonly Topic[] = [
     title: 'Calendar',
     body: (
       <>
-        <p>Every 30-day month has three scheduled releases. You see the date in advance and the result on the day.</p>
+        <p>Every 30-day month has three scheduled releases. You see the date in advance, what most people expect a few days before, and the result on the day. The headline says whether the result beat or missed what was expected.</p>
         <table>
           <thead>
             <tr>
@@ -285,7 +285,7 @@ const TOPICS: readonly Topic[] = [
             </tr>
           </tbody>
         </table>
-        <p>A result in line with expectations moves prices only a little. Hikes get likelier while inflation runs high.</p>
+        <p>A result in line with expectations moves prices only a little, because part of it is already in the price. A surprise moves them more. Hikes get likelier while inflation runs high.</p>
       </>
     ),
   },

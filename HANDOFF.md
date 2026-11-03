@@ -1,10 +1,8 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Two things share this checkout. Market depth M0 to M5 are committed (M5 in `28dbff2`); M6 is built and uncommitted. The Step 26 playtests are still open.
-  - Fill history (`doc/plans/2026-11-04-save-fill-history.md`): H1 to H3 are committed (`e256d83`). H4 is next.
-  - M6 (retail crowd and trend followers, uncommitted): `sim/participants.ts` (`startPartyDay`, `crowdFlow`, `momentumFlow`), `participants.test.ts`, `sim/market.ts`, `sim/types.ts` (crowd and momentum definitions, `ParticipantState` mood fields), `persist/save.ts`, `content/participants.ts` (crowd $60k, trend followers $30k), `harness/eventStudy.ts` (`maxGapPercent`, `maxFlowPercent`), the `demo-30-price-log` fixture, GAME_DESIGN and the plan.
-  - M6 result (seed abc, 300 runs): capped stock-days 1.2% (same as M5), no run-away (largest gap 11%), `followHeadlines` median $3,124, `buyRumour` $2,900 (M5 $3,069), true rumours run 1.6% to the claim day, false ones are pumped then unwound. The crowd first tried at $200k capped 4.7% of days, so it was cut. Tests pass.
+- **Current Goal:** Market depth work now lives on branch `market-depth-m7` in the worktree `.claude/worktrees/market-depth-m7` (cut from main `bb44166`, which has M0 to M6). Done on the branch: M7 (calendar consensus). Main also has the fill ledger H1 to H3 (`e256d83`); H4 is next there. The Step 26 playtests are still open. Nothing on the branch is merged into main.
+  - M7 (committed on the branch): `sim/calendar.ts` (`consensusOutcome`, `outcomeWord`, `calendarHeadlineText`, `expected` on the roll), `sim/participants.ts` (`consensusFlow`), `content/participants.ts` (consensus $300k), calendar panel and `days.ts` show `expected`, Guide line, fixture (three calendar headline lines plus prices). Calendar releases move 10% less on the day, run up a little before. 230 tests pass.
 - **Fill history, H1 to H3 (committed in `e256d83`):**
   - New `src/sim/fills.ts` (`recordFill`, `assertFills`, `closeTime`, `FILLS_MAX` 20,000) and `fills.test.ts` (12 tests).
   - `GameState.fills: FillRecord[]` (`types.ts`): one row per market order, limit fill, TP, SL, liquidation (fee = trade fee plus liquidation fee) and forced sale for missed loan interest. Each row has `n`, asset, day, `HH:MM` time, side, quantity, fill price, fee, realized P&L or null, slippage, `via`.

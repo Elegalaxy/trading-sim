@@ -98,6 +98,7 @@ function priceLog(): LogEvent[] {
       item: 'policyDecision',
       roll: 0.42,
       outcome: 'up',
+      expected: 'hold',
       before: [{ id: 'policyRate', value: 4, lastReleased: null }],
       after: [{ id: 'policyRate', value: 4.25, lastReleased: null }],
     },

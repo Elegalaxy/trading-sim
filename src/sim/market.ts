@@ -3,7 +3,13 @@
 // The day-ahead feed draws the info stream, and only for rumours. Distortion is not drawn.
 // Mutates `state` and returns it: the streams inside the state advance in place.
 
-import { assertCalendarDefinitions, beginCalendarDay, calendarRulesFrom, rollCalendarForDay } from './calendar.ts'
+import {
+  assertCalendarDefinitions,
+  beginCalendarDay,
+  calendarHeadlineText,
+  calendarRulesFrom,
+  rollCalendarForDay,
+} from './calendar.ts'
 import {
   CENTS_PER_UNIT,
   DAILY_MOVE_CAP_DENOMINATOR,
@@ -18,6 +24,7 @@ import { applyDueEffects, assertEventDefinitions, rollEventsForDay } from './eve
 import {
   assertParticipantDefinitions,
   assignLeaks,
+  consensusFlow,
   createParticipants,
   crowdFlow,
   informedFlow,
@@ -402,6 +409,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
       newsFlow(state, defs, def, inPlay),
       crowdFlow(state, defs, def, partyDay),
       momentumFlow(state, defs, def),
+      consensusFlow(state, defs, def),
     ].filter(
       (item): item is ParticipantFlowEvent => item !== null,
     )
@@ -473,9 +481,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
 }
 
 function calendarHeadline(item: CalendarItemEvent): string {
-  if (item.item === 'growthRelease') return `Growth release ${item.outcome}`
-  if (item.item === 'inflationRelease') return `Inflation release ${item.outcome}`
-  return `Policy rate ${item.outcome}`
+  return calendarHeadlineText(item.item, item.outcome, item.expected)
 }
 
 /** Largest absolute sector effect for this outcome, in percent of fair value. The summary does not see this number's source. */

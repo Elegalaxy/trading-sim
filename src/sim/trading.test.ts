@@ -534,6 +534,7 @@ describe('orders, fees, and borrow', () => {
       day: 0,
       roll: 0.25,
       outcome: 'above',
+      expected: 'inline',
       applied: true,
     })
     const macroBefore = marketPicture(macro)

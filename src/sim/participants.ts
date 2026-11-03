@@ -24,6 +24,13 @@
 // headline is readable, so a reader of the headline finds less left to trade. They stop when
 // the last effect day has been applied. Depth does not scale them: they act on public news.
 //
+// Consensus traders: a calendar release is rolled three days ahead and its consensus (the most
+// likely outcome at the last released values, public from the roll) is known. For the two days
+// before the release they trade each stock toward the effect that consensus outcome would have,
+// at 2/3 then full size, so it is already in the price. On the day fair value takes the actual
+// effect: a release that matches the consensus barely moves the price, and a surprise moves it
+// by roughly the actual effect minus the expected one.
+//
 // Retail crowd: each stock has a mood. Every rumour in the feed the player reads (any source,
 // true or false) adds a share to the crowd's belief in that event, signed by its claimed
 // direction and sized by the source tier. Headlines add a smaller mood after the fact, which
@@ -68,6 +75,8 @@ export function assertParticipantDefinitions(p: ParticipantDefinitions): void {
   positive(p.informed.capitalCents, 'informed.capitalCents')
   positive(p.informed.magnitudeRefPercent, 'informed.magnitudeRefPercent')
   positive(p.informed.regimeMin, 'informed.regimeMin')
+  positive(p.consensus.capitalCents, 'consensus.capitalCents')
+  positive(p.consensus.magnitudeRefPercent, 'consensus.magnitudeRefPercent')
   positive(p.crowd.capitalCents, 'crowd.capitalCents')
   positive(p.crowd.heatMin, 'crowd.heatMin')
   if (typeof p.crowd.heatMax !== 'number' || !(p.crowd.heatMax >= p.crowd.heatMin)) {
@@ -313,5 +322,38 @@ export function momentumFlow(state: MarketState, defs: MarketDefinitions, def: A
     depthCents: depthCents(def, p),
     moveCents: moveFor(state, def, p, demand),
     events: [],
+  }
+}
+
+/** Consensus traders' move in one stock: the expected effect of each coming release, ramped up toward its day. */
+export function consensusFlow(state: MarketState, defs: MarketDefinitions, def: AssetDefinition): ParticipantFlowEvent | null {
+  const p = defs.participants
+  const calendar = defs.calendar
+  if (p === undefined || calendar === undefined || state.participants === undefined) return null
+  if (def.sector !== 'A' && def.sector !== 'B') return null
+  let demand = 0
+  const events: string[] = []
+  for (const roll of state.calendarRolls) {
+    if (roll.applied) continue
+    const daysUntil = roll.day - state.day
+    if (daysUntil < 1 || daysUntil > EVENT_LOOKAHEAD_DAYS) continue
+    const cell = calendar.effects.find(
+      (row) => row.kind === roll.kind && row.outcome === roll.expected && row.sector === def.sector,
+    )
+    if (cell === undefined) continue
+    const ramp = (EVENT_LOOKAHEAD_DAYS + 1 - daysUntil) / EVENT_LOOKAHEAD_DAYS
+    demand += p.consensus.capitalCents * clamp(cell.percent / p.consensus.magnitudeRefPercent, 1) * ramp
+    events.push(`calendar:${roll.kind}:${roll.day}`)
+  }
+  if (events.length === 0 || demand === 0) return null
+  return {
+    kind: 'participantFlow',
+    day: state.day,
+    asset: def.id,
+    party: 'consensus',
+    demandCents: demand,
+    depthCents: depthCents(def, p),
+    moveCents: moveFor(state, def, p, demand),
+    events,
   }
 }

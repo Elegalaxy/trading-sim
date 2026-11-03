@@ -150,6 +150,8 @@ export type CalendarRoll = {
   day: number
   roll: number
   outcome: CalendarOutcome
+  /** The consensus, fixed when the outcome is rolled (market depth M7). It does not depend on the roll. */
+  expected: CalendarOutcome
   applied: boolean
 }
 
@@ -161,6 +163,8 @@ export type UpcomingCalendarItem = {
   day: number
   roll?: number
   outcome?: CalendarOutcome
+  /** The consensus. Present from the day the item is rolled, three days ahead. */
+  expected?: CalendarOutcome
 }
 
 /** Who can see a rumour source. The feed is generated for every source, then filtered. */
@@ -208,6 +212,12 @@ export type ParticipantDefinitions = {
      */
     efficiencyMin: number
     efficiencyMax: number
+  }
+  consensus: {
+    /** Cents traders put behind the expected effect of a calendar release, at full size on the last day. */
+    capitalCents: number
+    /** An expected effect of this many percent or more trades at full size. */
+    magnitudeRefPercent: number
   }
   crowd: {
     /** Cents of retail money behind a full mood swing in one stock. A thin stock moves more. */
@@ -389,7 +399,7 @@ export type ParticipantFlowEvent = {
   kind: 'participantFlow'
   day: number
   asset: string
-  party: 'informed' | 'news' | 'crowd' | 'momentum'
+  party: 'informed' | 'news' | 'crowd' | 'momentum' | 'consensus'
   /** Signed cents of demand. Positive buys. */
   demandCents: number
   depthCents: number
@@ -506,6 +516,8 @@ export type CalendarItemEvent = {
   item: CalendarItemKind
   roll: number
   outcome: CalendarOutcome
+  /** The consensus the outcome is judged against. Not part of the log line. */
+  expected: CalendarOutcome
   before: EnvironmentView[]
   after: EnvironmentView[]
 }

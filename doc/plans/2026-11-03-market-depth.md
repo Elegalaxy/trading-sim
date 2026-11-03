@@ -253,11 +253,13 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M7: Calendar consensus
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M4, user answer 4
 - Files to create or change: `src/sim/calendar.ts` (consensus from released values), `src/sim/market.ts` (`calendarHeadline`), `src/sim/participants.ts` (consensus offset), `src/sim/types.ts` (`UpcomingCalendarItem.expected`), `src/ui/CalendarPanel.tsx`, `src/ui/days.ts`, `src/content/calendar.ts` (wording), price log fixture
 - What changes: option C1. The calendar shows the consensus; headlines read against it; the anchor prices it in.
 - Must not change: calendar outcome rolls and their effect on fair value; `playerCalendar` still hides outcomes until their day.
+- Progress: done 2026-11-04 on branch `market-depth-m7`. `consensusOutcome`, `outcomeWord`, `calendarHeadlineText` in `sim/calendar.ts`; `CalendarRoll.expected` (stored at the roll), `UpcomingCalendarItem.expected`, `CalendarItemEvent.expected` (not in the log line). `consensusFlow` in `sim/participants.ts` (new definitions `consensus`: $300k, 3% reference), a fifth party `consensus`. `playerCalendar` keeps `expected` while hiding roll and outcome; the calendar panel prints `expected` and, on the day, `result`; the Guide has a line. The effect keyed by outcome and every roll are unchanged.
+- Result (seed abc, 300 runs): calendar releases move less on the day (growth day-0 0.90% to 0.81%, inflation 0.88% to 0.77%, policy 1.29% to 1.21%) and run up a little before (growth `d-3` 0.31 to 0.20). It is modest because the consensus is mostly `inline`, whose own effect is small. Capped days and the largest gap are unchanged (1.2%, 11.4%). Fixture: exactly the three calendar headline lines differ besides prices.
 
 ### Step M8 (only if the user picks E2): Scheduled earnings
 

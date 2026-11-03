@@ -21,6 +21,10 @@ export const PARTICIPANT_DEFINITIONS: ParticipantDefinitions = {
     efficiencyMin: 0.4,
     efficiencyMax: 0.7,
   },
+  consensus: {
+    capitalCents: 30_000_000,
+    magnitudeRefPercent: 3,
+  },
   crowd: {
     capitalCents: 6_000_000,
     heatMin: 0.5,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useId, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
 import { buildCandles, candleRangeLabel, formatVolume, type Candle, type DaySource, type TimeframeId } from './candles.ts'
 import { debugLog } from './debug.ts'
@@ -116,13 +116,42 @@ function markColor(mark: TradeRecord): string {
   return mark.side === 'buy' ? UP : DOWN
 }
 
-/** Which candles are on screen: `count` of them, ending `offset` candles before the newest. */
+/**
+ * Which candles are on screen: `count` slots, the last one `offset` candles before the newest.
+ * A negative offset leaves empty slots past the newest candle.
+ */
 type Span = { count: number; offset: number }
+
+/** Candles that stay on screen however far back the chart is dragged. */
+const MIN_KEPT = 5
 
 function clampSpan(span: Span, total: number): Span {
   const count = Math.round(Math.min(Math.max(span.count, MIN_VISIBLE), Math.max(MIN_VISIBLE, Math.min(MAX_VISIBLE, total))))
-  const offset = Math.round(Math.min(Math.max(span.offset, 0), Math.max(0, total - count)))
+  // Up to half a screen of empty space past the newest candle, and back until a few candles remain.
+  const least = -Math.floor(count / 2)
+  const most = Math.max(0, total - MIN_KEPT)
+  const offset = Math.round(Math.min(Math.max(span.offset, least), most))
   return count === span.count && offset === span.offset ? span : { count, offset }
+}
+
+type ZoomView = { span: Span; total: number; low: number; range: number; top: number; height: number; right: number }
+
+/** A price range set by dragging. Null fits the range to the candles on screen. */
+type Scale = { low: number; span: number }
+
+/** Smallest price range, in cents, the price scale can be stretched to. */
+const MIN_SCALE_SPAN = 4
+
+type Drag = {
+  /** `pan` moves the chart, `axis` stretches the price scale. */
+  mode: 'pan' | 'axis'
+  x: number
+  y: number
+  offset: number
+  low: number
+  span: number
+  /** True once the pan also moves the price range. */
+  free: boolean
 }
 
 export function PriceChart({
@@ -143,20 +172,29 @@ export function PriceChart({
   const [hover, setHover] = useState<Hover | null>(null)
   const [size, setSize] = useState({ w: 640, h: 420 })
   const [rawSpan, setSpan] = useState<Span>({ count: VISIBLE['1D'], offset: 0 })
-  const [drag, setDrag] = useState<{ x: number; offset: number } | null>(null)
+  const [scale, setScale] = useState<Scale | null>(null)
+  const [drag, setDrag] = useState<Drag | null>(null)
   const stageRef = useRef<HTMLDivElement>(null)
+  const clipId = `tv-clip-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+
+  const drawnAsset = view.asset
+  // Another asset has its own prices, so a stretched scale does not carry over.
+  const [scaleAsset, setScaleAsset] = useState(drawnAsset)
+  if (scaleAsset !== drawnAsset) {
+    setScaleAsset(drawnAsset)
+    setScale(null)
+  }
 
   const allBars = buildCandles(view.points, timeframe)
   const span = clampSpan(rawSpan, allBars.length)
   const end = allBars.length - span.offset
-  const bars = allBars.slice(Math.max(0, end - span.count), end)
+  const start = end - span.count
+  const bars = allBars.slice(Math.max(0, start), Math.max(0, end))
+  // Empty slots left of the first drawn candle, when the view starts before the oldest one.
+  const lead = Math.max(0, start) - start
   const live = allBars[allBars.length - 1]
-  const drawnAsset = view.asset
-  // Read by the wheel listener, which is attached once.
-  const zoomRef = useRef({ span, total: allBars.length, shown: bars.length })
-  useEffect(() => {
-    zoomRef.current = { span, total: allBars.length, shown: bars.length }
-  })
+  // What the wheel listener, which is attached once, needs from the last render.
+  const zoomRef = useRef<ZoomView | null>(null)
   const active = hover !== null && bars[hover.index] !== undefined ? bars[hover.index] : bars[bars.length - 1]
   const activeTone = active === undefined ? 'flat' : toneOf(active)
   const lastBar = bars[bars.length - 1]
@@ -183,22 +221,33 @@ export function PriceChart({
     debugLog('[ui]', chartLog)
   }, [chartLog])
 
-  // Wheel zoom keeps the candle under the pointer in place. React's wheel handler is passive,
-  // so it is attached here to be able to stop the page from scrolling.
+  // Wheel zoom keeps the candle (or, over the price scale, the price) under the pointer in place.
+  // React's wheel handler is passive, so it is attached here to be able to stop the page from scrolling.
   useEffect(() => {
     const node = stageRef.current
     if (node === null) return
     function onWheel(event: WheelEvent): void {
-      const { span: current, total, shown } = zoomRef.current
-      if (total === 0 || node === null) return
+      const view = zoomRef.current
+      const svg = node?.querySelector('svg')
+      if (view === null || view.total === 0 || svg === null || svg === undefined) return
+      const { span: current, total, low, range, top, height, right } = view
       event.preventDefault()
-      const rect = node.getBoundingClientRect()
-      const plotWidth = Math.max(1, rect.width - AXIS_RIGHT - PAD_LEFT)
-      const fraction = Math.min(1, Math.max(0, (event.clientX - rect.left - PAD_LEFT) / plotWidth))
-      const count = event.deltaY > 0 ? current.count * ZOOM_STEP : current.count / ZOOM_STEP
-      const next = clampSpan({ count, offset: current.offset }, total)
-      // The candle under the pointer, counted back from the newest.
-      const fromEnd = current.offset + (1 - fraction) * shown
+      const rect = svg.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      const x = ((event.clientX - rect.left) / rect.width) * svg.width.baseVal.value
+      const factor = event.deltaY > 0 ? ZOOM_STEP : 1 / ZOOM_STEP
+      if (x >= right) {
+        const y = ((event.clientY - rect.top) / rect.height) * svg.height.baseVal.value
+        const fraction = Math.min(1, Math.max(0, (y - top) / height))
+        const price = low + (1 - fraction) * range
+        const next = Math.max(MIN_SCALE_SPAN, range * factor)
+        setScale({ low: price - (1 - fraction) * next, span: next })
+        return
+      }
+      const fraction = Math.min(1, Math.max(0, (x - PAD_LEFT) / Math.max(1, right - PAD_LEFT)))
+      const next = clampSpan({ count: current.count * factor, offset: current.offset }, total)
+      // The slot under the pointer, counted back from the newest.
+      const fromEnd = current.offset + (1 - fraction) * current.count
       setSpan(clampSpan({ count: next.count, offset: fromEnd - (1 - fraction) * next.count }, total))
     }
     node.addEventListener('wheel', onWheel, { passive: false })
@@ -209,17 +258,7 @@ export function PriceChart({
     setHover(null)
     setTimeframe(next)
     setSpan({ count: VISIBLE[next], offset: 0 })
-  }
-
-  function onDown(event: PointerEvent<SVGSVGElement>): void {
-    if (event.button !== 0) return
-    event.currentTarget.setPointerCapture(event.pointerId)
-    setDrag({ x: event.clientX, offset: span.offset })
-  }
-
-  function onUp(event: PointerEvent<SVGSVGElement>): void {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    setDrag(null)
+    setScale(null)
   }
 
   const following = span.offset === 0 && span.count === Math.min(VISIBLE[timeframe], Math.max(MIN_VISIBLE, allBars.length))
@@ -239,7 +278,10 @@ export function PriceChart({
 
   let yLow = 0
   let ySpan = 1
-  if (bars.length > 0) {
+  if (scale !== null) {
+    yLow = scale.low
+    ySpan = scale.span
+  } else if (bars.length > 0) {
     let min = bars[0]?.low ?? 0
     let max = bars[0]?.high ?? 0
     for (const bar of bars) {
@@ -252,26 +294,73 @@ export function PriceChart({
     if (ySpan <= 0) ySpan = 1
   }
 
-  const slot = bars.length === 0 ? plotW : plotW / bars.length
+  useEffect(() => {
+    zoomRef.current = { span, total: allBars.length, low: yLow, range: ySpan, top: plotTop, height: priceH, right: plotRight }
+  })
+
+  const slot = plotW / span.count
+  const centerX = (index: number) => plotLeft + (lead + index + 0.5) * slot
   const ticks = [0, 1, 2, 3, 4].map((step) => yLow + (ySpan * step) / 4)
 
-  function onMove(event: PointerEvent<SVGSVGElement>): void {
-    if (bars.length === 0) return
+  /** The pointer in chart units. */
+  function pointAt(event: MouseEvent<SVGSVGElement>): { x: number; y: number } | null {
     const rect = event.currentTarget.getBoundingClientRect()
-    if (rect.width <= 0 || rect.height <= 0) return
-    const x = ((event.clientX - rect.left) / rect.width) * size.w
-    const y = ((event.clientY - rect.top) / rect.height) * size.h
+    if (rect.width <= 0 || rect.height <= 0) return null
+    return { x: ((event.clientX - rect.left) / rect.width) * size.w, y: ((event.clientY - rect.top) / rect.height) * size.h }
+  }
+
+  function onDown(event: PointerEvent<SVGSVGElement>): void {
+    if (event.button !== 0) return
+    const point = pointAt(event)
+    if (point === null) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setDrag({
+      mode: point.x >= plotRight ? 'axis' : 'pan',
+      x: point.x,
+      y: point.y,
+      offset: span.offset,
+      low: yLow,
+      span: ySpan,
+      free: scale !== null,
+    })
+  }
+
+  function onUp(event: PointerEvent<SVGSVGElement>): void {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    setDrag(null)
+  }
+
+  function onMove(event: PointerEvent<SVGSVGElement>): void {
+    const point = pointAt(event)
+    if (point === null) return
+    const { x, y } = point
+    if (drag !== null && drag.mode === 'axis') {
+      // Dragging down squeezes the prices together, dragging up spreads them out.
+      const next = Math.max(MIN_SCALE_SPAN, drag.span * Math.exp((y - drag.y) * 0.006))
+      setScale({ low: drag.low + drag.span / 2 - next / 2, span: next })
+      return
+    }
     if (drag !== null) {
       // Dragging right shows older candles.
-      const moved = Math.round((event.clientX - drag.x) / slot)
+      const moved = Math.round((x - drag.x) / slot)
       setSpan(clampSpan({ count: span.count, offset: drag.offset + moved }, allBars.length))
+      // A clear vertical drag frees the price range, as on a trading terminal.
+      const dy = y - drag.y
+      if (drag.free || Math.abs(dy) > 6) {
+        if (!drag.free) setDrag({ ...drag, free: true })
+        setScale({ low: drag.low + (dy / priceH) * drag.span, span: drag.span })
+      }
     }
-    if (x < plotLeft || x >= plotRight) {
+    if (bars.length === 0 || x < plotLeft || x >= plotRight) {
       setHover(null)
       return
     }
-    const index = Math.min(bars.length - 1, Math.max(0, Math.floor((x - plotLeft) / slot)))
-    setHover({ index, y })
+    setHover({ index: Math.floor((x - plotLeft) / slot) - lead, y })
+  }
+
+  function onDoubleClick(event: MouseEvent<SVGSVGElement>): void {
+    const point = pointAt(event)
+    if (point !== null && point.x >= plotRight) setScale(null)
   }
 
   const crossPrice =
@@ -285,7 +374,16 @@ export function PriceChart({
             {id}
           </button>
         ))}
-        <span className="tv-hint">Scroll to zoom, drag to look back</span>
+        <span className="tv-hint">Drag to move · scroll to zoom · drag the price scale to stretch it</span>
+        <button
+          type="button"
+          className="tv-auto"
+          aria-pressed={scale === null}
+          onClick={() => setScale(null)}
+          title="Fit the price scale to the candles on screen. Double-clicking the price scale does the same."
+        >
+          Auto
+        </button>
         {following ? null : (
           <button type="button" className="tv-now" onClick={() => setSpan({ count: VISIBLE[timeframe], offset: 0 })}>
             Back to now
@@ -314,8 +412,18 @@ export function PriceChart({
               onPointerUp={onUp}
               onPointerCancel={onUp}
               onPointerLeave={() => setHover(null)}
-              style={{ cursor: drag !== null ? 'grabbing' : 'crosshair', touchAction: 'none' }}
+              onDoubleClick={onDoubleClick}
+              style={{ cursor: drag?.mode === 'axis' ? 'ns-resize' : drag !== null ? 'grabbing' : 'crosshair', touchAction: 'none' }}
             >
+              <defs>
+                {/* Candles stay in the price area when the scale is moved; marks may reach into the volume. */}
+                <clipPath id={`${clipId}-price`}>
+                  <rect x={plotLeft} y={0} width={plotW} height={plotTop + priceH} />
+                </clipPath>
+                <clipPath id={`${clipId}-plot`}>
+                  <rect x={plotLeft} y={0} width={plotW} height={plotBottom} />
+                </clipPath>
+              </defs>
               {ticks.map((tick) => {
                 const y = priceY(tick, yLow, ySpan, plotTop, priceH)
                 return (
@@ -328,32 +436,40 @@ export function PriceChart({
                 )
               })}
               {bars.map((bar, index) => {
-                const color = toneColor(toneOf(bar))
-                const cx = plotLeft + (index + 0.5) * slot
+                if (bar.volume === null || maxVolume <= 0) return null
                 const bodyWidth = Math.max(1, Math.min(10, slot * 0.62))
-                const yOpen = priceY(bar.open, yLow, ySpan, plotTop, priceH)
-                const yClose = priceY(bar.close, yLow, ySpan, plotTop, priceH)
-                const yHigh = priceY(bar.high, yLow, ySpan, plotTop, priceH)
-                const yLowPx = priceY(bar.low, yLow, ySpan, plotTop, priceH)
-                const top = Math.min(yOpen, yClose)
-                const height = Math.max(1, Math.abs(yClose - yOpen))
+                const height = (bar.volume / maxVolume) * Math.max(0, volumeH - 4)
                 return (
-                  <g key={`${bar.startDay}-${bar.endDay}-${bar.time ?? ''}`}>
-                    {bar.volume !== null && maxVolume > 0 ? (
-                      <rect
-                        x={cx - bodyWidth / 2}
-                        y={plotBottom - (bar.volume / maxVolume) * Math.max(0, volumeH - 4)}
-                        width={bodyWidth}
-                        height={(bar.volume / maxVolume) * Math.max(0, volumeH - 4)}
-                        fill={color}
-                        opacity="0.35"
-                      />
-                    ) : null}
-                    <line x1={cx} x2={cx} y1={yHigh} y2={yLowPx} stroke={color} strokeWidth="1" />
-                    <rect x={cx - bodyWidth / 2} y={top} width={bodyWidth} height={height} fill={color} />
-                  </g>
+                  <rect
+                    key={`vol-${bar.startDay}-${bar.endDay}-${bar.time ?? ''}`}
+                    x={centerX(index) - bodyWidth / 2}
+                    y={plotBottom - height}
+                    width={bodyWidth}
+                    height={height}
+                    fill={toneColor(toneOf(bar))}
+                    opacity="0.35"
+                  />
                 )
               })}
+              <g clipPath={`url(#${clipId}-price)`}>
+                {bars.map((bar, index) => {
+                  const color = toneColor(toneOf(bar))
+                  const cx = centerX(index)
+                  const bodyWidth = Math.max(1, Math.min(10, slot * 0.62))
+                  const yOpen = priceY(bar.open, yLow, ySpan, plotTop, priceH)
+                  const yClose = priceY(bar.close, yLow, ySpan, plotTop, priceH)
+                  const yHigh = priceY(bar.high, yLow, ySpan, plotTop, priceH)
+                  const yLowPx = priceY(bar.low, yLow, ySpan, plotTop, priceH)
+                  const top = Math.min(yOpen, yClose)
+                  const height = Math.max(1, Math.abs(yClose - yOpen))
+                  return (
+                    <g key={`${bar.startDay}-${bar.endDay}-${bar.time ?? ''}`}>
+                      <line x1={cx} x2={cx} y1={yHigh} y2={yLowPx} stroke={color} strokeWidth="1" />
+                      <rect x={cx - bodyWidth / 2} y={top} width={bodyWidth} height={height} fill={color} />
+                    </g>
+                  )
+                })}
+              </g>
               {bars.length > 0 ? (
                 <>
                   <text x={plotLeft} y={size.h - 6} fill="#848e9c" fontSize="11">
@@ -406,9 +522,9 @@ export function PriceChart({
                 // Labels only while they fit; the arrows stay and carry a tooltip.
                 const labelled = placed.length <= 12 || slot >= 14
                 const stack = new Map<string, number>()
-                return placed.map(({ mark, index }) => {
+                const drawn = placed.map(({ mark, index }) => {
                   const bar = bars[index]!
-                  const cx = plotLeft + (index + 0.5) * slot
+                  const cx = centerX(index)
                   const buy = mark.side === 'buy'
                   const color = markColor(mark)
                   const dir = buy ? 1 : -1
@@ -434,12 +550,13 @@ export function PriceChart({
                     </g>
                   )
                 })
+                return <g clipPath={`url(#${clipId}-plot)`}>{drawn}</g>
               })()}
               {hover !== null && bars[hover.index] !== undefined ? (
                 <g>
                   <line
-                    x1={plotLeft + (hover.index + 0.5) * slot}
-                    x2={plotLeft + (hover.index + 0.5) * slot}
+                    x1={centerX(hover.index)}
+                    x2={centerX(hover.index)}
                     y1={plotTop}
                     y2={plotBottom}
                     stroke={CROSS}
@@ -452,6 +569,16 @@ export function PriceChart({
                   ) : null}
                 </g>
               ) : null}
+              <rect
+                x={plotRight}
+                y={0}
+                width={AXIS_RIGHT}
+                height={plotBottom}
+                fill="transparent"
+                style={{ cursor: drag?.mode === 'pan' ? 'grabbing' : 'ns-resize' }}
+              >
+                <title>Drag to stretch the prices. Double-click to fit them again.</title>
+              </rect>
             </svg>
           </>
         )}

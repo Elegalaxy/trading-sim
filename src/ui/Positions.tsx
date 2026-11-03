@@ -198,14 +198,13 @@ function ExitsEditor({
     onDone({ ok: true, text: `${asset} ${added.join(' and ')} added.` })
   }
 
-  function preview(kind: ExitKind, draft: Draft, problem: string | null) {
+  function preview(draft: Draft, problem: string | null) {
     if (problem !== null) return <span className="exit-warn">{problem}</span>
-    if (draft.cents === null) return <span className="day-note">Empty: no {kind === 'takeProfit' ? 'take profit' : 'stop loss'}.</span>
+    if (draft.cents === null) return <span className="day-note">None</span>
     const pnl = pnlAt(row, draft.cents, shares)
     return (
-      <span className="day-note">
-        {percentFrom(draft.cents, row.price)} from price · about{' '}
-        <span className={pnl >= 0 ? 'pnl-gain' : 'pnl-loss'}>{formatSignedUsd(pnl, 'exit pnl')}</span> on {shares} sh
+      <span className="exit-preview" title={`${percentFrom(draft.cents, row.price)} from the price, about ${formatSignedUsd(pnl, 'exit pnl')} before fees.`}>
+        {percentFrom(draft.cents, row.price)} · <span className={pnl >= 0 ? 'pnl-gain' : 'pnl-loss'}>{formatSignedUsd(pnl, 'exit pnl')}</span>
       </span>
     )
   }
@@ -225,9 +224,9 @@ function ExitsEditor({
 
   return (
     <div className="exits-editor">
-      <p className="day-note">
+      <p className="day-note" title="Each level closes its shares at its own price, with no spread.">
         {row.side === 'long' ? 'Long' : 'Short'} {row.shares} {asset} · entry {formatAverage(row.costCents, row.shares)} · price{' '}
-        {formatUsd(row.price, 'price')}. Each level closes its shares at its own price, with no spread.
+        {formatUsd(row.price, 'price')}
       </p>
       {levels.length > 0 ? (
         <ul className="exit-levels">
@@ -239,9 +238,9 @@ function ExitsEditor({
                 <span className={level.kind === 'takeProfit' ? 'pnl-gain' : 'pnl-loss'}>
                   {KIND_LABEL[level.kind]} {formatUsd(level.priceCents, 'exit')}
                 </span>
-                <span className="day-note">
-                  {percentFrom(level.priceCents, row.price)} · closes {level.quantity === null ? 'the rest' : `${level.quantity} of ${row.shares}`} ·
-                  about <span className={pnl >= 0 ? 'pnl-gain' : 'pnl-loss'}>{formatSignedUsd(pnl, 'exit pnl')}</span>
+                <span className="exit-preview">
+                  {percentFrom(level.priceCents, row.price)} · <span className={pnl >= 0 ? 'pnl-gain' : 'pnl-loss'}>{formatSignedUsd(pnl, 'exit pnl')}</span>
+                  {level.quantity === null ? null : <span className="day-note"> ({level.quantity} sh)</span>}
                 </span>
                 <button type="button" onClick={() => onRemove(level)}>
                   Remove
@@ -288,7 +287,7 @@ function ExitsEditor({
                 </button>
               ) : null}
             </div>
-            {preview(kind, draft, problem)}
+            {preview(draft, problem)}
           </div>
         ))}
         <div className="exit-row">

@@ -1,50 +1,43 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Two pieces of work from two sessions, committed together on top of `dc33a59`: (A) telegraphing, (B) the win rule plus free time and UI fixes. Next for market depth: M2 (stock size and liquidity), then M3 (slippage). The Step 26 playtests are still open.
-- **Recent Changes & Files Touched (one commit on top of `dc33a59`):**
-  - (A) Telegraphing (user decision; changes a `[CONFIRMED]` rule):
-    - Bent news and posts carry no mark. `src/ui/Tell.tsx` is deleted.
-    - New `src/ui/StatEdge.tsx` (screen-edge glow), with `effects.ts` and `StatEdge.test.ts`.
-    - The day report counts bent items (`store.ts`, `DayReport.tsx`).
-    - Text in `Guide.tsx` and `Primer.tsx`, plus GAME_DESIGN sections 9, 14, 15 and 16.
-    - The plan has Q6 (Step M13) and Q8.
-  - (B) Win rule:
-    - `fi.ts` `openLossCents` subtracts net open loss (when below zero) from FI passive income.
-    - New field `openLossCents` on `FiStatus` and `FiCheckEvent`. Updated `log.ts`, `game.ts` assertFi and `FiMeter.tsx`.
-    - Tests in `fi.test.ts`, including a held 50x loss that does not win.
-  - (B) Free time, a new module `src/sim/study.ts` (`GameState.study`: `points`, `course`, `used`):
-    - Command `{type:'study', slot:'daytime'|'evening', activity:'research'|'course'}`.
-    - Daytime is jobless only. Evening is before the market opens; after it, `skip` is rejected with `studiedEvening`.
-    - Verify (`stats.ts`) now costs 1 point and rejects `alreadyVerified` or `noResearch`. `buyCourse` (`lifestyle.ts`) now only enrols.
-    - New constants in `constants.ts`. Save key `study` in `save.ts`; old saves are rejected.
-    - Tests in `study.test.ts`; `lifestyle.test.ts` updated.
-    - UI: `DayTimeline.tsx` ("Free time" block, study buttons, Open market disabled after an evening of study), `NewsFeed.tsx` (Verify shows points), `LifestylePanel.tsx` (enrol and progress).
-  - (B) UI:
-    - `RunEnd.tsx` is a window with a breakdown (net worth vs start, passive vs expenses, open losses, score parts) that folds to a banner.
-    - The top bar shows Trading equity (`Dashboard.tsx`), and the day is `runEnd.day` once the run ends.
-    - `candles.ts` labels use player days, and pre-run candles read "N days before start".
-    - `PriceChart.tsx`:
-      - wheel zoom (10–400 candles), drag to pan through all history, and "Back to now";
-      - a dashed last-price line with an axis tag;
-      - marks come from `run.history`, so closed trades and TP/SL fills stay, labelled TP or SL.
-    - `Positions.tsx` ExitsEditor:
-      - TP and SL entered together;
-      - ±2/5/10% steps and a break-even SL;
-      - live % and P&L, a wrong-side warning, then two `addExit` dispatches.
-    - Text: `Guide.tsx` (winning rule, free time, verify cost). GAME_DESIGN section 6 "Free time", section 8 open-loss rule, and the changelog.
-  - Checks: npm test 189 passed (31 files), typecheck and lint pass. Batch `--batch 50 --strategy random` runs clean.
-  - Browser (seed `demo`, jobless):
-    - Research day gives 6 points, and Verify shows them.
-    - The TP/SL editor adds both levels, shows them on the chart and warns on a wrong side.
-    - On 15m, pan reaches "7 days before start".
-    - After the stop loss hit, the Buy and SL marks both stay.
-    - The result window was not opened in the browser.
+- **Current Goal:** Playtest polish on top of `8ac353b`, then market depth: M2 (stock size and liquidity), then M3 (slippage). The Step 26 playtests are still open.
+- **Committed in `8ac353b`** (pushed):
+  - Telegraphing: bent news and posts carry no mark. `StatEdge.tsx` adds a screen-edge glow, and the day report counts bent items.
+  - Win rule: net open loss is subtracted from FI passive income (`fi.ts` `openLossCents`).
+  - Free time (`src/sim/study.ts`, `GameState.study`):
+    - Research earns points that Verify spends.
+    - Course study happens in the jobless daytime or in a skipped market evening.
+    - `buyCourse` only enrols.
+  - UI:
+    - result window (`RunEnd.tsx`) and Trading equity in the top bar;
+    - chart zoom, pan and last-price line, with TP/SL marks that stay;
+    - TP and SL entered together in `Positions.tsx`.
+- **Uncommitted (this pass, from the user's playtest screenshots):**
+  - `BillBanner.tsx` and `styles.css`: the bill buttons have amber borders, Pay bill is solid amber once cash covers the bill, disabled buttons stay outlined, and tooltips say why a button is disabled.
+  - `PriceChart.tsx`, works like a trading terminal:
+    - drag or wheel on the price scale to stretch it; double-click it, or press the "Auto" toolbar button, to fit again;
+    - a clear vertical drag on the chart frees the price range, so the chart moves both ways;
+    - pan can leave up to half a screen of empty space past the newest candle, and goes back until 5 candles remain;
+    - slots are `plotW / span.count`, and `lead` counts the empty slots on the left;
+    - candles are clipped to the price area and marks to the plot;
+    - the scale resets to Auto on a timeframe or asset change;
+    - "Auto" and "Back to now" are plain outlined buttons (`styles.css` `.tv-toolbar`); Auto's text is amber while on.
+  - `Positions.tsx` ExitsEditor:
+    - the preview is only "% · P&L" (no share count, and the tooltip has the full text); empty shows "None";
+    - the levels list shows "% · P&L", with "(N sh)" only for partial levels;
+    - the header is shortened, with the spread note in a tooltip;
+    - the Add button is amber when enabled.
+  - Checks: npm test 189 passed (31 files), typecheck and lint pass.
+  - Browser (seed `demo`, 1440x900):
+    - the axis drag, vertical pan, future space, double-click reset and Auto all work;
+    - the TP+SL preview reads "+5.01% · +$229.00", and the levels show on the chart;
+    - the bill button styles were checked through computed styles only (no bill was due).
 - **Active Decisions / Constraints:**
   - Win rule: open losses count, open profit does not (`[PROVISIONAL]`, user decision 2026-11-03).
   - Free-time numbers are provisional: points 4/2 (cap 20, start 2), course 6 units (2/1), energy 4/2.
-  - The fill history (and so the chart marks) is kept for this browser session only, and is lost on reload.
+  - Fill history (the chart marks) lives for the browser session only.
   - The guide is a reference, not a strategy. The 8% daily cap is `[CONFIRMED]`. No market party reads player state.
-  - The dev server serves stale sim modules after edits; restart it on an import or ReferenceError.
+  - The dev server serves stale modules after edits, sometimes even across a reload. Restart it on a ReferenceError or an odd render error.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Exact Next Step:** (A) and (B) are committed together and pushed. The user plays a jobless run with research and a course, and confirms that the win now needs real profit. Then start M2.
+- **Exact Next Step:** The user checks this pass (bill buttons on day 30, chart scale, TP/SL text) and commits it. Then the user does a jobless run with research and a course. Then start M2.

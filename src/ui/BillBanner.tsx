@@ -86,7 +86,12 @@ export function BillBanner({ game }: { game: GameState | null }) {
             : 'Selling positions only works in the market section. Skip ahead, sell, then move the proceeds to cash.'}
         </li>
         <li>
-          <button type="button" onClick={onWithdraw} disabled={withdraw <= 0}>
+          <button
+            type="button"
+            onClick={onWithdraw}
+            disabled={withdraw <= 0}
+            title={withdraw > 0 ? `Moves ${money(withdraw, 'withdraw')} from savings to cash.` : 'Savings are empty.'}
+          >
             Withdraw from savings
           </button>
         </li>
@@ -104,7 +109,12 @@ export function BillBanner({ game }: { game: GameState | null }) {
         </li>
       </ul>
       <p className="bill-actions">
-        <button type="button" onClick={onPay} disabled={game.accounts.cashCents < bill.amountCents}>
+        <button
+          type="button"
+          onClick={onPay}
+          disabled={game.accounts.cashCents < bill.amountCents}
+          title={shortfall > 0 ? `Cash is ${money(shortfall, 'shortfall')} short.` : undefined}
+        >
           Pay bill
         </button>
       </p>

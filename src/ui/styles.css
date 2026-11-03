@@ -767,10 +767,34 @@ ul {
   font-size: 11px;
 }
 
+.tv-auto,
 .tv-now {
   margin-left: 8px;
   padding: 2px 8px;
   font-size: 12px;
+}
+
+/* Chart controls, outlined so they read as buttons next to the timeframe tabs. */
+.exchange .tv-toolbar .tv-auto,
+.exchange .tv-toolbar .tv-now {
+  padding: 2px 10px;
+  background: transparent;
+  border: 1px solid #2b3139;
+  border-radius: 4px;
+  color: #b7bdc6;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.exchange .tv-toolbar .tv-auto:hover,
+.exchange .tv-toolbar .tv-now:hover {
+  background: #2b3139;
+  color: #eaecef;
+}
+
+/* Auto on: the scale follows the candles. Only the text changes, so it stays quiet. */
+.exchange .tv-toolbar .tv-auto[aria-pressed='true'] {
+  color: #f7a600;
 }
 
 .tv-stage {
@@ -1234,6 +1258,23 @@ dl.estimate dd {
   justify-self: start;
 }
 
+.exit-preview {
+  font-size: 12px;
+  color: #b7bdc6;
+  white-space: nowrap;
+}
+
+.exchange .exit-form button.exit-submit {
+  padding: 5px 16px;
+}
+
+.exchange .exit-form button.exit-submit:not(:disabled) {
+  background: #f7a600;
+  border-color: #f7a600;
+  color: #1e2329;
+  font-weight: 650;
+}
+
 @media (max-width: 900px) {
   .exit-row {
     grid-template-columns: 1fr;
@@ -1316,6 +1357,40 @@ dl.estimate dd {
   gap: 4px 16px;
   padding: 0;
   list-style: none;
+}
+
+.exchange .bill-banner li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The banner's buttons are the way out of a bill, so they must read as buttons. */
+.exchange .bill-banner button {
+  padding: 4px 12px;
+  background: #1e2329;
+  border: 1px solid #e0b341;
+  border-radius: 4px;
+  color: #eaecef;
+  cursor: pointer;
+}
+
+.exchange .bill-banner button:hover:not(:disabled) {
+  background: #3a3320;
+}
+
+.exchange .bill-banner .bill-actions button:not(:disabled) {
+  background: #f7a600;
+  border-color: #f7a600;
+  color: #1e2329;
+  font-weight: 650;
+}
+
+.exchange .bill-banner button:disabled {
+  background: #1e2329;
+  border-color: #2b3139;
+  color: #5e6673;
+  cursor: not-allowed;
 }
 
 .exchange .tv-chart,

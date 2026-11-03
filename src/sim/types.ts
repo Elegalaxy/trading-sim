@@ -660,7 +660,11 @@ export type RealizedDay = {
   cents: number
 }
 
-/** Prices are cents. `halfSpread` is cents. `fee` is cents, 0.1% of shares × fill price. */
+/**
+ * Prices are cents. `halfSpread` is cents. `slippage` is cents a share paid beyond the half
+ * spread by a large order, 0 when the order is small (omitted then). `fee` is cents,
+ * 0.1% of shares × fill price.
+ */
 export type OrderFillEvent = {
   kind: 'orderFill'
   day: number
@@ -669,6 +673,7 @@ export type OrderFillEvent = {
   quantity: number
   price: number
   halfSpread: number
+  slippage?: number
   fillPrice: number
   fee: number
 }

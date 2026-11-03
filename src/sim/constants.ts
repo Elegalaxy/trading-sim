@@ -162,6 +162,16 @@ export const RATE_PPM_SCALE = 1_000_000
 export const SPREAD_PPM_MIN = 1000
 export const SPREAD_PPM_MAX = 4000
 
+/**
+ * Slippage, provisional. An order that is larger than a share of the bar it trades in pays
+ * extra beyond the half spread: price x SLIPPAGE_K x volatility x sqrt(share - free share).
+ * The index has no volatility of its own, so a floor is used. The extra is capped.
+ */
+export const SLIPPAGE_FREE_SHARE = 0.05
+export const SLIPPAGE_K = 1
+export const SLIPPAGE_VOLATILITY_FLOOR = 0.01
+export const SLIPPAGE_MAX_PPM = 200_000
+
 /** Section 7. Provisional daily short borrow fee: 0.01% to 0.03% of abs(shares) × price. */
 export const BORROW_FEE_PPM_MIN = 100
 export const BORROW_FEE_PPM_MAX = 300
@@ -270,8 +280,9 @@ export const SESSION_NOISE_SCALE = 1
 export const SESSION_WICK_SCALE = 0.6
 
 /**
- * Volume is cosmetic. Daily base notional in cents, divided by the open price,
- * gives a base share count. Provisional.
+ * Daily base notional in cents, divided by the open price, gives a base share count.
+ * A stock's own `liquidityNotionalCents` replaces it. Volume is the liquidity that
+ * slippage is measured against. Provisional.
  */
 export const SESSION_BASE_NOTIONAL_CENTS = 200_000_000
 

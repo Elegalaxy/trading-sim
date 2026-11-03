@@ -15,5 +15,5 @@ export const ASSET_DEFINITIONS: readonly AssetDefinition[] = [
   { id: 'BLSW', kind: 'stock', sector: 'A', startPriceCents: 11200, dailyVolatility: 0.018, spreadPpm: 3000, borrowFeePpm: 200, sharesOutstanding: 90000000, liquidityNotionalCents: 400000000 },
   { id: 'HRBU', kind: 'stock', sector: 'B', startPriceCents: 3100, dailyVolatility: 0.01, spreadPpm: 1000, borrowFeePpm: 100, sharesOutstanding: 150000000, liquidityNotionalCents: 300000000 },
   { id: 'KSR', kind: 'stock', sector: 'B', startPriceCents: 6400, dailyVolatility: 0.014, spreadPpm: 2000, borrowFeePpm: 150, sharesOutstanding: 25000000, liquidityNotionalCents: 80000000 },
-  { id: 'M4X', kind: 'index', sector: null, startPriceCents: 100000, dailyVolatility: 0, spreadPpm: 1500, borrowFeePpm: 100 },
+  { id: 'M4X', kind: 'index', sector: null, startPriceCents: 100000, dailyVolatility: 0, spreadPpm: 1500, borrowFeePpm: 100, liquidityNotionalCents: 800_000_000 },
 ]

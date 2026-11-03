@@ -28,6 +28,13 @@
 // The feed stored while the player trades was generated at the end of this day
 // (`feed.day` is market.day + 1). Its headlines name events that fired on market.day.
 //
+// Slippage (provisional): a market order, a liquidation and a stop pay extra beyond the half
+// spread when their size is above SLIPPAGE_FREE_SHARE of the bar they trade in (the bar the
+// clock is about to run, or the bar that triggered the stop). The extra per share is
+// price x K x volatility x sqrt(share - free share), capped. A limit order and a take profit
+// fill at their own price and pay none. It is a function of the order and the seeded bar
+// volume, so no market price or random stream moves.
+//
 // Realized ledger: closing or reducing realizes (exit fill − entry average) × closed
 // shares for a long, and the opposite for a short. Entry average is costCents /
 // abs(shares). A partial close removes round-half-away(cost × closed / open) cents
@@ -52,6 +59,11 @@ import {
   MARGIN_MIN_RATIO_DENOMINATOR,
   MARGIN_MIN_RATIO_NUMERATOR,
   RATE_PPM_SCALE,
+  SESSION_STEPS,
+  SLIPPAGE_FREE_SHARE,
+  SLIPPAGE_K,
+  SLIPPAGE_MAX_PPM,
+  SLIPPAGE_VOLATILITY_FLOOR,
   SPREAD_PPM_MAX,
   SPREAD_PPM_MIN,
   TRADE_FEE_DENOMINATOR,
@@ -203,6 +215,30 @@ function halfSpreadCents(price: number, spreadPpm: number, widened: boolean): nu
     throw new Error(`half-spread numerator is not a safe integer, received ${describeValue(price)} × ${describeValue(ppm)}`)
   }
   return roundDivHalfAway(numerator, RATE_PPM_SCALE * 2)
+}
+
+/** Volume of the bar an order placed now would trade in. The clock at the close uses the last bar. */
+export function fillBarVolume(state: GameState, assetId: string): number {
+  const bars = state.session.bars[assetId]
+  const bar = bars?.[Math.min(state.session.clock, SESSION_STEPS - 1)]
+  if (bar === undefined) throw new Error(`session has no bar for ${assetId}`)
+  return bar.volume
+}
+
+/** Extra cents a share pays beyond the half spread. Zero while the order is a small part of the bar. */
+export function slippageCents(price: number, volatility: number, quantity: number, barVolume: number): number {
+  const share = quantity / Math.max(1, barVolume)
+  const excess = share - SLIPPAGE_FREE_SHARE
+  if (!(excess > 0)) return 0
+  const ppm = Math.min(
+    SLIPPAGE_MAX_PPM,
+    Math.round(SLIPPAGE_K * Math.max(volatility, SLIPPAGE_VOLATILITY_FLOOR) * Math.sqrt(excess) * RATE_PPM_SCALE),
+  )
+  const numerator = price * ppm
+  if (!Number.isSafeInteger(numerator)) {
+    throw new Error(`slippage numerator is not a safe integer, received ${describeValue(price)} × ${describeValue(ppm)}`)
+  }
+  return roundDivHalfAway(numerator, RATE_PPM_SCALE)
 }
 
 function feeCents(notional: number): number {
@@ -376,6 +412,7 @@ export function tradingEquity(
 type FillQuote = {
   price: number
   halfSpread: number
+  slippage: number
   fillPrice: number
   fee: number
   cashMove: number
@@ -388,6 +425,7 @@ function quoteFill(
   side: OrderSide,
   quantity: number,
   fixedFill?: number,
+  slipVolume?: number,
 ): FillQuote | 'overflow' {
   const quoted = market.assets[def.id]
   if (quoted === undefined || !Number.isSafeInteger(quoted.priceCents) || quoted.priceCents <= 0) {
@@ -399,7 +437,10 @@ function quoteFill(
     const spreadPpm = requirePpm(def.spreadPpm, SPREAD_PPM_MIN, SPREAD_PPM_MAX, `asset ${def.id} spreadPpm`)
     halfSpread = halfSpreadCents(quoted.priceCents, spreadPpm, spreadWidens(market, def))
   }
-  const fillPrice = fixedFill ?? (side === 'buy' ? quoted.priceCents + halfSpread : quoted.priceCents - halfSpread)
+  // Slippage applies when a bar volume is given: a market order, or a stop that fills at its level.
+  const slippage = slipVolume === undefined ? 0 : slippageCents(quoted.priceCents, def.dailyVolatility, quantity, slipVolume)
+  const base = fixedFill ?? (side === 'buy' ? quoted.priceCents + halfSpread : quoted.priceCents - halfSpread)
+  const fillPrice = side === 'buy' ? base + slippage : base - slippage
   if (!Number.isSafeInteger(fillPrice) || fillPrice <= 0) {
     throw new Error(`fill price for ${def.id} must be a positive safe integer, received ${describeValue(fillPrice)}`)
   }
@@ -408,7 +449,7 @@ function quoteFill(
   const fee = feeCents(notional)
   const cashMove = side === 'buy' ? -(notional + fee) : notional - fee
   if (!Number.isSafeInteger(cashMove)) return 'overflow'
-  return { price: quoted.priceCents, halfSpread, fillPrice, fee, cashMove }
+  return { price: quoted.priceCents, halfSpread, slippage, fillPrice, fee, cashMove }
 }
 
 export type PositionClose = {
@@ -417,6 +458,7 @@ export type PositionClose = {
   quantity: number
   price: number
   halfSpread: number
+  slippage: number
   fillPrice: number
   fee: number
   /** Close P&L before the fee. */
@@ -452,6 +494,7 @@ export function closePartOfPosition(
   assetId: string,
   quantity: number,
   fixedFill?: number,
+  stopVolume?: number,
 ): PositionClose {
   const position = state.positions[assetId]
   if (position === undefined || position.signedShares === 0) {
@@ -464,7 +507,8 @@ export function closePartOfPosition(
   const side: OrderSide = position.signedShares > 0 ? 'sell' : 'buy'
   const def = findAsset(defs, assetId)
   if (def === undefined) throw new Error(`position ${assetId} is not an asset`)
-  const quote = quoteFill(quoteMarket(state), def, side, quantity, fixedFill)
+  const slipVolume = fixedFill === undefined ? fillBarVolume(state, assetId) : stopVolume
+  const quote = quoteFill(quoteMarket(state), def, side, quantity, fixedFill, slipVolume)
   if (quote === 'overflow') throw new Error(`close of ${assetId} overflowed a safe integer`)
   const nextTrading = state.accounts.tradingCents + quote.cashMove
   if (!Number.isSafeInteger(nextTrading)) {
@@ -486,6 +530,7 @@ export function closePartOfPosition(
     quantity,
     price: quote.price,
     halfSpread: quote.halfSpread,
+    slippage: quote.slippage,
     fillPrice: quote.fillPrice,
     fee: quote.fee,
     realizedCents: projection.realizedCents,
@@ -532,7 +577,8 @@ export function interpretOrder(
   if (addsToHeld && requested !== undefined && requested !== leverageOf(held)) return rejected(day, 'leverageMismatch')
 
   const market = quoteMarket(state)
-  const quote = quoteFill(market, def, record.side, quantity, fixedFill)
+  const slipVolume = fixedFill === undefined ? fillBarVolume(state, def.id) : undefined
+  const quote = quoteFill(market, def, record.side, quantity, fixedFill, slipVolume)
   if (quote === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   const nextTrading = state.accounts.tradingCents + quote.cashMove
   if (!Number.isSafeInteger(nextTrading)) {
@@ -573,6 +619,7 @@ export function interpretOrder(
     quantity,
     price: quote.price,
     halfSpread: quote.halfSpread,
+    ...(quote.slippage === 0 ? {} : { slippage: quote.slippage }),
     fillPrice: quote.fillPrice,
     fee: quote.fee,
   }

@@ -1,23 +1,25 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Market depth plan (`doc/plans/2026-11-03-market-depth.md`). M0, M1 and M2 are done. Next is M3 (slippage). The Step 26 playtests are still open.
-- **Committed earlier:** `8ac353b` (telegraphing, win rule, free time and study, result window) and `55b51b5` (chart price-scale drag, bill buttons, shorter TP/SL preview).
-- **Uncommitted: M2, stock size and liquidity (only these files):**
-  - `src/sim/types.ts`: `AssetDefinition` gains optional `sharesOutstanding` and `liquidityNotionalCents`.
-  - `src/sim/market.ts`: both must be positive safe integers when set; an index may not set shares.
-  - `src/sim/session.ts`: volume base is `liquidityNotionalCents ?? SESSION_BASE_NOTIONAL_CENTS`, divided by price. No RNG draw changed.
-  - `src/content/assets.ts`: placeholder sizes (NOVA 40M shares and $1M a day, BLSW 90M and $4M, HRBU 150M and $3M, KSR 25M and $0.8M).
-  - `src/ui/Dashboard.tsx`: `Mkt cap` in the symbol bar. `src/ui/Guide.tsx`: size and liquidity wording on the company pages.
-  - `src/sim/session.test.ts`: volume scales per stock with market hash and closes unchanged; bad values are rejected.
-  - Docs: GAME_DESIGN volume rule and changelog, plan M2 marked done.
-  - Checks: typecheck and lint pass, npm test 191 passed (31 files). Browser: header shows `Mkt cap $1.9B` for NOVA on seed `demo`.
+- **Current Goal:** Market depth plan (`doc/plans/2026-11-03-market-depth.md`). M0 to M3 are done (M2 committed in `f606bca`). Next for the sim files: save fill history H1 (waits on M3 commit), then market depth M4. The Step 26 playtests are still open.
+- **Uncommitted: M3, slippage (plan option I1):**
+  - `src/sim/constants.ts`: `SLIPPAGE_FREE_SHARE` 5%, `SLIPPAGE_K` 1, volatility floor 1%, cap 20%.
+  - `src/sim/trading.ts`: `slippageCents`, `fillBarVolume`; `quoteFill` takes a bar volume; `closePartOfPosition` takes `stopVolume`. Market orders, liquidations (also the loan's forced sale and the bill preview, same path) and stops pay it. Limit orders and take profits do not.
+  - `src/sim/resting.ts`: stops pass the triggering bar's volume. `types.ts`, `log.ts`: `orderFill.slippage` (cents a share), logged only above 0.
+  - `src/content/assets.ts`: M4X gets `liquidityNotionalCents`.
+  - UI: `OrderPanel.tsx` shows a Slippage row when above 0 (checked in the browser: 600 NOVA at 20x showed $198). `Guide.tsx` has the exact rule.
+  - Tests: new `src/sim/slippage.test.ts`; `trading`, `margin` and `leverage` tests use deep liquidity on their defs, `resting` and `leverage` hand-set bars use a large bar volume.
+  - Docs: GAME_DESIGN section 7 rule, section 16 batch table and open question, changelog; plan M3 done.
+  - Checks: typecheck and lint pass, npm test 197 passed (32 files). No fixture or market hash changed.
+- **Finding for the user:** liquidations paying slippage raised backstop write-offs at 50x about seven times (longNova50 $160,055, shortNova50 $151,468 over 100 runs) and brought them back at 20x ($7,154). Player result is unchanged (equity floors at $0) and the fat 50x short winning tail is gone. Decided 2026-11-04: liquidations keep paying slippage.
 - **Active Decisions / Constraints:**
   - Win rule: open losses count, open profit does not (`[PROVISIONAL]`).
   - Telegraphing: bent items are unmarked; stress and energy show as a screen-edge effect (`StatEdge.tsx`).
   - Free-time numbers are provisional: points 4/2 (cap 20, start 2), course 6 units (2/1), energy 4/2.
-  - Volume is display only until M3. Sizes are placeholders; M3 needs real ratios against account size.
+  - Sizes and liquidity are placeholders. A 50x whole-account order now often fails on slippage; the panel shows the cost first.
   - The guide is a reference, not a strategy. The 8% daily cap is `[CONFIRMED]`. No market party reads player state yet (M13 changes that).
   - The dev server serves stale modules after edits. Restart it on a ReferenceError or an odd render error.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Exact Next Step:** The user reviews and commits M2. Then M3: slippage in `quoteFill`, resting stops, liquidation, and the loan and bill previews (they share `closeWholePosition`). Estimate in `OrderPanel.tsx`, exact rule in the Guide.
+  - The 15-minute clock step costs nothing (`[CONFIRMED]`, user decision 2026-11-04, GAME_DESIGN section 5).
+  - Save fill history: plan `doc/plans/2026-11-04-save-fill-history.md` (H1–H5), all questions answered 2026-11-04 (sim ledger, H4 yes after H3, old saves empty ledger, no mid-day saves). It shares `trading.ts`, `resting.ts` and `margin.ts` with M3, so H1 starts once M3 is committed.
+- **Exact Next Step:** M3 is committed. Start H1 (fill ledger), and M4 (participants) after the Step 26 playtests.

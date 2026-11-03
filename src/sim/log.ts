@@ -327,6 +327,7 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `quantity=${formatNumber(event.quantity)}`,
         `price=${formatNumber(event.price)}`,
         `halfSpread=${formatNumber(event.halfSpread)}`,
+        ...(event.slippage === undefined || event.slippage === 0 ? [] : [`slippage=${formatNumber(event.slippage)}`]),
         `fillPrice=${formatNumber(event.fillPrice)}`,
         `fee=${formatNumber(event.fee)}`,
       ].join(' ')

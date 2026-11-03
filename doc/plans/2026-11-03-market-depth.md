@@ -211,12 +211,13 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M3: Slippage (temporary impact)
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M2
 - Files to create or change: `src/sim/trading.ts` (`quoteFill`), `src/sim/resting.ts` (stops), `src/sim/margin.ts` (liquidation fills), `src/sim/constants.ts`, `src/sim/log.ts`, `src/sim/trading.test.ts`, `src/ui/OrderPanel.tsx` (estimate), `src/ui/Guide.tsx` (account rule, exact), `src/harness/report.ts`
 - What changes: option I1. Large market orders, stops and liquidations fill worse in proportion to size against bar volume. `closeWholePosition` is shared with the loan's forced sale (`loan.ts`) and the bill-shortfall preview (`monthly.ts`), so the preview must use the same slippage as the real sale.
 - Must not change: market path, hashes, fixtures; fills of orders below the free threshold.
 - Verification: strategies hash test still equal; batch rerun of `longNova50` and `shortNova50` reports the new tail and backstop use next to the section 16 table.
+- Progress: done 2026-11-04. `slippageCents` and `fillBarVolume` in `trading.ts`; `quoteFill` takes the bar volume; `closePartOfPosition` takes a `stopVolume` that `triggerExits` passes for stops, and liquidation, loan and bill preview use the same path with no change. Free below 5% of the bar, `price × volatility × sqrt(share − 5%)`, cap 20%, index volatility floor 1%. `orderFill` has an optional `slippage` (cents a share), logged only when above 0. M4X gets `liquidityNotionalCents`. Tests that sit on the buying-power edge or hand-set bars use deep liquidity or large bar volume. New `src/sim/slippage.test.ts`. Batch rerun is in GAME_DESIGN section 16: 50x backstop use rose (liquidations pay slippage), flagged as an open question.
 
 ### Step M4: Participant framework and informed money
 

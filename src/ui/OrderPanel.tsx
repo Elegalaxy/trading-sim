@@ -19,6 +19,7 @@ type OrderQuote =
       fillPrice: number
       fee: number
       spreadCost: number
+      slippageCost: number
       equity: number
       gross: number
       required: number
@@ -89,6 +90,10 @@ function quoteOrder(
   if (!Number.isSafeInteger(spreadCost)) {
     throw new Error(`spread cost is not a safe integer, received ${String(spreadCost)}`)
   }
+  const slippageCost = fill.quantity * (fill.slippage ?? 0)
+  if (!Number.isSafeInteger(slippageCost)) {
+    throw new Error(`slippage cost is not a safe integer, received ${String(slippageCost)}`)
+  }
   const book = tradingEquity(clone, MARKET_DEFINITIONS)
   return {
     accepted: true,
@@ -97,6 +102,7 @@ function quoteOrder(
     fillPrice: fill.fillPrice,
     fee: fill.fee,
     spreadCost,
+    slippageCost,
     equity: book.equity,
     gross: book.gross,
     required: book.required,
@@ -218,6 +224,14 @@ function Estimate({
         <dt>Spread cost</dt>
         <dd>{formatUsd(quote.spreadCost, 'spread')}</dd>
       </div>
+      {quote.slippageCost === 0 ? null : (
+        <div
+          title="This order is large next to the trading in the current 15-minute bar, so it fills worse than the quote. A smaller order, or one placed when the market is busier, pays less."
+        >
+          <dt>Slippage</dt>
+          <dd>{formatUsd(quote.slippageCost, 'slippage')}</dd>
+        </div>
+      )}
       <div title="Equity left over after this order's margin. Below zero the order is rejected.">
         <dt>Free margin after</dt>
         <dd>{formatUsd(freeAfter, 'free margin after')}</dd>
@@ -321,7 +335,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
     quote === null
       ? ''
       : quote.accepted
-        ? `accepted ${asset} ${side} ${quantity} fill=${quote.fillPrice} fee=${quote.fee} spreadCost=${quote.spreadCost} equity=${quote.equity} gross=${quote.gross}`
+        ? `accepted ${asset} ${side} ${quantity} fill=${quote.fillPrice} fee=${quote.fee} spreadCost=${quote.spreadCost} slippageCost=${quote.slippageCost} equity=${quote.equity} gross=${quote.gross}`
         : `rejected ${asset} ${side} ${quantity} ${quote.reason}`
 
   useEffect(() => {

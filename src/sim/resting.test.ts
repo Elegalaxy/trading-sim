@@ -23,7 +23,7 @@ function setBars(game: GameState, spec: Record<number, Bar>): void {
   const price = game.market.assets.NOVA.priceCents
   game.session.bars.NOVA = Array.from({ length: 16 }, (_, i) => {
     const bar = spec[i] ?? [price, price, price, price]
-    return { open: bar[0], high: bar[1], low: bar[2], close: bar[3], volume: 0 }
+    return { open: bar[0], high: bar[1], low: bar[2], close: bar[3], volume: 1_000_000_000 }
   })
 }
 

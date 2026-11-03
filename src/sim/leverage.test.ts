@@ -11,7 +11,7 @@ import type { GameState, MarketDefinitions } from './types.ts'
 
 const defs: MarketDefinitions = {
   assets: [
-    { id: 'NOVA', kind: 'stock', sector: 'A', startPriceCents: 4800, dailyVolatility: 0.022, spreadPpm: 4000, borrowFeePpm: 300 },
+    { id: 'NOVA', kind: 'stock', sector: 'A', startPriceCents: 4800, dailyVolatility: 0.022, spreadPpm: 4000, borrowFeePpm: 300, liquidityNotionalCents: 10_000_000_000_000 },
     { id: 'HRBU', kind: 'stock', sector: 'B', startPriceCents: 3100, dailyVolatility: 0.01, spreadPpm: 1000, borrowFeePpm: 100 },
     { id: 'M4X', kind: 'index', sector: null, startPriceCents: 100000, dailyVolatility: 0, spreadPpm: 1500, borrowFeePpm: 100 },
   ],
@@ -94,7 +94,7 @@ describe('per-position leverage', () => {
       high: price,
       low: i === 1 ? price - 200 : price,
       close: price,
-      volume: 0,
+      volume: 1_000_000_000,
     }))
     applyCommand(game, defs, { type: 'tick', steps: 2 })
     expect(game.positions.NOVA).toMatchObject({ signedShares: 10, leverage: 25 })
@@ -125,7 +125,7 @@ describe('perpetual-style liquidation and funding', () => {
       high: i < 5 ? price : drop,
       low: i < 5 ? price : drop,
       close: i < 5 ? price : drop,
-      volume: 0,
+      volume: 1_000_000_000,
     }))
     applyCommand(game, defs, { type: 'tick', steps: 5 })
     expect(game.positions.NOVA).toBeDefined()
@@ -144,7 +144,7 @@ describe('perpetual-style liquidation and funding', () => {
     const price = game.market.assets.NOVA.priceCents
     applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'buy', quantity: 150, leverage: 5 })
     const drop = Math.round(price * 0.97)
-    game.session.bars.NOVA = Array.from({ length: 16 }, () => ({ open: drop, high: drop, low: drop, close: drop, volume: 0 }))
+    game.session.bars.NOVA = Array.from({ length: 16 }, () => ({ open: drop, high: drop, low: drop, close: drop, volume: 1_000_000_000 }))
     applyCommand(game, defs, { type: 'tick', steps: 4 })
     expect(game.positions.NOVA).toBeDefined()
   })

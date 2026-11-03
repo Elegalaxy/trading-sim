@@ -111,10 +111,11 @@ Added 2026-10-31 at the user's request: the player can trade at intraday prices,
 - `[PROVISIONAL]` The 8% daily move cap applies to the close against the previous close. Intraday bars may swing past 8% from the open but are clamped to a wider band (suggested 12%), so the loss cap guarantee in section 7 is not weakened.
 - `[PROVISIONAL]` The warning, the wipe-out check and funding are checked once per day at the close (end-of-day check). Liquidation is also checked after every 15-minute bar (section 7, Leverage and margin). The margin meter during the session uses the current intraday price. Order sizing against the margin rule uses the current intraday price.
 - `[PROVISIONAL]` Spread and fee are unchanged. An event day still widens the spread.
+- `[PROVISIONAL]` Slippage (plan Step M3, option I1). A market order, a stop loss and a liquidation pay extra beyond the half spread when they are larger than 5% of the shares traded in the bar they trade in (the bar the clock is about to run, or the bar that triggered the stop). Extra per share = price × daily volatility × sqrt(share of bar − 5%), at most 20% of the price; the index uses a 1% volatility floor. Limit orders and take profits pay none. It uses the seeded bar volume only, so no market price or stream moves. The order panel shows the cost before the order. Volume is no longer cosmetic: it is the liquidity a fill is measured against.
 - `[PROVISIONAL]` Volume is cosmetic: a per-bar figure that is higher on event days and on larger moves, plus noise, from a separate seeded stream. It does not change prices, spread or fills. The player can see it per bar and per day. Each stock has its own scale: `liquidityNotionalCents`, a typical daily traded value, divides by price to give shares. Each stock also has `sharesOutstanding`, and the header shows market cap (shares times price). Both are display and volume scale only until slippage (plan Step M3).
 - `[PROVISIONAL]` The day's high and low in the header and the candle are the session path's high and low. Daily closes, scores and the FI ledger are unchanged.
 - `[OPEN]` Whether a player who ends the day without reaching 21:00 has their open orders affected (there are none, since orders are market orders), and whether News or rumours reveal the close early. Default: no.
-- `[OPEN]` Whether the 15-minute clock step costs anything (energy, stress). Default: no cost.
+- `[CONFIRMED]` The 15-minute clock step costs nothing: no energy, no stress, no money (user decision 2026-11-04).
 - `[PROVISIONAL]` As built: the path is made by previewing the next market step on a copy, so End day prints exactly the close the session ended on. At End day, the drawdown and wipe-out measures start from the price at the clock, so only the move still to come counts. Day 120 has no next step and its session is flat. The two session streams are kept off the market, so a session never changes a market hash or a daily fixture.
 
 ### Limit orders and exits `[PROVISIONAL]`
@@ -496,7 +497,19 @@ After intraday liquidation, the 0.5% fee and funding:
 | shortNova50, 100 runs | $3,041 | $0 | $53,177 | $22,915 |
 | shortNova50, 300 runs (seed `xyz`) | $2,635 | $0 | $23,735 | $74,781 |
 
-The backstop is no longer used at 10x and 20x and its use at 50x fell by about 80%. The short bot's mean is now at or below the start, so the free option is mostly closed, but its tail is still fat (the best runs end near $20,000 to $50,000). `[OPEN]` Whether that tail is acceptable. The remaining gap-throughs come from event bars that move more than the 1% margin. Default: accept until the playtests.
+The backstop is no longer used at 10x and 20x and its use at 50x fell by about 80%. (Before slippage, see the next table.) The short bot's mean is now at or below the start, so the free option is mostly closed, but its tail is still fat (the best runs end near $20,000 to $50,000). `[OPEN]` Whether that tail is acceptable. The remaining gap-throughs come from event bars that move more than the 1% margin. Default: accept until the playtests.
+
+After slippage (plan Step M3, 2026-11-04), seed `abc`, 100 runs, 120 days:
+
+| Bot | Median | 90th percentile | Backstop write-offs |
+|---|---|---|---|
+| random (1 share, 5x) | $2,889 | $3,714 | $0 |
+| longNova10 | $3 | $375 | $0 |
+| longNova20 | $0 | $1 | $7,154 |
+| longNova50 | $0 | $0 | $160,055 |
+| shortNova50 | $0 | $0 | $151,468 |
+
+Slippage removes the fat winning tail of the 50x short (the 95th percentile was $53,177 in the table above; the 90th is now $0) but a forced sale of a whole 50x position is far larger than one bar, so it pays the capped slippage and gaps below zero more often. Backstop use rose about seven times at 50x and reappeared at 20x. The player's result is the same (equity floors at $0), so this is a cost to the model, not to the player. User decision 2026-11-04: liquidations keep paying slippage, as in a real forced sale. The higher backstop use is accepted.
 
 ### Leverage plus distortion in a 30-minute run
 
@@ -570,6 +583,8 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 
 ## 19. Changelog
 
+- 2026-11-04 (clock step): User decision: the 15-minute clock step costs nothing (section 5, intraday session, was `[OPEN]`). This matches the code, so nothing changes in play. A plan to save the trade history is in [plans/2026-11-04-save-fill-history.md](plans/2026-11-04-save-fill-history.md).
+
 - 2026-11-03 (win rule, free time): The FI check subtracts net open losses (section 8). Free time added: jobless daytime and a skipped market evening can go to research (points that verify spends) or course study (courses are now enrolled, then finished by study) (section 6).
 
 - 2026-11-03 (telegraphing): User decision: stress-bent news and posts no longer carry the diamond and tint. The warning state is shown by the meters and a new screen-edge effect (red glow for stress, dark corners for low energy, both scaling with the stat), and the end-of-day report counts the bent items. Verify is unchanged (section 9).
@@ -577,6 +592,7 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 - 2026-11-03 (guide and wording): Headlines and rumours describe the fact ("earnings beat", "inflation hotter than expected") instead of "up" or "down" (section 5). The calendar no longer shows an outcome before its day. The Guide describes market behaviour in rough terms, adds company profiles and a market psychology page, and keeps exact numbers only for account rules (section 11). Recorded the social feed, price impact, market participants, expectations and 8% cap ideas as open questions (section 12).
 
 - 2026-11-03 (partial exits): Take profit and stop loss can close part of a position, and a position can hold up to 4 levels of each kind (section 5, "Limit orders and exits"). One bar touching a stop and a take profit fills only the stops. Old saves load, and their exits close the whole position.
+- 2026-11-04: Plan Step M3. Large market orders, stops and liquidations pay slippage against the bar volume (section 7). Limit orders and take profits do not. The order panel and the Guide show it. No market stream moved.
 - 2026-11-04: Plan Step M2. Stocks have `sharesOutstanding` and `liquidityNotionalCents`. Session volume scales per stock and the header shows market cap. Prices, draws and fixtures are unchanged. Guide company pages say large or small, thin or deep.
 - 2026-11-03 (later): Made leveraged trading more like a perpetual future. Liquidation is also checked after every 15-minute bar, a liquidation costs a 0.5% fee, and funding (0.01% a day plus a crowd charge) replaces margin interest and the short borrow fee. Old saves still load.
 - 2026-11-03: Leverage is now chosen per position, 1x to 50x (user decision), replacing the account-wide 5x cap. Margin is value over leverage. The 15% and 10% marks, read against the required margin, are unchanged. Above about 10x the backstop can be used.

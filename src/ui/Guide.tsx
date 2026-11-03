@@ -348,6 +348,14 @@ const TOPICS: readonly Topic[] = [
             on a stock&apos;s news days.
           </li>
           <li>
+            A big order pays slippage on top. Up to 5% of the shares traded in the current 15-minute bar it is free.
+            Above that, each share pays extra: the price times the stock&apos;s daily volatility times the square root of
+            the order&apos;s share of the bar beyond 5%, never more than 20% of the price. Stop losses and forced
+            liquidations pay it too. Limit orders and take profits fill at their own price and pay none. The order panel
+            shows the cost before you send. A thinly traded stock, or a high leverage on your whole account, hits it
+            first.
+          </li>
+          <li>
             A limit buy waits below the price, a limit sell above it. It fills when the price reaches it, at your price or
             better, with no spread. It stays until filled or cancelled. At most 8 at once.
           </li>

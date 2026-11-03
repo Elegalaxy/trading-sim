@@ -374,7 +374,8 @@ function triggerExits(state: GameState, defs: MarketDefinitions, index: number):
       if (position === undefined) break
       const open = Math.abs(position.signedShares)
       const fill = exitFill(level, exit.side === 'long', bar.open)
-      const closed = closePartOfPosition(state, defs, def.id, Math.min(level.quantity ?? open, open), fill)
+      const stopVolume = level.kind === 'stopLoss' ? bar.volume : undefined
+      const closed = closePartOfPosition(state, defs, def.id, Math.min(level.quantity ?? open, open), fill, stopVolume)
       exit.levels = exit.levels.filter((item) => item !== level)
       events.push(
         restingEvent(state, 'filled', def.id, level.kind, closed.side, closed.quantity, closed.fillPrice, {

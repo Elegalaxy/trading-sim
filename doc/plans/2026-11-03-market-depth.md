@@ -201,12 +201,13 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M2: Stock size and liquidity
 
-- Status: `todo`
+- Status: `done`
 - Depends on: none
 - Files to create or change: `src/sim/types.ts` (`AssetDefinition`), `src/sim/market.ts` (validation), `src/sim/session.ts` (per-stock volume scale), `src/content/assets.ts`, `src/ui/Guide.tsx` (company page: large or small, liquid or thin), asset header in `src/ui/Dashboard.tsx`, `doc/GAME_DESIGN.md` (with the user's decision on volume)
 - What changes: `sharesOutstanding` and `liquidityNotionalCents` per stock. Volume scales per stock. Market cap is shown.
 - Must not change: session stream draws, closes, any fixture.
 - Verification: session tests updated for new volume numbers only; `stateHash(market)` unchanged for seed `demo`.
+- Progress: done 2026-11-04. Fields are optional on `AssetDefinition` and validated when present (index may not set shares). Session volume uses `liquidityNotionalCents ?? SESSION_BASE_NOTIONAL_CENTS`. NOVA 40M shares and $1M a day, BLSW 90M and $4M, HRBU 150M and $3M, KSR 25M and $0.8M (placeholders). Header shows `Mkt cap`. A session test checks that volume scales 8x and that market hash and closes do not move. All fixtures pass unchanged.
 
 ### Step M3: Slippage (temporary impact)
 

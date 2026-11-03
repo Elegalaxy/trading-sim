@@ -46,6 +46,14 @@ const MIDDLE_MIN = 420
 type Desk = 'positions' | 'history' | 'pnl' | 'equity' | 'book' | 'log'
 type View = 'chart' | 'life'
 
+/** Market cap in whole dollars, as `$1.9B` or `$640M`. */
+function formatCap(cents: number): string {
+  if (!Number.isSafeInteger(cents) || cents < 0) throw new Error(`market cap must be a non-negative safe integer, received ${String(cents)}`)
+  const dollars = cents / 100
+  if (dollars >= 1e9) return `$${(dollars / 1e9).toFixed(1)}B`
+  return `$${Math.round(dollars / 1e6)}M`
+}
+
 export function Dashboard() {
   const snapshot = useTradingStore()
   const run = snapshot.run
@@ -115,9 +123,11 @@ export function Dashboard() {
   let dayHigh: number | undefined
   let dayLow: number | undefined
   let dayOpen: number | undefined
+  let shares: number | undefined
   if (run !== null) {
     const def = assets.find((item) => item.id === asset)
     if (def === undefined) throw new Error(`unknown asset ${asset}`)
+    shares = def.sharesOutstanding
     points.push(...buildHistory(run.seed, asset, def.startPriceCents, Math.max(def.dailyVolatility, 0.006)))
     const rows = run.closes
     for (let i = 0; i < rows.length; i += 1) {
@@ -185,6 +195,8 @@ export function Dashboard() {
     changeText = `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`
   }
 
+  const capText = shares === undefined || lastPrice === undefined ? null : formatCap(shares * lastPrice)
+
   return (
     <main className="dashboard exchange">
       <header className="symbol-bar">
@@ -207,6 +219,12 @@ export function Dashboard() {
               <dt>Low</dt>
               <dd>{dayLow === undefined ? '—' : formatUsd(dayLow, 'low')}</dd>
             </div>
+            {capText === null ? null : (
+              <div>
+                <dt>Mkt cap</dt>
+                <dd>{capText}</dd>
+              </div>
+            )}
           </dl>
         </div>
         <dl className="symbol-stats symbol-accounts">

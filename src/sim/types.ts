@@ -62,6 +62,10 @@ export type AssetDefinition = {
   spreadPpm?: number
   /** Daily short borrow fee. 100 is 0.01% and 300 is 0.03% of abs(shares) × price. */
   borrowFeePpm?: number
+  /** Whole shares in issue. Market cap is this times the price. Stocks only; display only. */
+  sharesOutstanding?: number
+  /** Typical daily traded value in cents at an average price. Sets the session volume scale. */
+  liquidityNotionalCents?: number
 }
 
 /** Coarse band for the calendar lookup. Thresholds live on the calendar definition. */

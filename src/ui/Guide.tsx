@@ -148,23 +148,23 @@ const TOPICS: readonly Topic[] = [
         <h3>NOVA · Nova Dynamics (sector A, growth)</h3>
         <p>
           A young chip and software designer that lives on new products. Its price is the jumpiest of the four and its
-          spread the widest. It reacts most to growth data, launches and earnings, and it pays little back to owners.
+          spread the widest. It reacts most to growth data, launches and earnings, and it pays little back to owners. A mid-sized company with thin trading, so a big order stands out.
         </p>
         <h3>BLSW · Blueswell Networks (sector A, growth)</h3>
         <p>
           An established network and cloud provider. Still a growth business, but calmer than NOVA. Big contracts and
-          guidance matter. A strong economy helps it, a weak one hurts.
+          guidance matter. A strong economy helps it, a weak one hurts. The largest and most heavily traded of the four.
         </p>
         <h3>HRBU · Harbour Utilities (sector B, rates)</h3>
         <p>
           Power and water for the city. Steady income, reliable dividends and a lot of borrowing to fund its plants. That
           makes it sensitive to interest rates and regulation more than to growth. The calmest stock, with the tightest
-          spread.
+          spread. Large and easy to trade.
         </p>
         <h3>KSR · Kestrel Realty (sector B, rates)</h3>
         <p>
           Owns and rents out offices and homes, funded with loans. Rate decisions and inflation move it a lot, and building
-          costs hit it through input-cost shocks. Moderately volatile.
+          costs hit it through input-cost shocks. Moderately volatile. The smallest company and the thinnest to trade.
         </p>
         <h3>M4X · Market 4 Index</h3>
         <p>

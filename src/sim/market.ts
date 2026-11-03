@@ -74,6 +74,15 @@ function assertDefinitions(defs: MarketDefinitions): void {
         `asset ${def.id} dailyVolatility must be a finite number >= 0, received ${describeValue(def.dailyVolatility)}`,
       )
     }
+    for (const field of ['sharesOutstanding', 'liquidityNotionalCents'] as const) {
+      const value = def[field]
+      if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) {
+        throw new Error(`asset ${def.id} ${field} must be a positive safe integer, received ${describeValue(value)}`)
+      }
+    }
+    if (def.kind === 'index' && def.sharesOutstanding !== undefined) {
+      throw new Error(`index ${def.id} sharesOutstanding must be unset`)
+    }
     if (def.kind === 'stock') {
       stocks += 1
       if (def.sector !== 'A' && def.sector !== 'B') {

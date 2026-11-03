@@ -1,43 +1,23 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Playtest polish on top of `8ac353b`, then market depth: M2 (stock size and liquidity), then M3 (slippage). The Step 26 playtests are still open.
-- **Committed in `8ac353b`** (pushed):
-  - Telegraphing: bent news and posts carry no mark. `StatEdge.tsx` adds a screen-edge glow, and the day report counts bent items.
-  - Win rule: net open loss is subtracted from FI passive income (`fi.ts` `openLossCents`).
-  - Free time (`src/sim/study.ts`, `GameState.study`):
-    - Research earns points that Verify spends.
-    - Course study happens in the jobless daytime or in a skipped market evening.
-    - `buyCourse` only enrols.
-  - UI:
-    - result window (`RunEnd.tsx`) and Trading equity in the top bar;
-    - chart zoom, pan and last-price line, with TP/SL marks that stay;
-    - TP and SL entered together in `Positions.tsx`.
-- **Uncommitted (this pass, from the user's playtest screenshots):**
-  - `BillBanner.tsx` and `styles.css`: the bill buttons have amber borders, Pay bill is solid amber once cash covers the bill, disabled buttons stay outlined, and tooltips say why a button is disabled.
-  - `PriceChart.tsx`, works like a trading terminal:
-    - drag or wheel on the price scale to stretch it; double-click it, or press the "Auto" toolbar button, to fit again;
-    - a clear vertical drag on the chart frees the price range, so the chart moves both ways;
-    - pan can leave up to half a screen of empty space past the newest candle, and goes back until 5 candles remain;
-    - slots are `plotW / span.count`, and `lead` counts the empty slots on the left;
-    - candles are clipped to the price area and marks to the plot;
-    - the scale resets to Auto on a timeframe or asset change;
-    - "Auto" and "Back to now" are plain outlined buttons (`styles.css` `.tv-toolbar`); Auto's text is amber while on.
-  - `Positions.tsx` ExitsEditor:
-    - the preview is only "% · P&L" (no share count, and the tooltip has the full text); empty shows "None";
-    - the levels list shows "% · P&L", with "(N sh)" only for partial levels;
-    - the header is shortened, with the spread note in a tooltip;
-    - the Add button is amber when enabled.
-  - Checks: npm test 189 passed (31 files), typecheck and lint pass.
-  - Browser (seed `demo`, 1440x900):
-    - the axis drag, vertical pan, future space, double-click reset and Auto all work;
-    - the TP+SL preview reads "+5.01% · +$229.00", and the levels show on the chart;
-    - the bill button styles were checked through computed styles only (no bill was due).
+- **Current Goal:** Market depth plan (`doc/plans/2026-11-03-market-depth.md`). M0, M1 and M2 are done. Next is M3 (slippage). The Step 26 playtests are still open.
+- **Committed earlier:** `8ac353b` (telegraphing, win rule, free time and study, result window) and `55b51b5` (chart price-scale drag, bill buttons, shorter TP/SL preview).
+- **Uncommitted: M2, stock size and liquidity (only these files):**
+  - `src/sim/types.ts`: `AssetDefinition` gains optional `sharesOutstanding` and `liquidityNotionalCents`.
+  - `src/sim/market.ts`: both must be positive safe integers when set; an index may not set shares.
+  - `src/sim/session.ts`: volume base is `liquidityNotionalCents ?? SESSION_BASE_NOTIONAL_CENTS`, divided by price. No RNG draw changed.
+  - `src/content/assets.ts`: placeholder sizes (NOVA 40M shares and $1M a day, BLSW 90M and $4M, HRBU 150M and $3M, KSR 25M and $0.8M).
+  - `src/ui/Dashboard.tsx`: `Mkt cap` in the symbol bar. `src/ui/Guide.tsx`: size and liquidity wording on the company pages.
+  - `src/sim/session.test.ts`: volume scales per stock with market hash and closes unchanged; bad values are rejected.
+  - Docs: GAME_DESIGN volume rule and changelog, plan M2 marked done.
+  - Checks: typecheck and lint pass, npm test 191 passed (31 files). Browser: header shows `Mkt cap $1.9B` for NOVA on seed `demo`.
 - **Active Decisions / Constraints:**
-  - Win rule: open losses count, open profit does not (`[PROVISIONAL]`, user decision 2026-11-03).
+  - Win rule: open losses count, open profit does not (`[PROVISIONAL]`).
+  - Telegraphing: bent items are unmarked; stress and energy show as a screen-edge effect (`StatEdge.tsx`).
   - Free-time numbers are provisional: points 4/2 (cap 20, start 2), course 6 units (2/1), energy 4/2.
-  - Fill history (the chart marks) lives for the browser session only.
-  - The guide is a reference, not a strategy. The 8% daily cap is `[CONFIRMED]`. No market party reads player state.
-  - The dev server serves stale modules after edits, sometimes even across a reload. Restart it on a ReferenceError or an odd render error.
+  - Volume is display only until M3. Sizes are placeholders; M3 needs real ratios against account size.
+  - The guide is a reference, not a strategy. The 8% daily cap is `[CONFIRMED]`. No market party reads player state yet (M13 changes that).
+  - The dev server serves stale modules after edits. Restart it on a ReferenceError or an odd render error.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Exact Next Step:** The user checks this pass (bill buttons on day 30, chart scale, TP/SL text) and commits it. Then the user does a jobless run with research and a course. Then start M2.
+- **Exact Next Step:** The user reviews and commits M2. Then M3: slippage in `quoteFill`, resting stops, liquidation, and the loan and bill previews (they share `closeWholePosition`). Estimate in `OrderPanel.tsx`, exact rule in the Guide.

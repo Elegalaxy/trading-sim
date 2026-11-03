@@ -185,7 +185,7 @@ export function buildSession(
   const volumesFor = (def: AssetDefinition, open: number, close: number, noises: number[]) => {
     const move = Math.min(1, Math.abs(close - open) / open / 0.08)
     const eventBoost = preview !== null && preview.eventful.has(def.id) ? SESSION_EVENT_VOLUME_BOOST : 0
-    const base = SESSION_BASE_NOTIONAL_CENTS / open
+    const base = (def.liquidityNotionalCents ?? SESSION_BASE_NOTIONAL_CENTS) / open
     const day = base * (1 + SESSION_MOVE_VOLUME_BOOST * move + eventBoost)
     volumesById[def.id] = noises.map((z, i) =>
       Math.max(0, Math.round((day / SESSION_STEPS) * shape[i] * Math.exp(SESSION_VOLUME_NOISE * z))),

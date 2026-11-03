@@ -104,6 +104,30 @@ describe('intraday session', () => {
     expect(game.pending.find((event) => event.kind === 'orderFill')).toMatchObject({ price: 4800 })
   })
 
+  it('scales volume with the liquidity of each stock and leaves prices alone', () => {
+    const sized: MarketDefinitions = {
+      ...defs,
+      assets: defs.assets.map((def) => (def.id === 'NOVA' ? { ...def, liquidityNotionalCents: 8 * 200_000_000 } : def)),
+    }
+    const plain = createGame(defs, 'demo')
+    const deep = createGame(sized, 'demo')
+    const total = (game: GameState, id: string) => game.session.bars[id].reduce((sum, bar) => sum + bar.volume, 0)
+    expect(total(deep, 'NOVA') / total(plain, 'NOVA')).toBeGreaterThan(7.9)
+    expect(total(deep, 'NOVA') / total(plain, 'NOVA')).toBeLessThan(8.1)
+    expect(total(deep, 'HRBU')).toBe(total(plain, 'HRBU'))
+    expect(stateHash(deep.market)).toBe(stateHash(plain.market))
+    expect(deep.session.bars.NOVA.map((bar) => bar.close)).toEqual(plain.session.bars.NOVA.map((bar) => bar.close))
+  })
+
+  it('rejects a share count or liquidity that is not a positive integer', () => {
+    const bad = (patch: object): MarketDefinitions => ({
+      ...defs,
+      assets: defs.assets.map((def) => (def.id === 'NOVA' ? { ...def, ...patch } : def)),
+    })
+    expect(() => createGame(bad({ sharesOutstanding: 0 }), 'demo')).toThrow(/sharesOutstanding/)
+    expect(() => createGame(bad({ liquidityNotionalCents: 1.5 }), 'demo')).toThrow(/liquidityNotionalCents/)
+  })
+
   it('stays flat on day 120, which has no next step', () => {
     const game = createGame(defs, 'demo')
     for (let day = 0; day < 120; day += 1) {

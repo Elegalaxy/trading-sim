@@ -279,12 +279,14 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M10: Social feed "Y"
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M1, M6
 - Files to create or change: `src/sim/social.ts`, `src/sim/social.test.ts`, `src/sim/distortion.ts` (per-channel cap, `restyle`), `src/sim/game.ts`, `src/sim/types.ts`, `src/content/socialPosts.ts`, `src/persist/save.ts`, a feed panel in `src/ui/`, `src/ui/Guide.tsx`
 - What changes: section 7 of this plan.
 - Must not change: `stateHash(market)`; the bias cap per channel; the tell on every distorted post.
 - Verification: market hash equal with social on and off; at stress 100 at most 25% of each channel is distorted; whisper hit rate measured below the low rumour tier.
+- Progress: done 2026-11-04 on branch `market-depth-m7`. `sim/social.ts` (`createSocial`, `buildSocialDay`, `shownPosts`, `bentPostCount`), `SocialDefinitions`/`SocialPost`/`SocialState` in types, `MarketDefinitions.social`, `GameState.social` (optional), content in `content/socialFeed.ts`, built in `game.ts` after the session (create and each day). Stream `createRng(seed + '#social').market`. Posts panel under the news in `NewsFeed.tsx`; the day report count includes bent posts; Guide line. Stress: hide posts against a position and promote posts for it to the loaded wording, up to `distortionCap(visible posts, stress)`, in feed order and with no draw; no tell (Q8 decision); verify shows the calm feed. This is a simpler route than the plan's `restyle` action in `distortion.ts`: the news channel and its stream are untouched.
+- Result: market hash and session bars identical with the feed on and off (tested over 25 days); whisper hit rate 0.28 over 12 seeds x 30 days (lowest rumour tier 0.35); 10.7 posts a day of which 3.8 whispers; chatter hidden until the clock reaches it; at most a quarter of posts bent at stress 100, none at 60.
 
 ### Step M13: Player orders join the order flow
 

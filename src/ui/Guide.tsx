@@ -298,6 +298,12 @@ const TOPICS: readonly Topic[] = [
           <li>A rumour claims an event a few days ahead. A true one is followed by the event. A false one by nothing.</li>
           <li>High-tier sources are right most of the time, medium a little more often than not, low less often than not.</li>
           <li>Acting on a rumour gets you in early, at the risk of being wrong.</li>
+          <li>
+            Under the news there is a feed of posts from other traders: opinions, whispers about what might be coming,
+            and reactions to moves as they happen. They are less reliable than any rumour source, and they tend to
+            show what the crowd already thinks, which is not the same as what comes next. When you are stressed, posts
+            that agree with what you hold get louder and some that disagree go missing.
+          </li>
           <li>Better feeds and some jobs unlock better sources.</li>
         </ul>
       </>

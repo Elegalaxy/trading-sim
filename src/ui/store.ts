@@ -11,6 +11,7 @@ import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { assertResting, upgradeResting } from '../sim/resting.ts'
 import { sessionPrice } from '../sim/session.ts'
+import { bentPostCount } from '../sim/social.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
 import type { ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
 import { playerDay } from './days.ts'
@@ -848,7 +849,7 @@ function reportStart(game: GameState): ReportStart {
     stress: game.stats.stress,
     prices,
     // The perception built at this day's start. End day rebuilds it for the next day.
-    filtered: game.perception.events.length,
+    filtered: game.perception.events.length + bentPostCount(game),
     verified: game.perception.verified,
   }
 }

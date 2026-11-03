@@ -4,6 +4,7 @@ import { CALENDAR_DEFINITIONS } from './calendar.ts'
 import { ENVIRONMENT_DEFINITIONS } from './environment.ts'
 import { EVENT_DEFINITIONS } from './events.ts'
 import { PARTICIPANT_DEFINITIONS } from './participants.ts'
+import { SOCIAL_DEFINITIONS } from './socialFeed.ts'
 import { SOURCE_DEFINITIONS } from './sources.ts'
 
 export const MARKET_DEFINITIONS = {
@@ -11,6 +12,7 @@ export const MARKET_DEFINITIONS = {
   environment: ENVIRONMENT_DEFINITIONS,
   events: EVENT_DEFINITIONS,
   participants: PARTICIPANT_DEFINITIONS,
+  social: SOCIAL_DEFINITIONS,
   calendar: CALENDAR_DEFINITIONS,
   sources: SOURCE_DEFINITIONS,
 } satisfies MarketDefinitions
@@ -20,6 +22,7 @@ export { CALENDAR_DEFINITIONS } from './calendar.ts'
 export { ENVIRONMENT_DEFINITIONS } from './environment.ts'
 export { EVENT_DEFINITIONS } from './events.ts'
 export { PARTICIPANT_DEFINITIONS } from './participants.ts'
+export { SOCIAL_DEFINITIONS } from './socialFeed.ts'
 export { SOURCE_DEFINITIONS } from './sources.ts'
 export { CONSUMABLE_DEFINITIONS } from './consumables.ts'
 export { JOB_DEFINITIONS } from './jobs.ts'

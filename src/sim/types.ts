@@ -245,6 +245,8 @@ export type ParticipantDefinitions = {
 export type MarketDefinitions = {
   assets: readonly AssetDefinition[]
   participants?: ParticipantDefinitions
+  /** The social feed. Omitted means no posts and no social-stream draws. */
+  social?: SocialDefinitions
   /** Growth, inflation, policy rate, and any later entries. Order is the drift order. */
   environment: readonly EnvironmentEntryDefinition[]
   /** Rolled in this order, then each type's targets in listed order. */
@@ -581,6 +583,59 @@ export type SocialPostDefinition = {
   sourceId: string
   direction: 'up' | 'down'
   text: string
+}
+
+/**
+ * One kind of retail poster in the always-on social feed (market depth M10). Text templates take
+ * `{asset}`. `mood` says which crowd direction the persona posts in, or `any`.
+ */
+export type SocialPersona = {
+  id: string
+  mood: 'up' | 'down' | 'any'
+  /** Plain wording. */
+  calm: readonly string[]
+  /** The same post with the emotion turned up. Stress swaps it in for posts that agree with a position. */
+  loaded: readonly string[]
+}
+
+export type SocialDefinitions = {
+  personas: readonly SocialPersona[]
+  /** Chance a stock has a mood post today. */
+  moodPostChance: number
+  /** Crowd mood below this size, either way, is a coin flip. */
+  moodThreshold: number
+  /** Chance a scheduled event gets a true whisper, before the boost for an event informed money knows. */
+  whisperTrueChance: number
+  whisperLeakBoost: number
+  /** False whisper slots a day, each with this chance of posting. They keep the hit rate low. */
+  falseWhispersPerDay: number
+  falseWhisperChance: number
+  whisperCalm: string
+  whisperLoaded: Readonly<Record<'up' | 'down', string>>
+  /** A bar that moves at least this many percent can draw a chatter post. */
+  chatterThresholdPercent: number
+  maxChatterPerDay: number
+  chatterCalm: Readonly<Record<'up' | 'down', string>>
+}
+
+/** A post in the social feed. `truth` is hidden and only whispers have one. `time` is the session time of chatter. */
+export type SocialPost = {
+  id: string
+  kind: 'mood' | 'whisper' | 'chatter'
+  persona: string
+  asset: string
+  direction: 'up' | 'down'
+  calm: string
+  loaded: string
+  time: string | null
+  truth: boolean | null
+}
+
+/** The social feed's own stream and today's posts. Never read by the market. */
+export type SocialState = {
+  stream: RngStream
+  day: number
+  posts: SocialPost[]
 }
 
 /** A headline or rumour in the shown feed. `distorted` is the tell. */
@@ -1598,6 +1653,8 @@ export type GameState = {
   study: StudyState
   /** Every fill the book made, oldest first (section 5, the fill ledger). */
   fills: FillRecord[]
+  /** Social feed. Absent when the definitions have none. Never read by the market. */
+  social?: SocialState
 }
 
 /** How a fill happened. */

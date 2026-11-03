@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { VERIFY_ENERGY_COST, VERIFY_RESEARCH_COST } from '../sim/constants.ts'
+import { shownPosts } from '../sim/social.ts'
 import { NEWS_READ_ENERGY_COST } from '../sim/stats.ts'
 import type { HeadlineItem, JobDefinition, ShownFeed, ShownItem } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
@@ -78,6 +79,7 @@ export function NewsFeed({
   }
 
   const top = topHeadline(shownFeed.items)
+  const posts = game === null ? [] : shownPosts(game)
   // The feed is fixed for the day, so one read shows all of it. A read already paid for stays open.
   const readToday = newsReads > 0
   const listOpen = open || readToday
@@ -160,6 +162,18 @@ export function NewsFeed({
           )
         ) : null}
       </div>
+      {posts.length === 0 ? null : (
+        <div className="social-feed" style={blurStyle}>
+          <h3>Posts</h3>
+          <ul>
+            {posts.map((item) => (
+              <li key={item.post.id}>
+                <span className="feed-tag feed-social">{item.post.time === null ? 'Post' : `Post ${item.post.time}`}</span> {item.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   )
 }

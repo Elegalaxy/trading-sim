@@ -62,6 +62,7 @@ import {
   pruneExits,
 } from './resting.ts'
 import { buildSession, assertSession, createSessionStreams, interpretTick } from './session.ts'
+import { assertSocial, buildSocialDay, createSocial } from './social.ts'
 import { settleFunding } from './funding.ts'
 import { settleMargin } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
@@ -403,6 +404,7 @@ function assertGame(state: GameState, defs?: MarketDefinitions): void {
   assertLoan(state.loan)
   assertStudy(state.study)
   assertFills(state.fills)
+  if (state.social !== undefined) assertSocial(state.social, state.market.day)
 }
 
 /**
@@ -481,6 +483,10 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     loan: initialLoan(),
     study: initialStudy(),
     fills: [],
+  }
+  if (defs.social !== undefined) {
+    state.social = createSocial(seed)
+    buildSocialDay(state.social, state.market, state.session, defs)
   }
   refreshPerception(state)
   return state
@@ -685,6 +691,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   assertPolicyRateEntry(state.market, defs)
   stepMarketDay(state.market, defs)
   state.session = buildSession(state.market, defs, state.session.streams)
+  if (state.social !== undefined) buildSocialDay(state.social, state.market, state.session, defs)
   const traded = settleTradingAccount(state, defs, equityAtStart)
   const pruned = pruneExits(state)
   const policyRate = readPolicyRatePercent(state.market, defs)

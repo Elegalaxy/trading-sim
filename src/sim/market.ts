@@ -15,7 +15,16 @@ import {
 } from './constants.ts'
 import { assertEnvironmentDefinitions, driftEnvironment, initialEnvironment } from './environment.ts'
 import { applyDueEffects, assertEventDefinitions, rollEventsForDay } from './events.ts'
-import { assertParticipantDefinitions, assignLeaks, createParticipants, informedFlow, newsFlow } from './participants.ts'
+import {
+  assertParticipantDefinitions,
+  assignLeaks,
+  createParticipants,
+  crowdFlow,
+  informedFlow,
+  momentumFlow,
+  newsFlow,
+  startPartyDay,
+} from './participants.ts'
 import { assertFeedDefinitions, assertFeedState, publishFeed, type FiredHeadline } from './feed.ts'
 import { createRng, nextNormal } from './rng.ts'
 import {
@@ -378,6 +387,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   for (const event of effects) state.log.push(event)
   const inPlay = new Set<string>()
   for (const event of effects) if (event.kind === 'effectApplied') inPlay.add(event.asset)
+  const partyDay = startPartyDay(state, defs)
 
   for (const def of defs.assets) {
     if (def.kind !== 'stock') continue
@@ -387,7 +397,12 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
     const fair = asset.fairValue
     const pull = ((fair - previous) * FAIR_VALUE_PULL_NUMERATOR) / FAIR_VALUE_PULL_DENOMINATOR
     const noise = z * def.dailyVolatility * previous
-    const flows = [informedFlow(state, defs, def), newsFlow(state, defs, def, inPlay)].filter(
+    const flows = [
+      informedFlow(state, defs, def),
+      newsFlow(state, defs, def, inPlay),
+      crowdFlow(state, defs, def, partyDay),
+      momentumFlow(state, defs, def),
+    ].filter(
       (item): item is ParticipantFlowEvent => item !== null,
     )
     const flowMove = flows.reduce((sum, item) => sum + item.moveCents, 0)

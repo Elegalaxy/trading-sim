@@ -187,13 +187,18 @@ function checkStream(value: unknown, path: string): string | null {
 }
 
 function checkParticipants(value: unknown): string | null {
-  if (!isRecord(value) || !sameKeys(value, ['stream', 'informed', 'news', 'leaked'])) return 'shape:state.market.participants'
+  if (!isRecord(value) || !sameKeys(value, ['stream', 'informed', 'news', 'heat', 'shares', 'chase', 'mood', 'closes', 'leaked'])) return 'shape:state.market.participants'
   const found = checkStream(value.stream, 'state.market.participants.stream')
   if (found !== null) return found
   const informed = finiteNumber(value.informed, 'state.market.participants.informed')
   if (informed !== null) return informed
   const news = finiteNumber(value.news, 'state.market.participants.news')
   if (news !== null) return news
+  const heat = finiteNumber(value.heat, 'state.market.participants.heat')
+  if (heat !== null) return heat
+  for (const key of ['shares', 'chase', 'mood', 'closes'] as const) {
+    if (!isRecord(value[key])) return `shape:state.market.participants.${key}`
+  }
   if (!Array.isArray(value.leaked) || value.leaked.some((id) => typeof id !== 'string')) {
     return 'shape:state.market.participants.leaked'
   }

@@ -21,4 +21,17 @@ export const PARTICIPANT_DEFINITIONS: ParticipantDefinitions = {
     efficiencyMin: 0.4,
     efficiencyMax: 0.7,
   },
+  crowd: {
+    capitalCents: 6_000_000,
+    heatMin: 0.5,
+    heatMax: 1.5,
+    tierWeight: { low: 0.3, medium: 0.6, high: 1 },
+    headlineWeight: 0.15,
+    chaseDecay: 0.5,
+  },
+  momentum: {
+    capitalCents: 3_000_000,
+    lookbackDays: 3,
+    thresholdPercent: 3,
+  },
 }

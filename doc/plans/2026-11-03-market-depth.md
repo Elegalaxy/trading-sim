@@ -243,11 +243,13 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M6: Retail crowd and momentum bots
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M5
 - Files to create or change: `src/sim/participants.ts`, `src/content/participants.ts`, tests, price log fixture
 - What changes: per-stock crowd mood from rumours (all sources), headlines and recent returns; rumour shares leave on resolution; momentum bots. Crowd scale by size.
 - Verification: event study shows rumour-day run-ups and false-rumour unwinds; capped-day share recorded; no run-away trends over 300 seeds (largest offset logged).
+- Progress: done 2026-11-04. `startPartyDay`, `crowdFlow`, `momentumFlow` in `sim/participants.ts`. `ParticipantState` gains `heat` (crowd regime, third draw), `shares` (event id to signed belief), `chase`, `mood`, `closes`. The crowd reads the feed the player reads (`state.feed` for today), adds `tierWeight` (low 0.3, medium 0.6, high 1) per rumour signed by its claimed direction, headlines add `headlineWeight` 0.15 that fades 50% a day, and it trades capital $60k x heat x the change in total mood. A rumour's share is deleted on its event day (a false rumour has an id for a day that never fires), so the crowd sells into the news and unwinds a false rumour. Trend followers: $30k x clamp(3-day move / 3%). Neither draws. Capital is in dollars, so a thin stock moves more (NOVA $60k is 0.6% per unit of mood, BLSW 0.15%). The batch study now reports `maxGapPercent` and `maxFlowPercent`.
+- Result (seed abc, 300 runs): capped stock-days 1.2% (unchanged from M5; first try with crowd $200k gave 4.7%, so the crowd was cut to $60k). Largest gap between price and fair value 11.2%, largest one-step flow 11.5% (trimmed by the 8% cap): no run-away. `followHeadlines` median $3,124 (M5 $2,992, so slightly positive), headline `after3` 1.03%. `buyRumour` median $2,900 (M5 $3,069, M0 $2,624). True rumours run 1.6% to their claim day (M5 1.9%), false ones -0.09% and flat two days later: pumped then unwound. Random bot $2,873. Fixture regenerated, non-price lines identical.
 
 ### Step M7: Calendar consensus
 

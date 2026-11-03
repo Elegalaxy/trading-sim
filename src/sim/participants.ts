@@ -5,7 +5,8 @@
 // depth = the stock's daily traded value × `depthDays`. Institutions and noise traders are
 // the existing pull toward fair value and the normal noise term in `market.ts`, whose demand
 // form is algebraically the same, so they keep their formulas. This module adds the parties
-// that were not there before: informed money and news traders.
+// that were not there before: informed money, news traders, the retail crowd and trend
+// followers.
 //
 // Informed money: when an event is rolled onto the schedule, one draw on the participants
 // stream decides whether informed money hears of it (the type's `leak` times the run's
@@ -23,8 +24,19 @@
 // headline is readable, so a reader of the headline finds less left to trade. They stop when
 // the last effect day has been applied. Depth does not scale them: they act on public news.
 //
+// Retail crowd: each stock has a mood. Every rumour in the feed the player reads (any source,
+// true or false) adds a share to the crowd's belief in that event, signed by its claimed
+// direction and sized by the source tier. Headlines add a smaller mood after the fact, which
+// fades. The crowd trades the change in mood, so it buys a rumour, and its share leaves when
+// the event's day comes: a true rumour is sold into the news, a false one unwinds when the day
+// passes with no event. Its money is fixed in dollars, so a thin stock moves more than a deep
+// one. The crowd draws nothing: it reads the feed that is already in the market state.
+//
+// Trend followers: they trade the direction of the move over the last few closes, full size at
+// a clear trend, and flip when it reverses.
+//
 // Participants stream draw order (`createRng(seed + '#participants')`, `market` member):
-// the informed regime draw and the news regime draw at creation, then one draw per newly
+// the informed, news and crowd regime draws at creation, then one draw per newly
 // scheduled event in schedule order
 // (days 1 to 3 at creation, then the day+3 roll of each step). Nothing else draws.
 
@@ -33,6 +45,7 @@ import { EVENT_LOOKAHEAD_DAYS, SESSION_BASE_NOTIONAL_CENTS } from './constants.t
 import { affectedAssets, decayShare } from './events.ts'
 import type {
   AssetDefinition,
+  FeedItem,
   MarketDefinitions,
   MarketState,
   ParticipantDefinitions,
@@ -55,6 +68,16 @@ export function assertParticipantDefinitions(p: ParticipantDefinitions): void {
   positive(p.informed.capitalCents, 'informed.capitalCents')
   positive(p.informed.magnitudeRefPercent, 'informed.magnitudeRefPercent')
   positive(p.informed.regimeMin, 'informed.regimeMin')
+  positive(p.crowd.capitalCents, 'crowd.capitalCents')
+  positive(p.crowd.heatMin, 'crowd.heatMin')
+  if (typeof p.crowd.heatMax !== 'number' || !(p.crowd.heatMax >= p.crowd.heatMin)) {
+    throw new Error(`participants crowd.heatMax must be at least heatMin, received ${describeValue(p.crowd.heatMax)}`)
+  }
+  positive(p.momentum.capitalCents, 'momentum.capitalCents')
+  positive(p.momentum.thresholdPercent, 'momentum.thresholdPercent')
+  if (!Number.isSafeInteger(p.momentum.lookbackDays) || p.momentum.lookbackDays < 1) {
+    throw new Error(`participants momentum.lookbackDays must be a positive integer, received ${describeValue(p.momentum.lookbackDays)}`)
+  }
   positive(p.news.efficiencyMin, 'news.efficiencyMin')
   if (typeof p.news.efficiencyMax !== 'number' || !(p.news.efficiencyMax >= p.news.efficiencyMin)) {
     throw new Error(`participants news.efficiencyMax must be at least efficiencyMin, received ${describeValue(p.news.efficiencyMax)}`)
@@ -77,7 +100,8 @@ export function createParticipants(defs: MarketDefinitions, seed: string): Parti
   const stream = createRng(`${seed}#participants`).market
   const informed = p.informed.regimeMin + nextFloat(stream) * (p.informed.regimeMax - p.informed.regimeMin)
   const news = p.news.efficiencyMin + nextFloat(stream) * (p.news.efficiencyMax - p.news.efficiencyMin)
-  return { stream, informed, news, leaked: [] }
+  const heat = p.crowd.heatMin + nextFloat(stream) * (p.crowd.heatMax - p.crowd.heatMin)
+  return { stream, informed, news, heat, shares: {}, chase: {}, mood: {}, closes: {}, leaked: [] }
 }
 
 /** One leak draw per newly scheduled event, in order, then drop ids that are no longer scheduled. */
@@ -168,5 +192,126 @@ export function newsFlow(
     depthCents: depth,
     moveCents: move,
     events: state.active.filter((effect) => effect.parts.some((part) => part.asset === def.id)).map((effect) => effect.id),
+  }
+}
+
+/** The stocks a rumoured or headlined event id (`type:target:day`) reaches, or [] for a calendar id or an unknown one. */
+function assetsOfEvent(defs: MarketDefinitions, eventId: string): string[] {
+  const [typeId, target] = eventId.split(':')
+  const type = defs.events.find((item) => item.id === typeId)
+  if (type === undefined || target === undefined) return []
+  return affectedAssets(type.scope, target, defs.assets)
+}
+
+function eventDayOf(eventId: string): number {
+  return Number(eventId.split(':')[2])
+}
+
+function clamp(value: number, limit: number): number {
+  return Math.max(-limit, Math.min(limit, value))
+}
+
+function sign(direction: 'up' | 'down' | undefined): number {
+  return direction === 'up' ? 1 : direction === 'down' ? -1 : 0
+}
+
+/** Cents the price moves for this much demand. */
+function moveFor(state: MarketState, def: AssetDefinition, p: ParticipantDefinitions, demand: number): number {
+  return (state.assets[def.id].priceCents * demand) / depthCents(def, p)
+}
+
+/** What the crowd and the trend followers need worked out once a day, before any stock is priced. */
+export type PartyDay = { crowdDemand: Record<string, number> }
+
+/**
+ * Update the crowd from today's feed and note yesterday's close. Mutates `state.participants`.
+ * Call once per step, after effects are applied and before the stocks are priced.
+ */
+export function startPartyDay(state: MarketState, defs: MarketDefinitions): PartyDay {
+  const p = defs.participants
+  const participants = state.participants
+  const day: PartyDay = { crowdDemand: {} }
+  if (p === undefined || participants === undefined) return day
+  const stocks = defs.assets.filter((def) => def.kind === 'stock')
+  for (const def of stocks) {
+    const list = participants.closes[def.id] ?? []
+    list.push(state.assets[def.id].priceCents)
+    while (list.length > p.momentum.lookbackDays + 1) list.shift()
+    participants.closes[def.id] = list
+    participants.chase[def.id] = (participants.chase[def.id] ?? 0) * (1 - p.crowd.chaseDecay)
+  }
+  if (state.feed.day === state.day) {
+    for (const item of state.feed.items as readonly FeedItem[]) {
+      if (item.kind === 'rumour') {
+        const direction = sign(item.direction)
+        if (direction === 0 || assetsOfEvent(defs, item.targetEventId).length === 0) continue
+        const share = (participants.shares[item.targetEventId] ?? 0) + direction * p.crowd.tierWeight[item.tier]
+        participants.shares[item.targetEventId] = clamp(share, 1)
+      } else {
+        const direction = sign(item.direction)
+        if (direction === 0) continue
+        for (const asset of assetsOfEvent(defs, item.eventId)) {
+          participants.chase[asset] = clamp((participants.chase[asset] ?? 0) + direction * p.crowd.headlineWeight, 1)
+        }
+      }
+    }
+  }
+  for (const id of Object.keys(participants.shares)) {
+    if (eventDayOf(id) <= state.day) delete participants.shares[id]
+  }
+  for (const def of stocks) {
+    let mood = participants.chase[def.id] ?? 0
+    for (const [id, share] of Object.entries(participants.shares)) {
+      if (assetsOfEvent(defs, id).includes(def.id)) mood += share
+    }
+    day.crowdDemand[def.id] = p.crowd.capitalCents * participants.heat * (mood - (participants.mood[def.id] ?? 0))
+    participants.mood[def.id] = mood
+  }
+  return day
+}
+
+/** The crowd's move in one stock today: its capital times the change in its mood. */
+export function crowdFlow(
+  state: MarketState,
+  defs: MarketDefinitions,
+  def: AssetDefinition,
+  day: PartyDay,
+): ParticipantFlowEvent | null {
+  const p = defs.participants
+  const participants = state.participants
+  const demand = day.crowdDemand[def.id]
+  if (p === undefined || participants === undefined || demand === undefined || demand === 0) return null
+  const events = Object.keys(participants.shares).filter((id) => assetsOfEvent(defs, id).includes(def.id))
+  return {
+    kind: 'participantFlow',
+    day: state.day,
+    asset: def.id,
+    party: 'crowd',
+    demandCents: demand,
+    depthCents: depthCents(def, p),
+    moveCents: moveFor(state, def, p, demand),
+    events,
+  }
+}
+
+/** Trend followers' move in one stock: full size at a clear trend over the look-back, either way. */
+export function momentumFlow(state: MarketState, defs: MarketDefinitions, def: AssetDefinition): ParticipantFlowEvent | null {
+  const p = defs.participants
+  const participants = state.participants
+  if (p === undefined || participants === undefined) return null
+  const closes = participants.closes[def.id] ?? []
+  if (closes.length < p.momentum.lookbackDays + 1) return null
+  const trend = ((closes[closes.length - 1] / closes[0] - 1) * 100) / p.momentum.thresholdPercent
+  const demand = p.momentum.capitalCents * clamp(trend, 1)
+  if (demand === 0) return null
+  return {
+    kind: 'participantFlow',
+    day: state.day,
+    asset: def.id,
+    party: 'momentum',
+    demandCents: demand,
+    depthCents: depthCents(def, p),
+    moveCents: moveFor(state, def, p, demand),
+    events: [],
   }
 }

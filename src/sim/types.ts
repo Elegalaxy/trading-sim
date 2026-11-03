@@ -209,6 +209,27 @@ export type ParticipantDefinitions = {
     efficiencyMin: number
     efficiencyMax: number
   }
+  crowd: {
+    /** Cents of retail money behind a full mood swing in one stock. A thin stock moves more. */
+    capitalCents: number
+    /** The run's regime scales the crowd's money by a draw from this range. */
+    heatMin: number
+    heatMax: number
+    /** How strongly a rumour of each source tier sways the crowd, from 0 to 1. */
+    tierWeight: Readonly<Record<SourceTier, number>>
+    /** How strongly a headline sways the crowd after the fact, from 0 to 1. */
+    headlineWeight: number
+    /** Share of the after-the-fact mood that fades each day. */
+    chaseDecay: number
+  }
+  momentum: {
+    /** Cents trend followers put behind a clear trend in one stock. */
+    capitalCents: number
+    /** Days of closes the trend is read over. */
+    lookbackDays: number
+    /** A move of this many percent over the look-back is a full-size trend. */
+    thresholdPercent: number
+  }
 }
 
 export type MarketDefinitions = {
@@ -368,7 +389,7 @@ export type ParticipantFlowEvent = {
   kind: 'participantFlow'
   day: number
   asset: string
-  party: 'informed' | 'news'
+  party: 'informed' | 'news' | 'crowd' | 'momentum'
   /** Signed cents of demand. Positive buys. */
   demandCents: number
   depthCents: number
@@ -1326,6 +1347,16 @@ export type ParticipantState = {
   informed: number
   /** The run's news-trader efficiency (a share of the gap closed each news day). Never shown. */
   news: number
+  /** The run's crowd regime: scales the crowd's money. Never shown. */
+  heat: number
+  /** Crowd belief in each rumoured event, signed. A rumour's share leaves when its day comes. */
+  shares: Record<string, number>
+  /** Crowd mood chasing headlines, per stock, signed, fading. */
+  chase: Record<string, number>
+  /** The crowd's total mood per stock after the last step. The crowd trades the change. */
+  mood: Record<string, number>
+  /** The last few closes per stock, oldest first, for the trend followers. */
+  closes: Record<string, number[]>
   /** Scheduled event ids that informed money knows about. */
   leaked: string[]
 }

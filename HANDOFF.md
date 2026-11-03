@@ -1,10 +1,10 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Two things share this checkout. Market depth M0 to M4 are committed (M4 in `658d205`). The Step 26 playtests are still open.
-  - Fill history (`doc/plans/2026-11-04-save-fill-history.md`): H1 to H3 are done and committed (`e256d83`). H4 is next.
-  - M4 (informed money, committed `658d205`) and M5 (news traders, uncommitted) are built in the market-depth session. M5 files: `sim/participants.ts` (`newsFlow`), `participants.test.ts`, `sim/market.ts`, `sim/types.ts` (`news` regime, `party`), `persist/save.ts` (`news` key), `content/participants.ts` (efficiency 0.4 to 0.7), the `demo-30-price-log` fixture, GAME_DESIGN and the plan.
-  - M5 result (seed abc, 300 runs): `followHeadlines` median $2,992 (break-even, as chosen), headline `after3` 1.45% to 0.77%. Side effects to know: 8%-capped stock-days 0.07% to 1.3%, and `buyRumour` is now the strong bot ($3,069; true rumours run 1.9% to their claim day). M6 (retail crowd) is meant to fix that. 219 tests pass.
+- **Current Goal:** Two things share this checkout. Market depth M0 to M5 are committed (M5 in `28dbff2`); M6 is built and uncommitted. The Step 26 playtests are still open.
+  - Fill history (`doc/plans/2026-11-04-save-fill-history.md`): H1 to H3 are committed (`e256d83`). H4 is next.
+  - M6 (retail crowd and trend followers, uncommitted): `sim/participants.ts` (`startPartyDay`, `crowdFlow`, `momentumFlow`), `participants.test.ts`, `sim/market.ts`, `sim/types.ts` (crowd and momentum definitions, `ParticipantState` mood fields), `persist/save.ts`, `content/participants.ts` (crowd $60k, trend followers $30k), `harness/eventStudy.ts` (`maxGapPercent`, `maxFlowPercent`), the `demo-30-price-log` fixture, GAME_DESIGN and the plan.
+  - M6 result (seed abc, 300 runs): capped stock-days 1.2% (same as M5), no run-away (largest gap 11%), `followHeadlines` median $3,124, `buyRumour` $2,900 (M5 $3,069), true rumours run 1.6% to the claim day, false ones are pumped then unwound. The crowd first tried at $200k capped 4.7% of days, so it was cut. Tests pass.
 - **Fill history, H1 to H3 (committed in `e256d83`):**
   - New `src/sim/fills.ts` (`recordFill`, `assertFills`, `closeTime`, `FILLS_MAX` 20,000) and `fills.test.ts` (12 tests).
   - `GameState.fills: FillRecord[]` (`types.ts`): one row per market order, limit fill, TP, SL, liquidation (fee = trade fee plus liquidation fee) and forced sale for missed loan interest. Each row has `n`, asset, day, `HH:MM` time, side, quantity, fill price, fee, realized P&L or null, slippage, `via`.

@@ -10,10 +10,12 @@ import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from
 import { SESSION_STEPS } from '../sim/constants.ts'
 import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
-import { clockTime } from '../sim/session.ts'
+import { clockTime, sessionPrice } from '../sim/session.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
 import type { AccountLogEvent, CommandLogEvent, ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
+import { playerDay } from './days.ts'
 import { debugLog } from './debug.ts'
+import { formatUsd } from './money.ts'
 
 const SEED_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-'
 const DEFAULT_SEED_LENGTH = 8
@@ -53,6 +55,34 @@ export type TradeRecord = {
   via: 'market' | 'limit' | 'takeProfit' | 'stopLoss'
 }
 
+/** One money line in the end-of-day report. Positive is money in. */
+export type ReportLine = { label: string; cents: number }
+
+/**
+ * What the last End day did, for the end-of-day popup. Built from the values before End day
+ * and the log it wrote. Kept in this browser session only.
+ */
+export type DayReport = {
+  /** The day that just closed, as the player counts days. */
+  day: number
+  equityBefore: number
+  equityAfter: number
+  cashBefore: number
+  cashAfter: number
+  energyBefore: number
+  energyAfter: number
+  stressBefore: number
+  stressAfter: number
+  /** Each asset's move from the price at the clock to the close, and the side held. */
+  moves: { asset: string; percent: number; held: 'long' | 'short' | null }[]
+  /** Salary, savings and loan interest, the bill, funding and liquidation fees. */
+  money: ReportLine[]
+  /** Things to act on or know: a pending bill, a liquidation, a job change, the run ending. */
+  notes: string[]
+  /** True when the monthly cycle (payday and bills) ran at this close. */
+  payday: boolean
+}
+
 /** Trading account equity at a moment, for the equity chart. */
 export type EquityPoint = {
   day: number
@@ -75,6 +105,7 @@ export type TradingRun = {
   marks: readonly TradeMark[]
   history: readonly TradeRecord[]
   equity: readonly EquityPoint[]
+  report: DayReport | null
 }
 
 export type DispatchResult = {
@@ -267,6 +298,7 @@ export function startGame(seed: string, jobId = 'jobless', mode: string = 'seede
     marks: [],
     history: [],
     equity: [],
+    report: null,
   }
   recordEquity()
   debugLog('[ui]', `newRun mode=${mode} seed=${chosenSeed} job=${jobId}`)
@@ -344,6 +376,7 @@ export function continueGame(save: SaveFile): string | null {
     marks: [],
     history: [],
     equity: [],
+    report: null,
   }
   recordEquity()
   debugLog('[save]', `loaded day=${game.market.day}`)
@@ -828,6 +861,7 @@ export function endDay(): void {
   const sessionBars = run.game.session.bars
   const logStart = run.game.pending.length
   const heldBefore = heldNow(run.game)
+  const before = reportStart(run.game)
   try {
     simEndDay(run.game, definitions)
   } catch (error) {
@@ -860,6 +894,7 @@ export function endDay(): void {
       marks: keepOpenMarks(run.game, run.marks),
       history: run.history,
       equity: run.equity,
+      report: buildReport(run.game, before),
     }
     recordEquity()
     debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
@@ -886,6 +921,7 @@ export function endDay(): void {
     marks: keepOpenMarks(run.game, run.marks),
     history: run.history,
     equity: run.equity,
+    report: buildReport(run.game, before),
   }
   recordEquity()
   debugLog('[store]', `endDay day=${day} events=${events} hash=${hash}`)
@@ -926,6 +962,111 @@ export function parsePositiveInteger(raw: string, label: string): ParsedInteger 
   const value = Number(text)
   if (!Number.isSafeInteger(value) || value <= 0) return { ok: false, reason: `${label} is too large.` }
   return { ok: true, value }
+}
+
+type ReportStart = {
+  day: number
+  equity: number
+  cash: number
+  energy: number
+  stress: number
+  /** Price at the clock and the side held, per asset. */
+  prices: Record<string, { cents: number; held: 'long' | 'short' | null }>
+}
+
+function reportStart(game: GameState): ReportStart {
+  const prices: ReportStart['prices'] = {}
+  for (const def of definitions.assets) {
+    const shares = game.positions[def.id]?.signedShares ?? 0
+    prices[def.id] = { cents: sessionPrice(game, def.id), held: shares > 0 ? 'long' : shares < 0 ? 'short' : null }
+  }
+  return {
+    day: game.market.day,
+    equity: tradingEquity(game, definitions).equity,
+    cash: game.accounts.cashCents,
+    energy: game.stats.energy,
+    stress: game.stats.stress,
+    prices,
+  }
+}
+
+function jobName(game: GameState, id: string): string {
+  return game.job.catalog.find((job) => job.id === id)?.name ?? id
+}
+
+/** The end-of-day report from the values before End day and the log it wrote. */
+function buildReport(game: GameState, start: ReportStart): DayReport {
+  const money: ReportLine[] = []
+  const notes: string[] = []
+  let funding = 0
+  let liquidationFees = 0
+  let payday = false
+  for (const event of game.log) {
+    switch (event.kind) {
+      case 'salaryPaid':
+        payday = true
+        if (event.amountCents > 0) {
+          money.push({ label: `Salary, ${jobName(game, event.job)} (${event.days} days)`, cents: event.amountCents })
+        }
+        break
+      case 'savingsInterestPaid':
+        if (event.amountCents > 0) money.push({ label: 'Savings interest', cents: event.amountCents })
+        break
+      case 'loanInterestPaid':
+        money.push({ label: 'Loan interest', cents: -event.amountCents })
+        break
+      case 'billPaid':
+        money.push({ label: 'Monthly bill', cents: -event.amountCents })
+        break
+      case 'billPending':
+        notes.push(
+          `The monthly bill of ${formatUsd(event.amountCents, 'bill')} is due and cash is ${formatUsd(event.shortfallCents, 'shortfall')} short. Pay it before the next End day.`,
+        )
+        break
+      case 'forcedSale':
+        money.push({ label: `Forced sale for loan interest (${event.source})`, cents: event.amountCents })
+        break
+      case 'funding':
+        funding += event.amount
+        break
+      case 'liquidation':
+        liquidationFees += event.fee ?? 0
+        notes.push(`${event.asset} was liquidated: ${event.quantity} shares${event.time === undefined ? ' at the close' : ` at ${event.time}`}.`)
+        break
+      case 'marginWarning':
+        notes.push('Margin warning: trading equity is close to the liquidation mark.')
+        break
+      case 'jobChanged':
+        notes.push(`You now work as ${jobName(game, event.to)}.`)
+        break
+      default:
+        break
+    }
+  }
+  if (funding > 0) money.push({ label: 'Funding on open positions', cents: -funding })
+  if (liquidationFees > 0) money.push({ label: 'Liquidation fees', cents: -liquidationFees })
+  const moves: DayReport['moves'] = []
+  for (const def of definitions.assets) {
+    const from = start.prices[def.id]
+    const close = game.market.assets[def.id]?.priceCents
+    if (from === undefined || close === undefined || from.cents <= 0) continue
+    moves.push({ asset: def.id, percent: ((close - from.cents) / from.cents) * 100, held: from.held })
+  }
+  return {
+    day: playerDay(start.day),
+    equityBefore: start.equity,
+    equityAfter: tradingEquity(game, definitions).equity,
+    cashBefore: start.cash,
+    cashAfter: game.accounts.cashCents,
+    energyBefore: start.energy,
+    energyAfter: game.stats.energy,
+    stressBefore: start.stress,
+    stressAfter: game.stats.stress,
+    moves,
+    money,
+    notes,
+    payday,
+  }
 }
 
 /** Copy liquidation rows off the game log before the next command replaces it. */

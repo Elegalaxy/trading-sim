@@ -6,6 +6,7 @@ import type { JobDefinition } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { Primer } from './Primer.tsx'
 import { continueGame, startGame } from './store.ts'
+import { tradingDay } from './days.ts'
 
 function startingJobLabel(job: JobDefinition): string {
   if (job.requirement === 'none') return job.name
@@ -134,7 +135,7 @@ export function StartScreen() {
       {status.save !== null ? (
         <section className="panel">
           <p>
-            A save from day {status.save.state.market.day} is ready ({modeLabel(status.save.mode)}, seed{' '}
+            A save from day {tradingDay(status.save.state)} is ready ({modeLabel(status.save.mode)}, seed{' '}
             {status.save.seed}).
           </p>
           <button type="button" onClick={onContinue}>

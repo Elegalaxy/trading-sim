@@ -4,6 +4,7 @@ import { activeJob } from '../sim/jobs.ts'
 import type { GameState, JobDefinition } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { dispatch } from './store.ts'
+import { playerDay } from './days.ts'
 
 function jobOptionLabel(job: JobDefinition, locked: boolean): string {
   if (!locked) return job.name
@@ -79,7 +80,7 @@ export function JobPanel({ game }: { game: GameState | null }) {
       const starts = game?.job.pending?.effectiveDay
       const name = next?.name ?? choice
       setTone('ok')
-      setMessage(starts === undefined ? `${name} requested.` : `${name} starts on day ${starts}.`)
+      setMessage(starts === undefined ? `${name} requested.` : `${name} starts on day ${playerDay(starts)}.`)
       return
     }
     const reason = outcome.reason ?? 'rejected'
@@ -97,7 +98,7 @@ export function JobPanel({ game }: { game: GameState | null }) {
       </p>
       {pending !== null && pendingJob !== undefined ? (
         <p>
-          {pendingJob.name} starts on day {pending.effectiveDay}.
+          {pendingJob.name} starts on day {playerDay(pending.effectiveDay)}.
         </p>
       ) : null}
       <label htmlFor="job-choice">

@@ -20,8 +20,10 @@ export function Primer() {
         than medium, and medium more often than low.
       </p>
       <p>
-        The margin meter is trading equity divided by the value of open positions. It warns at 15%. At the end of a day,
-        10% or lower liquidates positions, worst first, until the ratio is back above the warning. Leverage stops at 5x.
+        Each position has its own leverage, from 1x to 50x, and uses margin equal to its value divided by that
+        leverage. When trading equity falls to 75% of the margin used you get a warning. At 50%, after any 15-minute bar
+        or at the close, positions are liquidated, worst first, for a 0.5% fee. Open positions pay a small daily
+        funding charge. The Guide button in the top bar explains every rule.
       </p>
       <p>
         The warning state is energy below 40 or stress above 60. Those meters change color. In that state, news can lean

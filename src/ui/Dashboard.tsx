@@ -8,6 +8,10 @@ import { Consumables } from './Consumables.tsx'
 import { BillBanner } from './BillBanner.tsx'
 import { CalendarPanel } from './CalendarPanel.tsx'
 import { DaySummaryPanel } from './DaySummary.tsx'
+import { DayReport } from './DayReport.tsx'
+import { nextPayday, tradingDay } from './days.ts'
+import { Guide } from './Guide.tsx'
+import { RUN_LENGTH_DAYS } from '../sim/constants.ts'
 import { EquityChart } from './EquityChart.tsx'
 import { Fold } from './Fold.tsx'
 import { History } from './History.tsx'
@@ -54,6 +58,7 @@ export function Dashboard() {
   const bodyRef = useRef<HTMLDivElement>(null)
   const [railOpen, setRailOpen] = useStoredFlag('rail', true)
   const [deskSize, setDeskSize] = useState<'normal' | 'tall' | 'folded'>('normal')
+  const [guideOpen, setGuideOpen] = useState(false)
 
   function onAsset(value: string): void {
     if (!assets.some((item) => item.id === value)) {
@@ -154,6 +159,7 @@ export function Dashboard() {
     if (exit?.slCents != null) levels.push({ kind: 'stopLoss', label: 'SL', cents: exit.slCents })
   }
   const events = run === null ? [] : [...run.game.market.log, ...run.game.log, ...run.game.perception.events]
+  const payday = run === null ? null : nextPayday(run.game, MARKET_DEFINITIONS)
   const cash = run?.game.accounts.cashCents
   const trading = run?.game.accounts.tradingCents
   const savings = run?.game.accounts.savingsCents
@@ -208,8 +214,21 @@ export function Dashboard() {
           <p>
             {run === null
               ? 'No run yet.'
-              : `${run.mode === 'seeded' ? 'Seeded' : 'Normal'} · ${run.seed} · Day ${run.game.market.day}`}
+              : `${run.mode === 'seeded' ? 'Seeded' : 'Normal'} · ${run.seed} · Day ${tradingDay(run.game)} of ${RUN_LENGTH_DAYS}`}
           </p>
+          {payday === null ? null : (
+            <span
+              className={payday.inDays <= 2 ? 'payday-chip soon' : 'payday-chip'}
+              title={`At the close of day ${payday.day}: salary about ${formatUsd(payday.salaryCents, 'salary')}, bill ${formatUsd(payday.billCents, 'bill')}${
+                payday.loanInterestCents > 0 ? `, loan interest about ${formatUsd(payday.loanInterestCents, 'loan interest')}` : ''
+              }.`}
+            >
+              {payday.inDays === 0 ? 'Payday and bills at today’s close' : `Payday and bills in ${payday.inDays} day${payday.inDays === 1 ? '' : 's'}`}
+            </span>
+          )}
+          <button type="button" className="guide-open" onClick={() => setGuideOpen(true)}>
+            Guide
+          </button>
           <StatMeters game={run?.game ?? null} compact />
         </div>
       </header>
@@ -218,6 +237,8 @@ export function Dashboard() {
         <DayTimeline game={run?.game ?? null} />
       </div>
       {run !== null ? <RunEnd seed={run.seed} mode={run.mode} game={run.game} /> : null}
+      <DayReport report={run?.report ?? null} />
+      {guideOpen ? <Guide onClose={() => setGuideOpen(false)} /> : null}
       <BillBanner game={run?.game ?? null} />
 
       <div

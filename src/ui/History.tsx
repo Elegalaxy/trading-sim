@@ -1,5 +1,6 @@
 import { formatSignedUsd, formatUsd } from './money.ts'
 import type { TradeRecord } from './store.ts'
+import { playerDay } from './days.ts'
 
 const VIA_LABEL: Record<TradeRecord['via'], string> = {
   market: 'Market',
@@ -44,7 +45,7 @@ export function History({ history }: { history: readonly TradeRecord[] }) {
               .map((row) => (
                 <tr key={row.n}>
                   <td>{row.n}</td>
-                  <td>{row.day}</td>
+                  <td>{playerDay(row.day)}</td>
                   <td>{row.time}</td>
                   <td>{row.asset}</td>
                   <td className={row.side === 'buy' ? 'side-long' : 'side-short'}>{row.side}</td>

@@ -158,6 +158,45 @@ describe('local save', () => {
     }
   })
 
+  it('keeps the fill ledger, checks its rows, and loads a save from before it', () => {
+    // Orders need a spread and a fee schedule, which the shared definitions leave out.
+    const trading: MarketDefinitions = {
+      ...DEFS,
+      assets: DEFS.assets.map((asset) => ({ ...asset, spreadPpm: 1000, borrowFeePpm: 100 })),
+    }
+    const game = createGame(trading, 'demo')
+    applyCommand(game, trading, { type: 'skip' })
+    applyCommand(game, trading, { type: 'order', asset: 'NOVA', side: 'buy', quantity: 10 })
+    applyCommand(game, trading, { type: 'order', asset: 'NOVA', side: 'sell', quantity: 4 })
+    expect(game.fills).toHaveLength(2)
+    const storage = memory()
+    writeSave({ mode: 'seeded', seed: 'demo', state: game }, storage)
+    const loaded = assertLoaded(loadSave(storage))
+    expect(loaded.state.fills).toEqual(game.fills)
+
+    const raw = storage.raw(SAVE_KEY)
+    if (raw === null) throw new Error('[DEBUG save] missing save')
+    const oldSave = JSON.parse(raw) as { state: Record<string, unknown> }
+    delete oldSave.state.fills
+    expect(inspectSave(oldSave).ok).toBe(true)
+
+    const badVia = JSON.parse(raw) as { state: { fills: Array<Record<string, unknown>> } }
+    badVia.state.fills[0]!.via = 'sneaky'
+    const via = inspectSave(badVia)
+    expect(via.ok).toBe(false)
+    if (!via.ok) expect(via.reason).toBe('shape:state.fills[0].via')
+
+    const badNumber = JSON.parse(raw) as { state: { fills: Array<Record<string, unknown>> } }
+    badNumber.state.fills[1]!.fillCents = Number.POSITIVE_INFINITY
+    const nonFinite = inspectSave(badNumber)
+    expect(nonFinite.ok).toBe(false)
+    if (!nonFinite.ok) expect(nonFinite.reason).toBe('non-finite:state.fills[1].fillCents')
+
+    const extra = JSON.parse(raw) as { state: { fills: Array<Record<string, unknown>> } }
+    extra.state.fills[0]!.note = 'x'
+    expect(inspectSave(extra).ok).toBe(false)
+  })
+
   it('keeps the same state hash at day 120 after a mid-run save', () => {
     const straight = createGame(DEFS, 'demo')
     const paused = createGame(DEFS, 'demo')

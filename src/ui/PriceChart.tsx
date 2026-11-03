@@ -3,7 +3,8 @@ import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
 import { buildCandles, candleRangeLabel, formatVolume, type Candle, type DaySource, type TimeframeId } from './candles.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
-import { useTradingStore, type TradeRecord } from './store.ts'
+import type { FillRecord } from '../sim/types.ts'
+import { useTradingStore } from './store.ts'
 
 /** Fewest and most candles one view can hold when zooming. */
 const MIN_VISIBLE = 10
@@ -88,7 +89,7 @@ function minutesOf(time: string): number {
 }
 
 /** The candle a fill belongs to: its day, and for 15m and 1H candles its time window. */
-function markIndex(bars: readonly Candle[], mark: TradeRecord, timeframe: TimeframeId): number {
+function markIndex(bars: readonly Candle[], mark: FillRecord, timeframe: TimeframeId): number {
   const width = timeframe === '15m' ? 15 : 60
   return bars.findIndex((bar) => {
     if (mark.day < bar.startDay || mark.day > bar.endDay) return false
@@ -104,15 +105,25 @@ function priceY(price: number, low: number, span: number, top: number, height: n
 }
 
 /** `TP 100 @ $50.00` for an exit, `Buy 100 @ $48.00` for an order or a limit fill. */
-function markLabel(mark: TradeRecord): string {
+function markLabel(mark: FillRecord): string {
   const head =
-    mark.via === 'takeProfit' ? 'TP' : mark.via === 'stopLoss' ? 'SL' : `${mark.side === 'buy' ? 'Buy' : 'Sell'}${mark.via === 'limit' ? ' limit' : ''}`
+    mark.via === 'takeProfit'
+      ? 'TP'
+      : mark.via === 'stopLoss'
+        ? 'SL'
+        : mark.via === 'liquidation'
+          ? 'Liquidated'
+          : mark.via === 'forcedSale'
+            ? 'Forced sale'
+            : `${mark.side === 'buy' ? 'Buy' : 'Sell'}${mark.via === 'limit' ? ' limit' : ''}`
   return `${head} ${mark.quantity} @ ${formatUsd(mark.fillCents, 'mark')}`
 }
 
-function markColor(mark: TradeRecord): string {
+function markColor(mark: FillRecord): string {
   if (mark.via === 'takeProfit') return LEVEL_COLOR.takeProfit
   if (mark.via === 'stopLoss') return LEVEL_COLOR.stopLoss
+  if (mark.via === 'liquidation') return '#b7324a'
+  if (mark.via === 'forcedSale') return LEVEL_COLOR.limit
   return mark.side === 'buy' ? UP : DOWN
 }
 
@@ -163,7 +174,7 @@ export function PriceChart({
   asset: string
   points: readonly ChartPoint[]
   levels?: readonly ChartLevel[]
-  marks?: readonly TradeRecord[]
+  marks?: readonly FillRecord[]
 }) {
   const energy = useTradingStore().run?.game.stats.energy ?? null
   const fx = useCosmeticFx(energy)

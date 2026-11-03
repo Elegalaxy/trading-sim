@@ -37,6 +37,7 @@ import {
   WIPE_OUT_RATIO_NUMERATOR,
 } from './constants.ts'
 import { quoteMarket } from './session.ts'
+import { closeTime, recordFill } from './fills.ts'
 import { closeWholePosition, marginBase, recordRealized, tradingEquity } from './trading.ts'
 import type {
   BackstopWriteOffEvent,
@@ -242,6 +243,18 @@ function liquidateUnderWarning(
     const asset = worstAsset(state, defs)
     const close = closeWholePosition(state, defs, asset)
     const fee = chargeLiquidationFee(state, day, close.quantity, close.fillPrice)
+    recordFill(state, {
+      asset: close.asset,
+      side: close.side,
+      quantity: close.quantity,
+      fillCents: close.fillPrice,
+      feeCents: close.fee + fee,
+      realizedCents: close.realizedCents,
+      slippageCents: close.slippage,
+      via: 'liquidation',
+      day,
+      time: time ?? closeTime(),
+    })
     closed += 1
     const after = tradingEquity(state, defs)
     const logged: LiquidationEvent = {

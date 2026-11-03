@@ -1543,4 +1543,29 @@ export type GameState = {
   loan: BankLoan
   /** Research points, the course being studied, and today's free-time slots. */
   study: StudyState
+  /** Every fill the book made, oldest first (section 5, the fill ledger). */
+  fills: FillRecord[]
+}
+
+/** How a fill happened. */
+export type FillVia = 'market' | 'limit' | 'takeProfit' | 'stopLoss' | 'liquidation' | 'forcedSale'
+
+/**
+ * One row of the fill ledger. `day` is the market day (the player's day is `day + 1`) and
+ * `time` the `HH:MM` of the 15-minute bar. `feeCents` is every fee the fill paid.
+ * `realizedCents` is the closed P&L before the fee, null when the fill only opened or added.
+ * `slippageCents` is cents a share paid beyond the half spread.
+ */
+export type FillRecord = {
+  n: number
+  asset: string
+  day: number
+  time: string
+  side: 'buy' | 'sell'
+  quantity: number
+  fillCents: number
+  feeCents: number
+  realizedCents: number | null
+  slippageCents: number
+  via: FillVia
 }

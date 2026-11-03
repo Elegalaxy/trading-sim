@@ -345,7 +345,7 @@ export function Dashboard() {
               </button>
             </nav>
             <div className={view === 'chart' ? 'main-pane' : 'main-pane hidden'}>
-              <PriceChart asset={asset} points={points} levels={levels} marks={run?.history.filter((fill) => fill.asset === asset)} />
+              <PriceChart asset={asset} points={points} levels={levels} marks={run?.game.fills.filter((fill) => fill.asset === asset)} />
             </div>
             {view === 'life' ? (
               <div className="main-pane main-scroll desk desk-grid">
@@ -407,8 +407,8 @@ export function Dashboard() {
             </nav>
             <div className="subpanel-body">
               {desk === 'positions' ? <Positions game={run?.game ?? null} onSelect={onAsset} selected={asset} /> : null}
-              {desk === 'history' ? <History history={run?.history ?? []} /> : null}
-              {desk === 'pnl' ? <PnlSummary game={run?.game ?? null} history={run?.history ?? []} /> : null}
+              {desk === 'history' ? <History history={run?.game.fills ?? []} /> : null}
+              {desk === 'pnl' ? <PnlSummary game={run?.game ?? null} history={run?.game.fills ?? []} /> : null}
               {desk === 'equity' ? <EquityChart points={run?.equity ?? []} /> : null}
               {desk === 'book' ? (
                 <DaySummaryPanel

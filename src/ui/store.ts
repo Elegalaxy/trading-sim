@@ -7,13 +7,12 @@ import { DAMAGED_SAVE_MESSAGE, inspectSave, isRunMode, isSeed, writeSave } from 
 import type { RunMode, SaveFile } from '../persist/save.ts'
 import { recordScore } from '../persist/scores.ts'
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
-import { SESSION_STEPS } from '../sim/constants.ts'
 import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { assertResting, upgradeResting } from '../sim/resting.ts'
-import { clockTime, sessionPrice } from '../sim/session.ts'
+import { sessionPrice } from '../sim/session.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
-import type { AccountLogEvent, CommandLogEvent, ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
+import type { ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
 import { playerDay } from './days.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
@@ -27,33 +26,6 @@ export type CloseRow = {
   prices: Readonly<Record<string, number>>
   /** The session that led into this close, one list of 15-minute bars per asset. Absent on a loaded save. */
   bars?: Readonly<Record<string, readonly SessionBar[]>>
-}
-
-/** A fill the chart marks while its position is open. Kept in this browser session only. */
-export type TradeMark = {
-  asset: string
-  day: number
-  /** `HH:MM` of the 15-minute bar the fill happened in. */
-  time: string
-  side: 'buy' | 'sell'
-  cents: number
-  quantity: number
-}
-
-/** One fill for the History tab. Kept in this browser session only. */
-export type TradeRecord = {
-  n: number
-  asset: string
-  day: number
-  /** `HH:MM` of the bar. */
-  time: string
-  side: 'buy' | 'sell'
-  quantity: number
-  fillCents: number
-  feeCents: number
-  /** Closed-position P&L before the fee, or null when the fill only opened or added. */
-  realizedCents: number | null
-  via: 'market' | 'limit' | 'takeProfit' | 'stopLoss'
 }
 
 /** One money line in the end-of-day report. Positive is money in. */
@@ -107,8 +79,6 @@ export type TradingRun = {
   liquidations: readonly LiquidationEvent[]
   /** Forced sales from missed loan interest on the summary day. */
   forcedSales: readonly ForcedSaleEvent[]
-  marks: readonly TradeMark[]
-  history: readonly TradeRecord[]
   equity: readonly EquityPoint[]
   report: DayReport | null
 }
@@ -300,8 +270,6 @@ export function startGame(seed: string, jobId = 'jobless', mode: string = 'seede
     summary: null,
     liquidations: [],
     forcedSales: [],
-    marks: [],
-    history: [],
     equity: [],
     report: null,
   }
@@ -351,6 +319,8 @@ export function continueGame(save: SaveFile): string | null {
     // Saves from before partial exits hold one TP and one SL per position.
     game.resting = upgradeResting(game.resting)
     assertResting(game.resting)
+    // Saves from before the fill ledger have none. They start it empty.
+    if ((game as { fills?: unknown }).fills === undefined) game.fills = []
   } catch (error) {
     console.error('[save] rejected reason=shape', error)
     debugLog('[save]', 'rejected reason=shape')
@@ -381,8 +351,6 @@ export function continueGame(save: SaveFile): string | null {
     summary,
     liquidations,
     forcedSales,
-    marks: [],
-    history: [],
     equity: [],
     report: null,
   }
@@ -670,94 +638,6 @@ function recordEquity(): void {
   run.equity = [...kept, { day, clock, equityCents: equity }].slice(-4000)
 }
 
-/** Turn the fill events of one command (or of End day) into history rows. */
-function collectFills(events: ReadonlyArray<CommandLogEvent | AccountLogEvent>, barTime: string, startN: number): TradeRecord[] {
-  const out: TradeRecord[] = []
-  const used = new Set<number>()
-  for (let i = 0; i < events.length; i += 1) {
-    const event = events[i]
-    if (event?.kind === 'orderFill') {
-      let realized: number | null = null
-      let via: TradeRecord['via'] = 'market'
-      let time = barTime
-      for (let j = i + 1; j < Math.min(events.length, i + 4); j += 1) {
-        const next = events[j]
-        if (next?.kind === 'realized' && next.asset === event.asset && realized === null) realized = next.amount
-        if (next?.kind === 'resting' && next.action === 'filled' && next.asset === event.asset && !used.has(j)) {
-          used.add(j)
-          via = 'limit'
-          if (next.time !== null) time = next.time
-          break
-        }
-      }
-      out.push({
-        n: startN + out.length,
-        asset: event.asset,
-        day: event.day,
-        time,
-        side: event.side,
-        quantity: event.quantity,
-        fillCents: event.fillPrice,
-        feeCents: event.fee,
-        realizedCents: realized,
-        via,
-      })
-    }
-  }
-  for (let i = 0; i < events.length; i += 1) {
-    const event = events[i]
-    if (event?.kind !== 'resting' || event.action !== 'filled' || used.has(i)) continue
-    if (event.detail !== 'takeProfit' && event.detail !== 'stopLoss') continue
-    if (event.side === null) continue
-    // The sim logs the close P&L of an exit fill right after it.
-    const next = events[i + 1]
-    const realized = next?.kind === 'realized' && next.asset === event.asset ? next.amount : null
-    out.push({
-      n: startN + out.length,
-      asset: event.asset,
-      day: event.day,
-      time: event.time ?? barTime,
-      side: event.side,
-      quantity: event.quantity,
-      fillCents: event.priceCents,
-      feeCents: event.fee,
-      realizedCents: realized,
-      via: event.detail,
-    })
-  }
-  return out
-}
-
-/** Marks only matter while their position is open. */
-function keepOpenMarks(game: GameState, marks: readonly TradeMark[]): TradeMark[] {
-  return marks.filter((mark) => game.positions[mark.asset] !== undefined)
-}
-
-/** Fills added by one command, in order. A resting fill's own event carries the bar time. */
-function newMarks(game: GameState, added: readonly CommandLogEvent[], before: Readonly<Record<string, number>>, marks: readonly TradeMark[]): TradeMark[] {
-  let next = marks.slice()
-  const signs: Record<string, number> = { ...before }
-  // The newest bar the player can see is the one before the clock.
-  const barTime = clockTime(Math.min(Math.max(game.session.clock - 1, 0), SESSION_STEPS - 1))
-  for (let i = 0; i < added.length; i += 1) {
-    const event = added[i]
-    if (event?.kind !== 'orderFill') continue
-    const after = added[i + 1]
-    const time = after?.kind === 'resting' && after.action === 'filled' && after.time !== null ? after.time : barTime
-    const prior = signs[event.asset] ?? 0
-    const now = game.positions[event.asset]?.signedShares ?? 0
-    // A flip or a fresh position starts a new set of marks for the asset.
-    if (prior === 0 || Math.sign(prior) !== Math.sign(now)) next = next.filter((mark) => mark.asset !== event.asset)
-    signs[event.asset] = now
-    if (now === 0) {
-      next = next.filter((mark) => mark.asset !== event.asset)
-      continue
-    }
-    next.push({ asset: event.asset, day: event.day, time, side: event.side, cents: event.fillPrice, quantity: event.quantity })
-  }
-  return next
-}
-
 /** One player command. Acceptance comes from the simulation log, not from a second set of rules. */
 export function dispatch(cmd: unknown): DispatchResult {
   const label = commandLabel(cmd)
@@ -789,8 +669,6 @@ export function dispatch(cmd: unknown): DispatchResult {
   }
   const from = run.game.section
   const before = run.game.pending.length
-  const signsBefore: Record<string, number> = {}
-  for (const [asset, position] of Object.entries(run.game.positions)) signsBefore[asset] = position.signedShares
   try {
     applyCommand(run.game, definitions, cmd)
   } catch (error) {
@@ -817,11 +695,7 @@ export function dispatch(cmd: unknown): DispatchResult {
     return { accepted: false, reason: rejection.reason }
   }
   debugLog('[store]', `dispatch ${label} -> accepted`)
-  run.marks = newMarks(run.game, added, signsBefore, run.marks)
   if (added.some((event) => event.kind === 'liquidation')) run.liquidations = readLiquidations(run.game)
-  const barTime = clockTime(Math.min(Math.max(run.game.session.clock - 1, 0), SESSION_STEPS - 1))
-  const fills = collectFills(added, barTime, run.history.length + 1)
-  if (fills.length > 0) run.history = [...run.history, ...fills]
   recordEquity()
   logOrderOrTransfer(cmd, true, '')
   logSkip(cmd, from, to, true, '')
@@ -853,17 +727,12 @@ export function endDay(): void {
   }
   const dayBefore = run.game.market.day
   const sessionBars = run.game.session.bars
-  const logStart = run.game.pending.length
   const before = reportStart(run.game)
   try {
     simEndDay(run.game, definitions)
   } catch (error) {
     console.error('[store] endDay failed', error)
     throw error
-  }
-  if (run.game.log.length >= logStart) {
-    const fills = collectFills(run.game.log.slice(logStart), '20:45', run.history.length + 1)
-    if (fills.length > 0) run.history = [...run.history, ...fills]
   }
   logBill(run.game)
   logRunEnd(run.game)
@@ -884,8 +753,6 @@ export function endDay(): void {
       summary: run.summary,
       liquidations: readLiquidations(run.game),
       forcedSales: readForcedSales(run.game),
-      marks: keepOpenMarks(run.game, run.marks),
-      history: run.history,
       equity: run.equity,
       report: buildReport(run.game, before),
     }
@@ -911,8 +778,6 @@ export function endDay(): void {
     summary,
     liquidations,
     forcedSales,
-    marks: keepOpenMarks(run.game, run.marks),
-    history: run.history,
     equity: run.equity,
     report: buildReport(run.game, before),
   }

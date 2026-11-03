@@ -27,6 +27,7 @@
 import { MAX_LEVERAGE, SESSION_STEPS } from './constants.ts'
 import { clockTime, sessionPrice } from './session.ts'
 import { settleIntradayMargin } from './margin.ts'
+import { recordFill } from './fills.ts'
 import { closePartOfPosition, interpretOrder } from './trading.ts'
 import type {
   CommandLogEvent,
@@ -377,6 +378,17 @@ function triggerExits(state: GameState, defs: MarketDefinitions, index: number):
       const stopVolume = level.kind === 'stopLoss' ? bar.volume : undefined
       const closed = closePartOfPosition(state, defs, def.id, Math.min(level.quantity ?? open, open), fill, stopVolume)
       exit.levels = exit.levels.filter((item) => item !== level)
+      recordFill(state, {
+        asset: def.id,
+        side: closed.side,
+        quantity: closed.quantity,
+        fillCents: closed.fillPrice,
+        feeCents: closed.fee,
+        realizedCents: closed.realizedCents,
+        slippageCents: closed.slippage,
+        via: level.kind,
+        time: clockTime(index),
+      })
       events.push(
         restingEvent(state, 'filled', def.id, level.kind, closed.side, closed.quantity, closed.fillPrice, {
           fee: closed.fee,
@@ -429,6 +441,8 @@ function triggerLimits(state: GameState, defs: MarketDefinitions, index: number)
       defs,
       { type: 'order', asset: order.asset, side: order.side, quantity: order.quantity, leverage: order.leverage },
       fill,
+      'limit',
+      clockTime(index),
     )
     if (!outcome.accepted) {
       const rejection = outcome.events.find((event) => event.kind === 'commandRejected')

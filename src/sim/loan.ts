@@ -16,6 +16,7 @@ import {
 import { netWorthCents } from './fi.ts'
 import { activeJob } from './jobs.ts'
 import { assertLifestyle } from './lifestyle.ts'
+import { closeTime, recordFill } from './fills.ts'
 import { closeWholePosition } from './trading.ts'
 import type {
   AccountLogEvent,
@@ -370,7 +371,18 @@ function hasOpenPosition(state: GameState, defs: MarketDefinitions): boolean {
  */
 function sellPositionForInterest(state: GameState, defs: MarketDefinitions, assetId: string): number {
   const before = state.accounts.tradingCents
-  closeWholePosition(state, defs, assetId)
+  const close = closeWholePosition(state, defs, assetId)
+  recordFill(state, {
+    asset: close.asset,
+    side: close.side,
+    quantity: close.quantity,
+    fillCents: close.fillPrice,
+    feeCents: close.fee,
+    realizedCents: close.realizedCents,
+    slippageCents: close.slippage,
+    via: 'forcedSale',
+    time: closeTime(),
+  })
   const after = state.accounts.tradingCents
   const beforePositive = before > 0 ? before : 0
   const afterPositive = after > 0 ? after : 0

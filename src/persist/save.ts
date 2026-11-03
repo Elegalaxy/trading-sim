@@ -62,7 +62,21 @@ const PERCEPTION_KEYS = ['day', 'shown', 'events', 'verified'] as const
 const LIFESTYLE_KEYS = ['home', 'infoFeed'] as const
 const LOAN_KEYS = ['balanceCents', 'interestDueCents', 'interestDay'] as const
 const STUDY_KEYS = ['points', 'course', 'used'] as const
-const RUN_END_KEYS = ['outcome', 'day', 'reason', 'netWorthCents', 'score'] as const
+const FILL_KEYS = [
+  'n',
+  'asset',
+  'day',
+  'time',
+  'side',
+  'quantity',
+  'fillCents',
+  'feeCents',
+  'realizedCents',
+  'slippageCents',
+  'via',
+] as const
+const FILL_VIAS = ['market', 'limit', 'takeProfit', 'stopLoss', 'liquidation', 'forcedSale'] as const
+const RUN_END_KEYS =['outcome', 'day', 'reason', 'netWorthCents', 'score'] as const
 
 export type RunMode = (typeof RUN_MODES)[number]
 
@@ -242,8 +256,34 @@ function checkRunEnd(value: unknown): string | null {
   return finiteNumber(value.score, 'state.runEnd.score')
 }
 
+function checkFills(value: unknown): string | null {
+  if (!Array.isArray(value)) return 'shape:state.fills'
+  for (let index = 0; index < value.length; index += 1) {
+    const row: unknown = value[index]
+    if (!isRecord(row) || !sameKeys(row, FILL_KEYS)) return `shape:state.fills[${index}]`
+    if (row.n !== index + 1) return `shape:state.fills[${index}].n`
+    if (typeof row.asset !== 'string' || typeof row.time !== 'string') return `shape:state.fills[${index}]`
+    if (row.side !== 'buy' && row.side !== 'sell') return `shape:state.fills[${index}].side`
+    if (typeof row.via !== 'string' || !(FILL_VIAS as readonly string[]).includes(row.via)) return `shape:state.fills[${index}].via`
+    for (const key of ['day', 'quantity', 'fillCents', 'feeCents', 'slippageCents'] as const) {
+      const found = finiteNumber(row[key], `state.fills[${index}].${key}`)
+      if (found !== null) return found
+    }
+    if (row.realizedCents !== null) {
+      const found = finiteNumber(row.realizedCents, `state.fills[${index}].realizedCents`)
+      if (found !== null) return found
+    }
+  }
+  return null
+}
+
 function checkState(value: unknown): string | null {
-  if (!isRecord(value) || !sameKeys(value, STATE_KEYS)) return 'shape:state'
+  // Saves from before the fill ledger have no `fills`. They load with an empty one.
+  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills'])) return 'shape:state'
+  if (value.fills !== undefined) {
+    const fills = checkFills(value.fills)
+    if (fills !== null) return fills
+  }
   const market = checkMarket(value.market)
   if (market !== null) return market
   if (!isRecord(value.session) || !sameKeys(value.session, SESSION_KEYS)) return 'shape:state.session'

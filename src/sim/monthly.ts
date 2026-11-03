@@ -105,6 +105,8 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
       interestDay: state.loan.interestDay,
     },
     study: state.study,
+    // The cover check is a preview: closing here must not touch the real ledger.
+    fills: [],
   }
   for (const id of ids) {
     const position = state.positions[id]

@@ -69,6 +69,7 @@ import {
   TRADE_FEE_DENOMINATOR,
   TRADE_FEE_NUMERATOR,
 } from './constants.ts'
+import { recordFill } from './fills.ts'
 import { quoteMarket } from './session.ts'
 import type {
   AssetDefinition,
@@ -546,6 +547,8 @@ export function interpretOrder(
   defs: MarketDefinitions,
   cmd: unknown,
   fixedFill?: number,
+  via: 'market' | 'limit' = 'market',
+  time?: string,
 ): OrderOutcome {
   const day = state.market.day
   if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) {
@@ -634,6 +637,17 @@ export function interpretOrder(
     })
   }
   recordRealized(state, day, -quote.fee)
+  recordFill(state, {
+    asset: def.id,
+    side: record.side,
+    quantity,
+    fillCents: quote.fillPrice,
+    feeCents: quote.fee,
+    realizedCents: projection.closedShares > 0 ? projection.realizedCents : null,
+    slippageCents: quote.slippage,
+    via,
+    ...(time === undefined ? {} : { time }),
+  })
   return { accepted: true, events }
 }
 

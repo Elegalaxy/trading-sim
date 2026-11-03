@@ -1,9 +1,8 @@
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { sessionPrice } from '../sim/session.ts'
-import type { GameState } from '../sim/types.ts'
+import type { FillRecord, GameState } from '../sim/types.ts'
 import { accountSummary, unrealizedCents } from './account.ts'
 import { formatSignedUsd, formatUsd } from './money.ts'
-import type { TradeRecord } from './store.ts'
 
 function tone(cents: number): string | undefined {
   return cents > 0 ? 'pnl-gain' : cents < 0 ? 'pnl-loss' : undefined
@@ -21,9 +20,9 @@ function Stat({ label, cents, signed = true }: { label: string; cents: number; s
 /**
  * Realized comes from the saved daily ledger (closed P&L minus fees, borrow and interest).
  * Floating is the open positions at the current quote. Trade counts and per-asset rows read
- * the fills of this browser session.
+ * the fill ledger.
  */
-export function PnlSummary({ game, history }: { game: GameState | null; history: readonly TradeRecord[] }) {
+export function PnlSummary({ game, history }: { game: GameState | null; history: readonly FillRecord[] }) {
   if (game === null) {
     return (
       <section className="panel">
@@ -63,7 +62,7 @@ export function PnlSummary({ game, history }: { game: GameState | null; history:
         <Stat label="Realized today" cents={today} />
         <Stat label="Realized total" cents={realizedTotal} />
         <Stat label="Net (realized + floating)" cents={realizedTotal + account.floating} />
-        <Stat label="Fees paid (session)" cents={fees} signed={false} />
+        <Stat label="Fees paid" cents={fees} signed={false} />
         <div>
           <dt>Closed trades</dt>
           <dd>{tradeText}</dd>
@@ -77,7 +76,7 @@ export function PnlSummary({ game, history }: { game: GameState | null; history:
             <thead>
               <tr>
                 <th>Asset</th>
-                <th>Realized (session)</th>
+                <th>Realized</th>
                 <th>Floating</th>
               </tr>
             </thead>

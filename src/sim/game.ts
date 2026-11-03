@@ -76,6 +76,7 @@ import {
   interpretReadNews,
   interpretVerify,
 } from './stats.ts'
+import { assertFills } from './fills.ts'
 import { assertStudy, initialStudy, interpretStudy, resetStudyDay } from './study.ts'
 import { interpretOrder, tradingEquity } from './trading.ts'
 import {
@@ -401,6 +402,7 @@ function assertGame(state: GameState, defs?: MarketDefinitions): void {
   assertLifestyle(state.lifestyle)
   assertLoan(state.loan)
   assertStudy(state.study)
+  assertFills(state.fills)
 }
 
 /**
@@ -478,6 +480,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     lifestyle: initialLifestyle(),
     loan: initialLoan(),
     study: initialStudy(),
+    fills: [],
   }
   refreshPerception(state)
   return state

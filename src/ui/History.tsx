@@ -1,21 +1,23 @@
 import { formatSignedUsd, formatUsd } from './money.ts'
-import type { TradeRecord } from './store.ts'
+import type { FillRecord } from '../sim/types.ts'
 import { playerDay } from './days.ts'
 
-const VIA_LABEL: Record<TradeRecord['via'], string> = {
+const VIA_LABEL: Record<FillRecord['via'], string> = {
   market: 'Market',
   limit: 'Limit',
   takeProfit: 'Take profit',
   stopLoss: 'Stop loss',
+  liquidation: 'Liquidation',
+  forcedSale: 'Forced sale',
 }
 
-/** Every fill of this browser session, newest first. */
-export function History({ history }: { history: readonly TradeRecord[] }) {
+/** Every fill of the run, newest first. It is saved with the game. */
+export function History({ history }: { history: readonly FillRecord[] }) {
   if (history.length === 0) {
     return (
       <section className="panel">
         <h2>History</h2>
-        <p>No fills yet. Fills show here as you trade. History is kept for this browser session only.</p>
+        <p>No fills yet. Fills show here as you trade, and stay with the saved run.</p>
       </section>
     )
   }

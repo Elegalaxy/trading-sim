@@ -15,6 +15,7 @@ import {
 } from './constants.ts'
 import { assertEnvironmentDefinitions, driftEnvironment, initialEnvironment } from './environment.ts'
 import { applyDueEffects, assertEventDefinitions, rollEventsForDay } from './events.ts'
+import { assertParticipantDefinitions, assignLeaks, createParticipants, informedFlow } from './participants.ts'
 import { assertFeedDefinitions, assertFeedState, publishFeed, type FiredHeadline } from './feed.ts'
 import { createRng, nextNormal } from './rng.ts'
 import {
@@ -43,6 +44,7 @@ function assertDefinitions(defs: MarketDefinitions): void {
   if (typeof defs !== 'object' || defs === null || Array.isArray(defs)) {
     throw new Error(`market definitions must be an object, received ${describeValue(defs)}`)
   }
+  if (defs.participants !== undefined) assertParticipantDefinitions(defs.participants)
   if (!Array.isArray(defs.assets) || defs.assets.length === 0) {
     throw new Error(`market definitions assets must be a non-empty array, received ${describeValue(defs.assets)}`)
   }
@@ -154,6 +156,9 @@ function assertState(state: MarketState, defs: MarketDefinitions): void {
     if (typeof asset.fairValue !== 'number' || !Number.isFinite(asset.fairValue)) {
       throw new Error(`asset ${def.id} fairValue must be a finite number, received ${describeValue(asset.fairValue)}`)
     }
+  }
+  if ((state.participants === undefined) !== (defs.participants === undefined)) {
+    throw new Error('market participants state must be present exactly when the definitions have participants')
   }
   if (!Array.isArray(state.environment) || state.environment.length !== defs.environment.length) {
     throw new Error(
@@ -301,12 +306,15 @@ export function createMarket(defs: MarketDefinitions, seed: string): MarketState
     log: [],
     feed: { day: 1, items: [] },
   }
+  const participants = createParticipants(defs, seed)
+  if (participants !== undefined) state.participants = participants
   // Days 1–3 are rolled now, at the starting environment, before any drift.
   // The standard calendar starts on day 10, so this loop draws no calendar float.
   for (let eventDay = 1; eventDay <= EVENT_LOOKAHEAD_DAYS; eventDay += 1) {
     const rolled = rollEventsForDay(defs, state.environment, state.streams.events, 0, eventDay)
     for (const event of rolled.scheduled) state.scheduled.push(event)
     for (const event of rolled.log) state.log.push(event)
+    assignLeaks(state, defs, rolled.scheduled)
     rollCalendarForDay(state, defs, eventDay)
   }
   // Nothing has fired yet, so the day-1 feed is rumours only.
@@ -376,7 +384,8 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
     const fair = asset.fairValue
     const pull = ((fair - previous) * FAIR_VALUE_PULL_NUMERATOR) / FAIR_VALUE_PULL_DENOMINATOR
     const noise = z * def.dailyVolatility * previous
-    const rawMove = pull + noise
+    const flow = informedFlow(state, defs, def)
+    const rawMove = flow === null ? pull + noise : pull + noise + flow.moveCents
     const applied = applyCappedMove(previous, rawMove)
     const noiseEvent: NoiseRollEvent = { kind: 'noiseRoll', day, asset: def.id, z }
     const priceEvent: PriceStepEvent = {
@@ -387,13 +396,16 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
       fair,
       pull,
       noise,
+      ...(flow === null ? {} : { flow: flow.moveCents }),
       rawMove,
       cappedMove: applied.delta,
       capped: applied.capped,
       newPrice: applied.newPrice,
       gapAfter: fair - applied.newPrice,
     }
-    state.log.push(noiseEvent, priceEvent)
+    state.log.push(noiseEvent)
+    if (flow !== null) state.log.push(flow)
+    state.log.push(priceEvent)
     asset.priceCents = applied.newPrice
   }
 
@@ -433,6 +445,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   )
   for (const event of rolled.scheduled) state.scheduled.push(event)
   for (const event of rolled.log) state.log.push(event)
+  assignLeaks(state, defs, rolled.scheduled)
   rollCalendarForDay(state, defs, day + EVENT_LOOKAHEAD_DAYS)
   publishFeed(state, defs, fired)
   return state

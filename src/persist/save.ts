@@ -49,6 +49,7 @@ const MARKET_KEYS = [
   'log',
   'feed',
 ] as const
+const MARKET_OPTIONAL_KEYS = ['participants'] as const
 const STREAM_NAMES = ['market', 'events', 'info', 'distortion'] as const
 const STREAM_KEYS = ['a', 'b', 'c', 'd'] as const
 const RESTING_KEYS = ['nextId', 'orders', 'exits'] as const
@@ -171,8 +172,20 @@ function checkStream(value: unknown, path: string): string | null {
   return null
 }
 
+function checkParticipants(value: unknown): string | null {
+  if (!isRecord(value) || !sameKeys(value, ['stream', 'informed', 'leaked'])) return 'shape:state.market.participants'
+  const found = checkStream(value.stream, 'state.market.participants.stream')
+  if (found !== null) return found
+  const informed = finiteNumber(value.informed, 'state.market.participants.informed')
+  if (informed !== null) return informed
+  if (!Array.isArray(value.leaked) || value.leaked.some((id) => typeof id !== 'string')) {
+    return 'shape:state.market.participants.leaked'
+  }
+  return null
+}
+
 function checkMarket(value: unknown): string | null {
-  if (!isRecord(value) || !sameKeys(value, MARKET_KEYS)) return 'shape:state.market'
+  if (!isRecord(value) || !keysWithin(value, MARKET_KEYS, MARKET_OPTIONAL_KEYS)) return 'shape:state.market'
   const day = finiteNumber(value.day, 'state.market.day')
   if (day !== null) return day
   if (!Number.isSafeInteger(value.day) || (value.day as number) < 0) return 'shape:state.market.day'
@@ -191,6 +204,10 @@ function checkMarket(value: unknown): string | null {
   if (!Array.isArray(value.scheduled)) return 'shape:state.market.scheduled'
   if (!Array.isArray(value.active)) return 'shape:state.market.active'
   if (!Array.isArray(value.log)) return 'shape:state.market.log'
+  if (value.participants !== undefined) {
+    const found = checkParticipants(value.participants)
+    if (found !== null) return found
+  }
   if (!isRecord(value.feed) || !Array.isArray(value.feed.items)) return 'shape:state.market.feed'
   return finiteNumber(value.feed.day, 'state.market.feed.day')
 }

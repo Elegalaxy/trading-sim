@@ -68,6 +68,9 @@ export function assertEventDefinitions(
     }
     if (seen.has(eventType.id)) throw new Error(`event type ${eventType.id} is duplicated`)
     seen.add(eventType.id)
+    if (eventType.leak !== undefined && (typeof eventType.leak !== 'number' || !(eventType.leak >= 0 && eventType.leak <= 1))) {
+      throw new Error(`event ${eventType.id} leak must be a number from 0 to 1, received ${describeValue(eventType.leak)}`)
+    }
     if (eventType.scope !== 'stock' && eventType.scope !== 'sector' && eventType.scope !== 'market') {
       throw new Error(`event ${eventType.id} scope must be stock, sector, or market, received ${describeValue(eventType.scope)}`)
     }
@@ -319,7 +322,7 @@ export function rollEventsForDay(
   return { scheduled, log }
 }
 
-function affectedAssets(scope: EventScope, target: string, assets: readonly AssetDefinition[]): string[] {
+export function affectedAssets(scope: EventScope, target: string, assets: readonly AssetDefinition[]): string[] {
   if (scope === 'stock') {
     const stock = assets.find((asset) => asset.id === target && asset.kind === 'stock')
     if (stock === undefined) throw new Error(`event target ${target} is not a stock`)

@@ -221,12 +221,14 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M4: Participant framework and informed money
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M0 (baseline), user answers 1–3
 - Files to create or change: `src/sim/participants.ts`, `src/sim/participants.test.ts`, `src/sim/market.ts` (anchor in the price step, `createMarket` seeds the stream), `src/sim/types.ts`, `src/sim/log.ts`, `src/content/participants.ts`, `src/content/events.ts` (per-type `leak`), `src/content/index.ts`, `src/persist/save.ts`, `tests/fixtures/demo-30-price-log.txt`
 - What changes: `MarketState.participants` (stream, regime, per-stock offsets). The pull aims at the anchor. Informed money leaks scheduled events. One `participantOffset` log line per stock per day with each party's share.
 - Must not change: the four main streams, fair value, the event, calendar, environment and rumour log lines (asserted line by line), the "no player state" rule.
 - Verification: fixture regenerated on purpose; noise and step7 fixtures pass untouched; event study shows pre-news drift on leaked types only; random bot mean final equity within about 5% of M0.
+- Progress: done 2026-11-04. Built as real orders (user decision B), narrower than the Files list: `src/sim/participants.ts` (regime and leak draws on `createRng(seed + '#participants').market`, `informedFlow`, `depthCents`), `MarketDefinitions.participants` (`depthDays` 10, informed capital $150k, regime 0.5 to 1.5, magnitude reference 5%), `EventTypeDefinition.leak`, `MarketState.participants?` (optional, absent when the definitions have none), a `participantFlow` log line and an optional `flow` on `priceStep`. Institutions and noise traders stay the existing pull and noise formulas, because their demand form is algebraically the same; no party code reads `GameState` (tested). Informed money trades the two days before an event (an event is first seen two days out). `move = price x demand / depth`.
+- Result (seed abc, 300 runs): pre-news drift now shows, 0.3% over the two days before a stock headline (earnings 0.6%, lawsuit 0.9%, scandal 0.8%); the day-0 move fell from 0.53% to 0.40% and by day 3 from 2.15% to 1.84%. Capped stock-days unchanged (0.07%). Random bot median final equity $2,923 against $2,935 without participants. `followHeadlines` median $3,392 (M0: $3,504). The `demo-30-price-log.txt` fixture was regenerated; its non-price lines are identical to the old file, and the noise and step-7 fixtures pass untouched.
 
 ### Step M5: News traders
 

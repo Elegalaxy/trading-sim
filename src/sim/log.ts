@@ -124,11 +124,23 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `fair=${formatNumber(event.fair)}`,
         `pull=${formatNumber(event.pull)}`,
         `noise=${formatNumber(event.noise)}`,
+        ...(event.flow === undefined ? [] : [`flow=${formatNumber(event.flow)}`]),
         `rawMove=${formatNumber(event.rawMove)}`,
         `cappedMove=${formatNumber(event.cappedMove)}`,
         `capped=${formatFlag(event.capped, 'capped flag')}`,
         `newPrice=${formatNumber(event.newPrice)}`,
         `gapAfter=${formatNumber(event.gapAfter)}`,
+      ].join(' ')
+    case 'participantFlow':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=participantFlow',
+        `asset=${formatAsset(event.asset)}`,
+        `party=${formatToken(event.party, 'party')}`,
+        `demand=${formatNumber(event.demandCents)}`,
+        `depth=${formatNumber(event.depthCents)}`,
+        `move=${formatNumber(event.moveCents)}`,
+        `events=${event.events.join(',')}`,
       ].join(' ')
     case 'indexStep':
       return [

@@ -185,8 +185,27 @@ export type SourceDefinition = {
   visibility: readonly VisibilityRequirement[]
 }
 
+/**
+ * Order-flow parties (plan market depth, Step M4). Omitted means the price step is the
+ * plain pull plus noise, with no extra draws.
+ */
+export type ParticipantDefinitions = {
+  /** Price moves by net demand over depth. Depth is a stock's daily traded value times this many days. */
+  depthDays: number
+  informed: {
+    /** Cents a fund puts behind one leaked event on one stock, at full size and the last day before it. */
+    capitalCents: number
+    /** The run's regime scales every leak chance by a draw from this range. */
+    regimeMin: number
+    regimeMax: number
+    /** An event of this many percent or more trades at full size. Smaller ones trade in proportion. */
+    magnitudeRefPercent: number
+  }
+}
+
 export type MarketDefinitions = {
   assets: readonly AssetDefinition[]
+  participants?: ParticipantDefinitions
   /** Growth, inflation, policy rate, and any later entries. Order is the drift order. */
   environment: readonly EnvironmentEntryDefinition[]
   /** Rolled in this order, then each type's targets in listed order. */
@@ -273,6 +292,11 @@ export type EventTypeDefinition = {
    * ("beat", "hotter than expected"), not the price move. Omitted, the key itself is used.
    */
   directionWords?: Readonly<Record<EventDirection, string>>
+  /**
+   * Chance, before the run's regime, that informed money hears of this event once it is
+   * scheduled and trades ahead of it. Omitted means 0.
+   */
+  leak?: number
   modifiers: readonly EnvironmentModifier[]
 }
 
@@ -322,11 +346,27 @@ export type PriceStepEvent = {
   fair: number
   pull: number
   noise: number
+  /** Cents moved by order-flow parties beyond the pull and the noise. Absent when 0. */
+  flow?: number
   rawMove: number
   cappedMove: number
   capped: boolean
   newPrice: number
   gapAfter: number
+}
+
+/** One party's net demand in a stock for the day, and the cents it moved the price. Logged only when not 0. */
+export type ParticipantFlowEvent = {
+  kind: 'participantFlow'
+  day: number
+  asset: string
+  party: 'informed'
+  /** Signed cents of demand. Positive buys. */
+  demandCents: number
+  depthCents: number
+  moveCents: number
+  /** Scheduled events being traded ahead of. */
+  events: string[]
 }
 
 export type IndexStepEvent = {
@@ -1226,6 +1266,7 @@ export type LogEvent =
   | NoiseRollEvent
   | PriceStepEvent
   | IndexStepEvent
+  | ParticipantFlowEvent
   | EnvDriftEvent
   | EventRollEvent
   | EventDirectionEvent
@@ -1270,6 +1311,15 @@ export type SessionState = {
  * `calendarRolls` is not part of `scheduled`. A later distortion step must not filter it.
  * `feed` is the full day-ahead feed. Filtering it must not change this object or any stream.
  */
+/** Own stream and regime for the order-flow parties. Plain JSON, cloned with the market. */
+export type ParticipantState = {
+  stream: RngStream
+  /** The run's regime: scales every leak chance. Never shown. */
+  informed: number
+  /** Scheduled event ids that informed money knows about. */
+  leaked: string[]
+}
+
 export type MarketState = {
   day: number
   streams: RngState
@@ -1281,6 +1331,8 @@ export type MarketState = {
   calendarRolls: CalendarRoll[]
   scheduled: ScheduledEvent[]
   active: ActiveEffect[]
+  /** Order-flow parties. Absent when the definitions have none. Never reads player state. */
+  participants?: ParticipantState
   log: LogEvent[]
   /** Feed for `day + 1`. Day 0 can hold rumours only, because nothing has fired yet. */
   feed: DayFeed

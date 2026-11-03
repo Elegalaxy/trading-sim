@@ -1,25 +1,25 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Market depth plan (`doc/plans/2026-11-03-market-depth.md`). M0 to M3 are done (M2 committed in `f606bca`). Next for the sim files: save fill history H1 (waits on M3 commit), then market depth M4. The Step 26 playtests are still open.
-- **Uncommitted: M3, slippage (plan option I1):**
-  - `src/sim/constants.ts`: `SLIPPAGE_FREE_SHARE` 5%, `SLIPPAGE_K` 1, volatility floor 1%, cap 20%.
-  - `src/sim/trading.ts`: `slippageCents`, `fillBarVolume`; `quoteFill` takes a bar volume; `closePartOfPosition` takes `stopVolume`. Market orders, liquidations (also the loan's forced sale and the bill preview, same path) and stops pay it. Limit orders and take profits do not.
-  - `src/sim/resting.ts`: stops pass the triggering bar's volume. `types.ts`, `log.ts`: `orderFill.slippage` (cents a share), logged only above 0.
-  - `src/content/assets.ts`: M4X gets `liquidityNotionalCents`.
-  - UI: `OrderPanel.tsx` shows a Slippage row when above 0 (checked in the browser: 600 NOVA at 20x showed $198). `Guide.tsx` has the exact rule.
-  - Tests: new `src/sim/slippage.test.ts`; `trading`, `margin` and `leverage` tests use deep liquidity on their defs, `resting` and `leverage` hand-set bars use a large bar volume.
-  - Docs: GAME_DESIGN section 7 rule, section 16 batch table and open question, changelog; plan M3 done.
-  - Checks: typecheck and lint pass, npm test 197 passed (32 files). No fixture or market hash changed.
-- **Finding for the user:** liquidations paying slippage raised backstop write-offs at 50x about seven times (longNova50 $160,055, shortNova50 $151,468 over 100 runs) and brought them back at 20x ($7,154). Player result is unchanged (equity floors at $0) and the fat 50x short winning tail is gone. Decided 2026-11-04: liquidations keep paying slippage.
+- **Current Goal:** Two things share this checkout. Market depth M0 to M3 are committed (M3 in `8806b83`). The Step 26 playtests are still open.
+  - Fill history (`doc/plans/2026-11-04-save-fill-history.md`): H1 to H3 are done and uncommitted. H4 is next.
+  - M4 (informed money, order-flow parties) is done and uncommitted, built in the market-depth session. Its files: new `src/sim/participants.ts` and `.test.ts`, `src/content/participants.ts`; edits to `sim/events.ts` (export `affectedAssets`, `leak` check), `sim/market.ts`, `sim/summary.ts`, `harness/cli.ts`, `content/events.ts` (`leak` per type), `content/index.ts`, `persist/save.ts` (optional `participants` key), the `demo-30-price-log` fixture, GAME_DESIGN and the plan. It shares `types.ts` and `log.ts` with H1 to H3 (hunks: `ParticipantDefinitions`, `ParticipantState`, `ParticipantFlowEvent`, `leak`, `flow`). Result: pre-news drift 0.3% (earnings 0.6%), day-0 move 0.53% to 0.40%, random bot median unchanged, non-price fixture lines identical. 217 tests pass.
+- **Fill history, H1 to H3 (uncommitted):**
+  - New `src/sim/fills.ts` (`recordFill`, `assertFills`, `closeTime`, `FILLS_MAX` 20,000) and `fills.test.ts` (12 tests).
+  - `GameState.fills: FillRecord[]` (`types.ts`): one row per market order, limit fill, TP, SL, liquidation (fee = trade fee plus liquidation fee) and forced sale for missed loan interest. Each row has `n`, asset, day, `HH:MM` time, side, quantity, fill price, fee, realized P&L or null, slippage, `via`.
+  - Rows are appended in `trading.ts` (`interpretOrder` takes `via` and `time`), `resting.ts` (exits, limit fills), `margin.ts`, `loan.ts`. `monthly.ts` cover-check scratch gets `fills: []`, so previews never write.
+  - `save.ts`: `fills` is optional in `inspectSave` (old saves load); `continueGame` in `store.ts` starts it empty. Row shape checked. Test in `save.test.ts`.
+  - UI: History, P&L and chart marks read `game.fills`. `TradeRecord`, `collectFills`, `marks` are removed from `store.ts`. History labels Liquidation and Forced sale; the chart marks them (dark red, amber).
+  - Checks: typecheck and lint pass. `npm test`: everything passes except the other session's `participants.test.ts`. Browser (seed `demo`, port 5175): a trade, End day, reload, the History row is still there.
+  - **Known gap (H4):** after a reload the chart has no candle for past days, so the Buy/Sell/TP/SL marks do not show. H4 saves the past days' 15-minute bars (`closes`) and the equity curve. The `closes` and `equity` types live in `ui/store.ts`, and `persist` may import sim types only, so decide where the shape goes first (e.g. a sim-side `GameState` field or a typed envelope field).
 - **Active Decisions / Constraints:**
-  - Win rule: open losses count, open profit does not (`[PROVISIONAL]`).
+  - Fill history: sim ledger, H4 yes (after H3), old saves load with an empty ledger, no mid-day saves.
+  - The 15-minute clock step costs nothing (`[CONFIRMED]`, 2026-11-04).
+  - Win rule: open losses count, open profit does not (`[PROVISIONAL]`). Liquidations keep paying slippage (decided 2026-11-04).
   - Telegraphing: bent items are unmarked; stress and energy show as a screen-edge effect (`StatEdge.tsx`).
   - Free-time numbers are provisional: points 4/2 (cap 20, start 2), course 6 units (2/1), energy 4/2.
-  - Sizes and liquidity are placeholders. A 50x whole-account order now often fails on slippage; the panel shows the cost first.
-  - The guide is a reference, not a strategy. The 8% daily cap is `[CONFIRMED]`. No market party reads player state yet (M13 changes that).
-  - The dev server serves stale modules after edits. Restart it on a ReferenceError or an odd render error.
+  - Sizes and liquidity are placeholders. The guide is a reference, not a strategy. The 8% daily cap is `[CONFIRMED]`. No market party reads player state yet (M13 changes that).
+  - `GameState.fills` is required: any hand-built GameState needs `fills: []`.
+  - The dev server serves stale modules after edits. Restart it on a ReferenceError or an odd render error. A restart may pick another port (5175 now), which has its own localStorage.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-  - The 15-minute clock step costs nothing (`[CONFIRMED]`, user decision 2026-11-04, GAME_DESIGN section 5).
-  - Save fill history: plan `doc/plans/2026-11-04-save-fill-history.md` (H1–H5), all questions answered 2026-11-04 (sim ledger, H4 yes after H3, old saves empty ledger, no mid-day saves). It shares `trading.ts`, `resting.ts` and `margin.ts` with M3, so H1 starts once M3 is committed.
-- **Exact Next Step:** M3 is committed. Start H1 (fill ledger), and M4 (participants) after the Step 26 playtests.
+- **Exact Next Step:** Commit H1 to H3 apart from the M4 files (stage by path). Then H4 and the Guide line (H5). M4 continues in its own session after the Step 26 playtests.

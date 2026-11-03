@@ -95,6 +95,7 @@ export function daySummary(dayLog: readonly LogEvent[]): DaySummary {
       case 'headline':
       case 'rumourGenerated':
       case 'noiseRoll':
+      case 'participantFlow':
       case 'fairValueChange':
       case 'envDrift':
       case 'eventRoll':

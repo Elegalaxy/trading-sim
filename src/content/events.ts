@@ -22,6 +22,7 @@ function modifier(
 export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   {
     id: 'earningsBeat',
+    leak: 0.6,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.08,
@@ -39,6 +40,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'productLaunch',
+    leak: 0.4,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.05,
@@ -52,6 +54,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'scandal',
+    leak: 0.3,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.04,
@@ -68,6 +71,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'managementChange',
+    leak: 0.3,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.05,
@@ -81,6 +85,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'regulation',
+    leak: 0.4,
     scope: 'sector',
     targets: SECTORS,
     chance: 0.06,
@@ -94,6 +99,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'supplyShock',
+    leak: 0.1,
     scope: 'sector',
     targets: SECTORS,
     chance: 0.05,
@@ -107,6 +113,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'demandShift',
+    leak: 0.1,
     scope: 'sector',
     targets: SECTORS,
     chance: 0.06,
@@ -137,6 +144,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'guidanceUpdate',
+    leak: 0.5,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.06,
@@ -151,6 +159,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'lawsuit',
+    leak: 0.4,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.04,
@@ -164,6 +173,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'contractAward',
+    leak: 0.5,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.05,
@@ -177,6 +187,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'buyback',
+    leak: 0.3,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.04,
@@ -190,6 +201,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'dividendChange',
+    leak: 0.3,
     scope: 'stock',
     targets: STOCKS,
     chance: 0.05,
@@ -204,6 +216,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'inflationDataShock',
+    leak: 0.1,
     scope: 'market',
     targets: ['market'],
     chance: 0.08,
@@ -218,6 +231,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'growthDataShock',
+    leak: 0.1,
     scope: 'market',
     targets: ['market'],
     chance: 0.08,
@@ -232,6 +246,7 @@ export const EVENT_DEFINITIONS: readonly EventTypeDefinition[] = [
   },
   {
     id: 'inputCostShock',
+    leak: 0.1,
     scope: 'sector',
     targets: SECTORS,
     chance: 0.05,

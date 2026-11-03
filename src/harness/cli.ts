@@ -205,7 +205,7 @@ function parseArgs(argv: readonly string[]): CliOptions {
 }
 
 function isPriceKind(kind: LogEvent['kind']): boolean {
-  return kind === 'noiseRoll' || kind === 'priceStep' || kind === 'indexStep'
+  return kind === 'noiseRoll' || kind === 'priceStep' || kind === 'indexStep' || kind === 'participantFlow'
 }
 
 function isFeedKind(kind: LogEvent['kind']): boolean {
@@ -222,6 +222,7 @@ function matchesAsset(event: LogEvent, asset: string): boolean {
     case 'noiseRoll':
     case 'priceStep':
     case 'indexStep':
+    case 'participantFlow':
     case 'effectApplied':
     case 'fairValueChange':
       return event.asset === asset

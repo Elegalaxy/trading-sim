@@ -201,6 +201,14 @@ export type ParticipantDefinitions = {
     /** An event of this many percent or more trades at full size. Smaller ones trade in proportion. */
     magnitudeRefPercent: number
   }
+  news: {
+    /**
+     * Share of the gap to news-adjusted fair value that news traders close each day a stock has
+     * news in play, on top of the pull. The run's regime draws from this range. Above 1 overshoots.
+     */
+    efficiencyMin: number
+    efficiencyMax: number
+  }
 }
 
 export type MarketDefinitions = {
@@ -360,7 +368,7 @@ export type ParticipantFlowEvent = {
   kind: 'participantFlow'
   day: number
   asset: string
-  party: 'informed'
+  party: 'informed' | 'news'
   /** Signed cents of demand. Positive buys. */
   demandCents: number
   depthCents: number
@@ -1316,6 +1324,8 @@ export type ParticipantState = {
   stream: RngStream
   /** The run's regime: scales every leak chance. Never shown. */
   informed: number
+  /** The run's news-trader efficiency (a share of the gap closed each news day). Never shown. */
+  news: number
   /** Scheduled event ids that informed money knows about. */
   leaked: string[]
 }

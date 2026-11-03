@@ -232,11 +232,14 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M5: News traders
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M4
 - Files to create or change: `src/sim/participants.ts`, `src/content/participants.ts`, tests, price log fixture
 - What changes: on a headline, news traders price in a regime-dependent share of the remaining effect, sometimes above 1, decaying. This is the knob that sets the post-headline edge.
 - Verification: event study day +1 to +3 drift falls toward the target the user picks (question 3); overshoot-then-reversal visible on some seeds.
+- Progress: done 2026-11-04. `newsFlow` in `sim/participants.ts`: on each day a stock has an effect applied, `move = news x (fair + pending effect - price)`, where `pending` is what its active effects still have to apply and `news` is the run's efficiency (regime draw after the informed one, 0.4 to 0.7 in `content/participants.ts`). It lands on the day fair value first moves, before the headline is readable. `ParticipantState.news`, `ParticipantFlowEvent.party` is `informed` or `news`, `priceStep.flow` is the sum. Depth does not scale it (public news).
+- Result (seed abc, 300 runs): stock headlines `after3` 1.45% to 0.77% (1x hold, costs are about 0.5% a round trip); day 0 move 0.40% to 1.83%, so the move is now in the price by day 2. `followHeadlines` median $2,992 (M0 $3,504, M4 $3,392): break-even, as chosen in Question 3. `fadeHeadlines` $2,261, random $2,864 (M4 $2,923). Efficiency 0.3 to 0.6 left `followHeadlines` at $3,110, 0.5 to 0.9 at $2,815 with 2.3% of stock-days capped. Capped stock-days rose from 0.07% to 1.3% at the chosen range (event days hit the 8% cap more often, flagged for M11).
+- Finding: `buyRumour` median rose from $2,624 (M0) to $3,069 and a true rumour now runs 1.9% to its claim day (was 0.55%), because news traders move the price more on the event day while false rumours stay flat. The edge moved from headlines to rumours, as the plan's risks section predicted. M6 (retail crowd) is the party meant to add sell-the-news and a false-rumour pump.
 
 ### Step M6: Retail crowd and momentum bots
 

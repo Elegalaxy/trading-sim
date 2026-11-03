@@ -49,13 +49,13 @@ function market(leak: number | undefined, participants = true): MarketDefinition
     environment: [{ id: 'policyRate', start: 4, driftSpeed: 0 }],
     events: [news('news', leak)],
     ...(participants
-      ? { participants: { depthDays: 10, informed: { capitalCents: 15_000_000, regimeMin: 1, regimeMax: 1, magnitudeRefPercent: 5 } } }
+      ? { participants: { depthDays: 10, informed: { capitalCents: 15_000_000, regimeMin: 1, regimeMax: 1, magnitudeRefPercent: 5 }, news: { efficiencyMin: 0.5, efficiencyMax: 0.5 } } }
       : {}),
   }
 }
 
 function flows(state: MarketState): ParticipantFlowEvent[] {
-  return state.log.filter((event): event is ParticipantFlowEvent => event.kind === 'participantFlow')
+  return state.log.filter((event): event is ParticipantFlowEvent => event.kind === 'participantFlow' && event.party === 'informed')
 }
 
 function run(defs: MarketDefinitions, seed: string, days: number): { state: MarketState; flows: ParticipantFlowEvent[] } {
@@ -138,6 +138,54 @@ describe('informed money', () => {
     const source = io.readFileSync(file, 'utf8')
     for (const word of ['GameState', 'positions', 'resting', 'perception', 'accounts']) {
       expect(source.includes(word)).toBe(false)
+    }
+  })
+})
+
+function newsFlows(state: MarketState): ParticipantFlowEvent[] {
+  return state.log.filter((event): event is ParticipantFlowEvent => event.kind === 'participantFlow' && event.party === 'news')
+}
+
+describe('news traders', () => {
+  const quiet: MarketDefinitions = { ...market(undefined), events: [{ ...news('news', undefined), chance: 0 }] }
+
+  it('trade on a day an effect is applied, by the efficiency times the gap to fair value plus what is still to come', () => {
+    const state = createMarket(quiet, 'newsy')
+    state.scheduled.push({
+      id: 'news:NOVA:1',
+      typeId: 'news',
+      target: 'market',
+      eventDay: 1,
+      direction: 'up',
+      magnitudePercent: 5,
+      duration: 2,
+      decay: 'linear',
+      headline: 'news',
+    })
+    const before = state.assets.NOVA.priceCents
+    stepMarketDay(state, quiet)
+    const flow = newsFlows(state).find((item) => item.asset === 'NOVA')
+    if (flow === undefined) throw new Error('news traders did not trade on the first effect day')
+    const part = state.active[0].parts.find((item) => item.asset === 'NOVA')
+    if (part === undefined) throw new Error('missing effect part')
+    const target = state.assets.NOVA.fairValue + part.totalDelta / 2
+    expect(flow.moveCents).toBeCloseTo(0.5 * (target - before), 6)
+    expect(flow.moveCents).toBeGreaterThan(0)
+    const step = state.log.find((event) => event.kind === 'priceStep' && event.asset === 'NOVA')
+    if (step?.kind !== 'priceStep') throw new Error('missing price step')
+    expect(step.flow).toBeCloseTo(flow.moveCents, 6)
+    // The second and last effect day trades again; the day after, with nothing in play, they do not.
+    stepMarketDay(state, quiet)
+    expect(newsFlows(state).some((item) => item.asset === 'NOVA')).toBe(true)
+    stepMarketDay(state, quiet)
+    expect(newsFlows(state)).toEqual([])
+  })
+
+  it('stay out of a market with no news', () => {
+    const state = createMarket(quiet, 'dull')
+    for (let day = 0; day < 10; day += 1) {
+      stepMarketDay(state, quiet)
+      expect(newsFlows(state)).toEqual([])
     }
   })
 })

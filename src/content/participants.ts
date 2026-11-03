@@ -17,4 +17,8 @@ export const PARTICIPANT_DEFINITIONS: ParticipantDefinitions = {
     regimeMax: 1.5,
     magnitudeRefPercent: 5,
   },
+  news: {
+    efficiencyMin: 0.4,
+    efficiencyMax: 0.7,
+  },
 }

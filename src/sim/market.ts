@@ -15,7 +15,7 @@ import {
 } from './constants.ts'
 import { assertEnvironmentDefinitions, driftEnvironment, initialEnvironment } from './environment.ts'
 import { applyDueEffects, assertEventDefinitions, rollEventsForDay } from './events.ts'
-import { assertParticipantDefinitions, assignLeaks, createParticipants, informedFlow } from './participants.ts'
+import { assertParticipantDefinitions, assignLeaks, createParticipants, informedFlow, newsFlow } from './participants.ts'
 import { assertFeedDefinitions, assertFeedState, publishFeed, type FiredHeadline } from './feed.ts'
 import { createRng, nextNormal } from './rng.ts'
 import {
@@ -28,6 +28,7 @@ import {
   type MarketDefinitions,
   type MarketState,
   type NoiseRollEvent,
+  type ParticipantFlowEvent,
   type PriceStepEvent,
 } from './types.ts'
 
@@ -375,6 +376,8 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   const effects = applyDueEffects(state, defs)
   tagCalendarEffects(effects)
   for (const event of effects) state.log.push(event)
+  const inPlay = new Set<string>()
+  for (const event of effects) if (event.kind === 'effectApplied') inPlay.add(event.asset)
 
   for (const def of defs.assets) {
     if (def.kind !== 'stock') continue
@@ -384,8 +387,11 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
     const fair = asset.fairValue
     const pull = ((fair - previous) * FAIR_VALUE_PULL_NUMERATOR) / FAIR_VALUE_PULL_DENOMINATOR
     const noise = z * def.dailyVolatility * previous
-    const flow = informedFlow(state, defs, def)
-    const rawMove = flow === null ? pull + noise : pull + noise + flow.moveCents
+    const flows = [informedFlow(state, defs, def), newsFlow(state, defs, def, inPlay)].filter(
+      (item): item is ParticipantFlowEvent => item !== null,
+    )
+    const flowMove = flows.reduce((sum, item) => sum + item.moveCents, 0)
+    const rawMove = flows.length === 0 ? pull + noise : pull + noise + flowMove
     const applied = applyCappedMove(previous, rawMove)
     const noiseEvent: NoiseRollEvent = { kind: 'noiseRoll', day, asset: def.id, z }
     const priceEvent: PriceStepEvent = {
@@ -396,7 +402,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
       fair,
       pull,
       noise,
-      ...(flow === null ? {} : { flow: flow.moveCents }),
+      ...(flows.length === 0 ? {} : { flow: flowMove }),
       rawMove,
       cappedMove: applied.delta,
       capped: applied.capped,
@@ -404,7 +410,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
       gapAfter: fair - applied.newPrice,
     }
     state.log.push(noiseEvent)
-    if (flow !== null) state.log.push(flow)
+    for (const item of flows) state.log.push(item)
     state.log.push(priceEvent)
     asset.priceCents = applied.newPrice
   }

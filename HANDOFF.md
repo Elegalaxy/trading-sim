@@ -1,10 +1,11 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Two things share this checkout. Market depth M0 to M3 are committed (M3 in `8806b83`). The Step 26 playtests are still open.
-  - Fill history (`doc/plans/2026-11-04-save-fill-history.md`): H1 to H3 are done and uncommitted. H4 is next.
-  - M4 (informed money, order-flow parties) is done and uncommitted, built in the market-depth session. Its files: new `src/sim/participants.ts` and `.test.ts`, `src/content/participants.ts`; edits to `sim/events.ts` (export `affectedAssets`, `leak` check), `sim/market.ts`, `sim/summary.ts`, `harness/cli.ts`, `content/events.ts` (`leak` per type), `content/index.ts`, `persist/save.ts` (optional `participants` key), the `demo-30-price-log` fixture, GAME_DESIGN and the plan. It shares `types.ts` and `log.ts` with H1 to H3 (hunks: `ParticipantDefinitions`, `ParticipantState`, `ParticipantFlowEvent`, `leak`, `flow`). Result: pre-news drift 0.3% (earnings 0.6%), day-0 move 0.53% to 0.40%, random bot median unchanged, non-price fixture lines identical. 217 tests pass.
-- **Fill history, H1 to H3 (uncommitted):**
+- **Current Goal:** Two things share this checkout. Market depth M0 to M4 are committed (M4 in `658d205`). The Step 26 playtests are still open.
+  - Fill history (`doc/plans/2026-11-04-save-fill-history.md`): H1 to H3 are done and committed (`e256d83`). H4 is next.
+  - M4 (informed money, committed `658d205`) and M5 (news traders, uncommitted) are built in the market-depth session. M5 files: `sim/participants.ts` (`newsFlow`), `participants.test.ts`, `sim/market.ts`, `sim/types.ts` (`news` regime, `party`), `persist/save.ts` (`news` key), `content/participants.ts` (efficiency 0.4 to 0.7), the `demo-30-price-log` fixture, GAME_DESIGN and the plan.
+  - M5 result (seed abc, 300 runs): `followHeadlines` median $2,992 (break-even, as chosen), headline `after3` 1.45% to 0.77%. Side effects to know: 8%-capped stock-days 0.07% to 1.3%, and `buyRumour` is now the strong bot ($3,069; true rumours run 1.9% to their claim day). M6 (retail crowd) is meant to fix that. 219 tests pass.
+- **Fill history, H1 to H3 (committed in `e256d83`):**
   - New `src/sim/fills.ts` (`recordFill`, `assertFills`, `closeTime`, `FILLS_MAX` 20,000) and `fills.test.ts` (12 tests).
   - `GameState.fills: FillRecord[]` (`types.ts`): one row per market order, limit fill, TP, SL, liquidation (fee = trade fee plus liquidation fee) and forced sale for missed loan interest. Each row has `n`, asset, day, `HH:MM` time, side, quantity, fill price, fee, realized P&L or null, slippage, `via`.
   - Rows are appended in `trading.ts` (`interpretOrder` takes `via` and `time`), `resting.ts` (exits, limit fills), `margin.ts`, `loan.ts`. `monthly.ts` cover-check scratch gets `fills: []`, so previews never write.
@@ -22,4 +23,4 @@
   - `GameState.fills` is required: any hand-built GameState needs `fills: []`.
   - The dev server serves stale modules after edits. Restart it on a ReferenceError or an odd render error. A restart may pick another port (5175 now), which has its own localStorage.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Exact Next Step:** Commit H1 to H3 apart from the M4 files (stage by path). Then H4 and the Guide line (H5). M4 continues in its own session after the Step 26 playtests.
+- **Exact Next Step:** H4 and the Guide line (H5). M4 continues in its own session after the Step 26 playtests.

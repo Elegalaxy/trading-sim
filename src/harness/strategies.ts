@@ -8,12 +8,21 @@
 // at that leverage, as large as the margin allows. They open again after a
 // liquidation. They exist to measure how often high leverage is liquidated and
 // how often the backstop is used.
+// followHeadlines, fadeHeadlines and buyRumour trade the news a player can read
+// (the visible feed for the bot's job and lifestyle, without stress bias) at 1x,
+// one stock trade per asset, each a fifth of trading equity. The headline bots
+// trade a stock headline the way its event points (fade: the other way) and close
+// it NEWS_HOLD_DAYS later. buyRumour trades a stock rumour the way it claims and
+// closes it in the session after the claimed day, when the headline would be out.
+// They measure whether reading the news pays after spread and fees (plan Step M0).
 
 import {
   MARGIN_MIN_RATIO_DENOMINATOR,
   MARGIN_MIN_RATIO_NUMERATOR,
 } from '../sim/constants.ts'
 import { applyCommand } from '../sim/game.ts'
+import { activeJob } from '../sim/jobs.ts'
+import { playerVisibleFeed } from '../sim/lifestyle.ts'
 import { createRng, nextInt } from '../sim/rng.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import type { GameState, MarketDefinitions, OrderSide, RngStream } from '../sim/types.ts'
@@ -27,6 +36,9 @@ export const STRATEGY_NAMES = [
   'longNova20',
   'longNova50',
   'shortNova50',
+  'followHeadlines',
+  'fadeHeadlines',
+  'buyRumour',
 ] as const
 
 export type StrategyName = (typeof STRATEGY_NAMES)[number]
@@ -52,6 +64,28 @@ const SHRINK = 0.97
 const MAX_SHRINKS = 40
 const MAX_WALK = 64
 const MAX_TOP_UP = 8
+/** Market days a headline trade is held. */
+const NEWS_HOLD_DAYS = 3
+/** Share of trading equity one news trade uses, at 1x. */
+const NEWS_SHARE = 0.2
+
+type NewsMode = 'follow' | 'fade' | 'rumour'
+
+const NEWS_BOTS: Partial<Record<StrategyName, NewsMode>> = {
+  followHeadlines: 'follow',
+  fadeHeadlines: 'fade',
+  buyRumour: 'rumour',
+}
+
+/** What the news bots remember between days. One per run. */
+export type BotMemory = {
+  /** The market day on which each open news trade is closed, by asset. */
+  exitDay: Record<string, number>
+}
+
+export function createBotMemory(): BotMemory {
+  return { exitDay: {} }
+}
 
 export function isStrategyName(value: string): value is StrategyName {
   return (STRATEGY_NAMES as readonly string[]).includes(value)
@@ -277,6 +311,66 @@ function placeRandom(game: GameState, defs: MarketDefinitions, stream: RngStream
   return action
 }
 
+function stockTarget(defs: MarketDefinitions, eventId: string): string | null {
+  const target = eventId.split(':')[1]
+  if (target === undefined) return null
+  const asset = defs.assets.find((item) => item.id === target)
+  return asset?.kind === 'stock' ? asset.id : null
+}
+
+/** Close every news trade whose day has come. A position already liquidated is just forgotten. */
+function closeDueNews(game: GameState, defs: MarketDefinitions, memory: BotMemory, action: DayAction): void {
+  for (const asset of Object.keys(memory.exitDay).sort()) {
+    const due = memory.exitDay[asset]
+    if (due === undefined || game.market.day < due) continue
+    delete memory.exitDay[asset]
+    const shares = game.positions[asset]?.signedShares ?? 0
+    if (shares === 0) continue
+    const quantity = Math.abs(shares)
+    if (submit(game, defs, asset, shares > 0 ? 'sell' : 'buy', quantity)) {
+      action.orders += 1
+      action.lastQuantity = quantity
+    } else {
+      action.rejections += 1
+    }
+  }
+}
+
+/** Open a 1x trade worth NEWS_SHARE of equity, or what free margin allows. Shrinks on rejection. */
+function openNews(game: GameState, defs: MarketDefinitions, asset: string, side: OrderSide, action: DayAction): boolean {
+  const price = requireAssetPrice(game, asset)
+  const book = tradingEquity(game, defs)
+  const room = Math.min(book.equity * NEWS_SHARE, book.equity - book.required)
+  let quantity = Math.floor(room / price)
+  for (let tries = 0; quantity > 0 && tries < MAX_SHRINKS; tries += 1) {
+    if (submit(game, defs, asset, side, quantity, 1)) {
+      action.orders += 1
+      action.lastQuantity = quantity
+      return true
+    }
+    action.rejections += 1
+    quantity = Math.floor(quantity * SHRINK)
+  }
+  return false
+}
+
+function placeNews(game: GameState, defs: MarketDefinitions, mode: NewsMode, memory: BotMemory): DayAction {
+  const action = emptyAction()
+  closeDueNews(game, defs, memory, action)
+  const feed = playerVisibleFeed(game.market.feed, activeJob(game.job), game.lifestyle)
+  for (const item of feed.items) {
+    if ((mode === 'rumour') !== (item.kind === 'rumour') || item.direction === undefined) continue
+    const asset = stockTarget(defs, item.kind === 'headline' ? item.eventId : item.targetEventId)
+    if (asset === null || memory.exitDay[asset] !== undefined) continue
+    if ((game.positions[asset]?.signedShares ?? 0) !== 0) continue
+    const withNews = item.direction === 'up' ? 'buy' : 'sell'
+    const side: OrderSide = mode === 'fade' ? (withNews === 'buy' ? 'sell' : 'buy') : withNews
+    const exit = item.kind === 'rumour' ? game.market.day + item.leadDays : game.market.day + NEWS_HOLD_DAYS
+    if (openNews(game, defs, asset, side, action)) memory.exitDay[asset] = exit
+  }
+  return action
+}
+
 /** Open the market. A day starts closed, and an order before this is rejected. */
 function skipToMarket(game: GameState, defs: MarketDefinitions): void {
   const from = game.section
@@ -306,12 +400,16 @@ function skipToMarket(game: GameState, defs: MarketDefinitions): void {
   }
 }
 
-/** One day of the named strategy. `randomStream` is required only for `random`. */
+/**
+ * One day of the named strategy. `randomStream` is required only for `random`,
+ * and `memory` only for the news bots.
+ */
 export function actDay(
   strategy: StrategyName,
   game: GameState,
   defs: MarketDefinitions,
   randomStream: RngStream | null,
+  memory?: BotMemory,
 ): DayAction {
   skipToMarket(game, defs)
   if (strategy === 'hold') return emptyAction()
@@ -325,6 +423,11 @@ export function actDay(
   }
   const leveraged = LEVERAGED[strategy]
   if (leveraged !== undefined) return placeLeveraged(game, defs, leveraged.side, leveraged.leverage)
+  const news = NEWS_BOTS[strategy]
+  if (news !== undefined) {
+    if (memory === undefined) throw new Error(`[DEBUG batch] ${strategy} is missing its bot memory`)
+    return placeNews(game, defs, news, memory)
+  }
   if (randomStream === null) throw new Error('[DEBUG batch] random strategy is missing its harness stream')
   return placeRandom(game, defs, randomStream)
 }

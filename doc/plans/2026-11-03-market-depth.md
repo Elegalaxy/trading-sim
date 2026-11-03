@@ -36,6 +36,8 @@ Read from the code on 2026-11-03.
 
 ### 4.1 Options
 
+User decision 2026-11-03: **B, real orders.** The recommendation below is kept for the record. M4 builds B: each party submits net demand in shares, price moves by that demand against the stock's depth (from M2), institutions are the party that buys below fair value and sells above it (replacing the fixed 35% pull), and noise traders replace the noise term. The damping and clamps in section 10 become required, not optional.
+
 - **A. Value offsets (recommended).** Each party adds a signed offset, in percent of fair value, to a per-stock *anchor*. The pull aims at `anchor = fair value + Σ offsets` instead of at fair value. The 35% pull itself stands for institutions and value money. Offsets decay and are logged per party. Small, stable, easy to tune and to explain in a debug line.
 - **B. Order flow and depth.** Each party submits net demand in shares, and price clears against per-stock depth. Closer to a real market and more emergent, but harder to keep stable (feedback loops, runaway trends) and harder to tune in 120-day runs. Worth revisiting if A feels mechanical.
 - **C. Pattern templates** (for example "after a true rumour, add +x% then −y%"). Rejected: this scripts strategies, which the user does not want.
@@ -165,12 +167,27 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M0: Event-study report and baseline
 
-- Status: `todo`
+- Status: `done`
 - Depends on: none
 - Files to create or change: `src/harness/strategies.ts`, `src/harness/report.ts`, `src/harness/batch.ts`, `src/harness/cli.ts`, `src/harness/strategies.test.ts`
 - What changes: an event-study report: average signed move around each headline by day offset −3 to +5, split by event type, scope and whether a true rumour preceded it; the move on a false rumour's claimed day; the share of capped stock-days. New bots `followHeadlines` (enter after a headline in its fact direction, exit 3 days later), `fadeHeadlines`, `buyRumour`. Record the current numbers (about 0.5% on the day and 2.1% by day 3 for stock headlines) as the baseline in Progress.
 - Must not change: any `src/sim` or `src/content` file, any fixture.
 - Verification: `npm run sim -- --seed abc --days 120 --batch 300 --strategy followHeadlines` prints the report; numbers match the measurement quoted in section 2 within noise.
+- Progress: 2026-11-03: `src/harness/eventStudy.ts` prints `[sim] study` lines after every batch report, whatever the strategy (it reads only the market log, the stored feed and closes). `d<k>` is the signed move from the close before the event day to close N+k; `after<k>` is from close N, the first price a headline reader can trade at. Bots `followHeadlines`, `fadeHeadlines`, `buyRumour` trade the visible, unbiased feed at 1x, a fifth of equity per trade. Two new tests in `strategies.test.ts` (bots close on time and leave the market hash equal to an idle run; study lines are printed). npm test 182 passed, typecheck and lint passed. No sim, content or fixture change.
+  Baseline, seed `abc`, 300 runs of 120 days (start trading equity $3,000):
+
+  | Group | n | d−3 | d0 | d1 | d3 | d5 | after1 | after3 | after5 |
+  |---|---|---|---|---|---|---|---|---|---|
+  | stock headlines | 51,234 | +0.06 | +0.53 | +1.24 | +2.15 | +2.52 | +0.71 | +1.63 | +2.01 |
+  | sector events | 24,816 | −0.15 | +0.48 | +1.14 | +2.33 | +3.03 | +0.66 | +1.86 | +2.56 |
+  | market events | 28,452 | −0.03 | +0.32 | +0.81 | +1.68 | +1.97 | +0.50 | +1.37 | +1.67 |
+  | policy decision | 4,800 | −0.14 | +0.57 | +0.97 | +1.40 | +1.63 | +0.41 | +0.85 | +1.08 |
+  | inflation release | 4,800 | −0.35 | +0.42 | +0.73 | +1.17 | +1.59 | +0.32 | +0.77 | +1.19 |
+  | growth release | 4,800 | +0.30 | +0.30 | +0.46 | +0.53 | +0.46 | +0.16 | +0.23 | +0.16 |
+
+  Percent, signed the way the news points; standard error of d3 is 0.02 to 0.07. By type, the largest post-headline drift is scandal (after3 +3.7) and lawsuit (+2.5), the smallest buyback (+0.6). Stock headlines with a true rumour before them move the same as those without (d3 2.16 vs 2.07): nothing prices news in today. Types that only point one way (buyback, product launch, contract award, scandal, lawsuit) show the price falling about 0.4% over the 3 days before, in both directions; two-way types show nothing. That looks like the market's average drift, not information; a drift-adjusted column would confirm it.
+  Rumours, from the close when generated to the claimed day: true ones +0.5% (+1.76% two days later) at every tier; false ones about 0. Capped stock-days: 0.08% (112 of 144,000).
+  Bots, final trading equity p10 / p50 / p90: `hold` $3,000 / $3,000 / $3,000; `followHeadlines` $3,191 / $3,504 / $3,860 (no losing decile at 1x); `fadeHeadlines` $1,762 / $1,949 / $2,132; `buyRumour` $2,367 / $2,624 / $2,862 (the false ~40% and the round trips cost more than the true ones earn). No liquidations.
 
 ### Step M1: Bias direction from the event, not the text
 
@@ -292,3 +309,18 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 10. Government as a party: later (recommended), or a policy put after index crashes now?
 11. Saves from before M4 and M10: reject as damaged (as in Steps 28 and 32), or write an upgrade?
 12. Order: start with M0 to M3 (measurement, bias fix, liquidity, slippage), which do not change the market, before participants?
+
+### Answers (2026-11-03)
+
+- 1: B, real orders (section 4.1).
+- 2: yes. Informed money reads the 3-day schedule; calendar items never leak.
+- 3: a little. Target for M5: `followHeadlines` at 1x ends near break-even to slightly positive after costs, at any hold of 1 to 5 days (M0 baseline: median +17% a run). The Guide keeps "a few days" and never states a hold.
+- 4: C1, consensus from last released values, no randomness.
+- 5: E1, random earnings events for now. M8 is not planned.
+- 6: open. The user's first idea was order flow. With real-order parties (answer 1), the player's orders can join the same flow later as a new step after M6; that needs the seeded rule read as "same seed and same commands, same market". M3 (slippage) stays first.
+- 7: yes. Volume becomes the liquidity measure (changes the provisional "volume is cosmetic" rule in M2).
+- 8: yes to a cap per channel that scales with stress. Open: the user suggested distorted posts carry no tell, with verify still showing the true feed. The tell is `[CONFIRMED]` in GAME_DESIGN section 9, so this needs an explicit decision, and whether it covers posts only or news too.
+- 9: keep the 8% cap (K1) while participants are built; revisit in M11.
+- 10: government party later.
+- 11: reject old saves as damaged. There are no real players yet, only testers, who restart.
+- 12: yes. Next are M0, M2 and M3; M1 is done.

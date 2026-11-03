@@ -4,7 +4,8 @@ import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { createGame, endDay } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
-import { STRATEGY_NAMES, actDay } from './strategies.ts'
+import { createEventStudy, finishStudyRun, recordStudyDay, startStudyRun, studyLines } from './eventStudy.ts'
+import { STRATEGY_NAMES, actDay, createBotMemory } from './strategies.ts'
 
 // The high-leverage bots open one large position at their leverage, leave the market
 // alone, and open again after a liquidation.
@@ -55,5 +56,48 @@ describe('high-leverage strategies', () => {
     const next = actDay('longNova20', game, defs, null)
     expect(next.orders).toBe(0)
     expect(game.positions.NOVA?.signedShares).toBe(shares)
+  })
+})
+
+describe('news bots and the event study', () => {
+  it('trade the news, close on time, and see the same market as an idle run', () => {
+    for (const name of ['followHeadlines', 'fadeHeadlines', 'buyRumour'] as const) {
+      const game = createGame(defs, 'news')
+      const idle = createGame(defs, 'news')
+      const memory = createBotMemory()
+      let orders = 0
+      for (let day = 0; day < 40 && game.runEnd === null && game.bill === null; day += 1) {
+        orders += actDay(name, game, defs, null, memory).orders
+        actDay('hold', idle, defs, null)
+        for (const [asset, exit] of Object.entries(memory.exitDay)) {
+          // An open trade is never kept past its exit day.
+          expect(exit).toBeGreaterThan(game.market.day)
+          expect(game.positions[asset]?.signedShares ?? 0).not.toBe(0)
+        }
+        endDay(game, defs)
+        endDay(idle, defs)
+        expect(stateHash(game.market)).toBe(stateHash(idle.market))
+      }
+      expect(orders).toBeGreaterThan(2)
+    }
+  })
+
+  it('reports signed moves around effects and rumours', () => {
+    const study = createEventStudy(defs)
+    for (const seed of ['study-1', 'study-2']) {
+      const game = createGame(defs, seed)
+      startStudyRun(study, game.market)
+      for (let day = 0; day < 60 && game.runEnd === null && game.bill === null; day += 1) {
+        actDay('hold', game, defs, null)
+        endDay(game, defs)
+        recordStudyDay(study, game.market)
+      }
+      finishStudyRun(study)
+    }
+    const lines = studyLines(study)
+    expect(lines[0]).toMatch(/^\[sim\] study cappedStockDayShare=\d\.\d{6} /)
+    const stock = lines.find((line) => line.startsWith('[sim] study group=stock '))
+    expect(stock).toMatch(/ d-3=-?\d+\.\d{3} .* d0=-?\d+\.\d{3} .* after3=-?\d+\.\d{3} /)
+    expect(lines.some((line) => line.startsWith('[sim] study group=rumour:false:'))).toBe(true)
   })
 })

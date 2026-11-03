@@ -1,13 +1,15 @@
 // Batch runner. Each run gets a seed derived from the base seed and the run
 // index, still valid as a --seed. Strategies act, then endDay. Prices are not
-// moved from here. The per-day market log is not printed.
+// moved from here. The per-day market log is not printed. Every batch also
+// prints the event study (eventStudy.ts), which reads only the market.
 
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { createGame, endDay } from '../sim/game.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { RNG_STREAM_NAMES, type GameState, type LogEvent, type MarketDefinitions } from '../sim/types.ts'
+import { createEventStudy, finishStudyRun, recordStudyDay, startStudyRun, studyLines, type EventStudy } from './eventStudy.ts'
 import { csvRelativePath, reportLines, writeCsv, type BatchStats, type LargestMove, type RunRecord } from './report.ts'
-import { actDay, createRandomStream, type StrategyName } from './strategies.ts'
+import { actDay, createBotMemory, createRandomStream, type StrategyName } from './strategies.ts'
 
 const SEED_PATTERN = /^[A-Za-z0-9-]{1,32}$/
 const INDEX_ID = 'M4X'
@@ -164,9 +166,19 @@ function readAccountDay(game: GameState, totals: RunTotals): void {
   }
 }
 
-function runOne(defs: MarketDefinitions, seed: string, days: number, strategy: StrategyName, run: number, stats: BatchStats): RunRecord & RunTotals {
+function runOne(
+  defs: MarketDefinitions,
+  seed: string,
+  days: number,
+  strategy: StrategyName,
+  run: number,
+  stats: BatchStats,
+  study: EventStudy,
+): RunRecord & RunTotals {
   const game = createGame(defs, seed)
   const randomStream = strategy === 'random' ? createRandomStream(seed) : null
+  const memory = createBotMemory()
+  startStudyRun(study, game.market)
   const totals: RunTotals = {
     orders: 0,
     rejections: 0,
@@ -179,7 +191,7 @@ function runOne(defs: MarketDefinitions, seed: string, days: number, strategy: S
   for (let step = 0; step < days; step += 1) {
     if (game.runEnd !== null || game.bill !== null) break
     const before = marketPicture(game, defs)
-    const action = actDay(strategy, game, defs, randomStream)
+    const action = actDay(strategy, game, defs, randomStream, memory)
     const after = marketPicture(game, defs)
     if (after !== before) {
       throw new Error(`[DEBUG batch] strategy changed the market seed=${seed} day=${game.market.day} asset=${INDEX_ID}`)
@@ -199,11 +211,13 @@ function runOne(defs: MarketDefinitions, seed: string, days: number, strategy: S
       if (game.runEnd !== null) break
       throw new Error(`[DEBUG batch] day ${game.market.day} seed=${seed} has no price step`)
     }
+    recordStudyDay(study, game.market)
     if (dayCapped.value) stats.cappedDays += 1
     stats.runDays += 1
     played += 1
     readAccountDay(game, totals)
   }
+  finishStudyRun(study)
   if (played < days) {
     stats.endedEarly += 1
     const reason = game.runEnd?.reason ?? (game.bill !== null ? 'billPending' : 'stopped')
@@ -255,9 +269,10 @@ export function runBatch(request: BatchRequest): void {
     records: [],
   }
   const records: RunRecord[] = []
+  const study = createEventStudy(defs)
   for (let run = 1; run <= request.batch; run += 1) {
     const seed = runSeed(request.seed, run)
-    const row = runOne(defs, seed, request.days, request.strategy, run, stats)
+    const row = runOne(defs, seed, request.days, request.strategy, run, stats, study)
     records.push({
       run: row.run,
       seed: row.seed,
@@ -278,4 +293,5 @@ export function runBatch(request: BatchRequest): void {
   writeCsv(stats)
   console.log(`[DEBUG batch] wrote csv=${relative} runs=${records.length}`)
   for (const line of reportLines(stats)) console.log(line)
+  for (const line of studyLines(study)) console.log(line)
 }

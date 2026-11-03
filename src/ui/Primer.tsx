@@ -27,8 +27,9 @@ export function Primer() {
       </p>
       <p>
         The warning state is energy below 40 or stress above 60. Those meters change color. In that state, news can lean
-        toward your open positions. Every distorted item carries the same small diamond and tint. That mark is the tell.
-        The market, the events, and the fills stay the same.
+        toward your open positions, and the edge of the screen glows or darkens. Bent items look like any other item:
+        Verify shows the true feed, and the end-of-day report counts them. The market, the events, and the fills stay the
+        same.
       </p>
       <p>this is a simulation, not financial advice</p>
     </section>

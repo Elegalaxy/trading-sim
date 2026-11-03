@@ -21,7 +21,10 @@ describe('display candles', () => {
     expect(out).toHaveLength(8)
     expect(out[0]).toMatchObject({ open: 100, close: 101, time: '17:00', volume: 100 })
     expect(out[7]).toMatchObject({ close: 108, time: '18:45' })
-    expect(candleRangeLabel(out[1]!)).toBe('Day 1 17:15')
+    // Sim day 1 is the player's day 2, as on the top bar.
+    expect(candleRangeLabel(out[1]!)).toBe('Day 2 17:15')
+    const before = buildCandles([{ ...day1, day: -3 }], '15m')
+    expect(candleRangeLabel(before[0]!)).toBe('3 days before start 17:00')
   })
 
   it('groups four bars into an hour', () => {
@@ -45,7 +48,7 @@ describe('display candles', () => {
   it('groups days into a week with a wick and summed volume', () => {
     const [week] = buildCandles([day1, day2], '1W')
     expect(week).toMatchObject({ startDay: 1, endDay: 2, open: 100, close: 104, high: 109, low: 99, volume: 1600 })
-    expect(candleRangeLabel(week!)).toBe('Day 1–2')
+    expect(candleRangeLabel(week!)).toBe('Day 2–3')
   })
 
   it('shows a live day only up to the clock', () => {

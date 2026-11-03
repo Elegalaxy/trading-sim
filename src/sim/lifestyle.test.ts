@@ -189,14 +189,32 @@ describe('lifestyle upgrades, downgrades, and courses', () => {
       debugLifestyle(`before course ${jobId} rejected ${rejectionReason(game)}`)
     }
 
+    // Study finishes an enrolled course: a jobless daytime slot gives 2 of its 6 units, an evening 1.
+    function finishCourse(): void {
+      while (game.study.course !== null) {
+        const slot = (['daytime', 'evening'] as const).find((item) => !game.study.used.includes(item))
+        if (slot === undefined) endDay(game, defs)
+        else applyCommand(game, defs, { type: 'study', slot, activity: 'course' })
+      }
+    }
+
     applyCommand(game, defs, { type: 'buyCourse', course: 'finance' })
     expect(game.accounts.cashCents).toBe(STARTING_CASH_CENTS - COURSE_COST_CENTS)
-    expect(game.job.courses).toEqual(['finance'])
+    expect(game.job.courses).toEqual([])
+    expect(game.study.course).toEqual({ id: 'finance', units: 0 })
     expect(lifestyleExpensesCents(game.lifestyle)).toBe(BASE_MONTHLY_EXPENSES_CENTS)
     const bought = game.log.at(-1)
     if (bought?.kind !== 'coursePurchased') throw new Error('[DEBUG lifestyle] missing coursePurchased')
     expect(formatEvent(bought)).toBe(`day=0 kind=coursePurchased course=finance cost=${COURSE_COST_CENTS}`)
     debugLifestyle(`coursePurchased finance cost=${bought.cost} expenses=${lifestyleExpensesCents(game.lifestyle)}`)
+    applyCommand(game, defs, { type: 'setJob', jobId: 'tradingFloor' })
+    expect(rejectionReason(game)).toBe('jobLocked')
+    applyCommand(game, defs, { type: 'buyCourse', course: 'basic' })
+    expect(rejectionReason(game)).toBe('alreadyEnrolled')
+    finishCourse()
+    expect(game.log.at(-1)?.kind).toBe('courseCompleted')
+    expect(game.job.courses).toEqual(['finance'])
+    expect(game.study.course).toBeNull()
 
     applyCommand(game, defs, { type: 'setJob', jobId: 'tradingFloor' })
     expect(game.log.at(-1)?.kind).toBe('jobChangeRequested')
@@ -207,6 +225,7 @@ describe('lifestyle upgrades, downgrades, and courses', () => {
 
     const cash = game.accounts.cashCents
     applyCommand(game, defs, { type: 'buyCourse', course: 'basic' })
+    finishCourse()
     expect(game.job.courses).toEqual(['finance', 'basic'])
     expect(game.accounts.cashCents).toBe(cash - COURSE_COST_CENTS)
     applyCommand(game, defs, { type: 'setJob', jobId: 'officeClerk' })
@@ -216,7 +235,7 @@ describe('lifestyle upgrades, downgrades, and courses', () => {
     expect(game.accounts.cashCents).toBe(cash - COURSE_COST_CENTS)
     debugLifestyle('finance unlocks tradingFloor and freelanceAnalyst; basic unlocks officeClerk')
 
-    advance(game, defs, 30)
+    advance(game, defs, 30 - game.market.day)
     expect(billDueCents(game)).toBe(BASE_MONTHLY_EXPENSES_CENTS)
     debugLifestyle(`course bill=${billDueCents(game)} unchanged`)
   })

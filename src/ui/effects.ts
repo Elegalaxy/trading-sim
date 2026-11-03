@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { ENERGY_WARNING_BELOW, STRESS_WARNING_ABOVE } from '../sim/stats.ts'
 
 // Provisional cosmetic scale (plan section 2.4). Display only: no simulation calls.
 // No blur and no delay at energy 40 or above. Maximum at energy 0.
@@ -119,6 +120,18 @@ export function cosmeticFx(energy: number, reduced: boolean): CosmeticFx {
     delayMs: (drop * FX_MAX_DELAY_MS) / FX_CLEAR_AT_ENERGY,
     tell,
   }
+}
+
+/** Screen-edge strength (StatEdge.tsx). */
+/** Screen edge: 0 at the warning mark, 1 at the extreme, null outside the warning state. */
+export function stressLevel(stress: number): number | null {
+  if (!(stress > STRESS_WARNING_ABOVE)) return null
+  return Math.min(1, (stress - STRESS_WARNING_ABOVE) / (100 - STRESS_WARNING_ABOVE))
+}
+
+export function energyLevel(energy: number): number | null {
+  if (!(energy < ENERGY_WARNING_BELOW)) return null
+  return Math.min(1, (ENERGY_WARNING_BELOW - energy) / ENERGY_WARNING_BELOW)
 }
 
 export function formatBlurPx(blurPx: number): string {

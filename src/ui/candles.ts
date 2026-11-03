@@ -126,8 +126,22 @@ export function buildCandles(days: readonly DaySource[], timeframe: TimeframeId)
   return size === undefined ? daily : groupCandles(daily, size)
 }
 
+/**
+ * Sources carry sim days (closes so far). The player's day is one more, the same number the
+ * top bar shows. Made-up history before the run reads as days before the start.
+ */
+function dayName(simDay: number): string {
+  return simDay >= 0 ? String(simDay + 1) : `−${-simDay}`
+}
+
 export function candleRangeLabel(candle: Candle): string {
-  const days = candle.startDay === candle.endDay ? `Day ${candle.startDay}` : `Day ${candle.startDay}–${candle.endDay}`
+  if (candle.endDay < 0) {
+    const span = candle.startDay === candle.endDay ? `${-candle.startDay}` : `${-candle.startDay}–${-candle.endDay}`
+    const range = `${span} day${candle.startDay === -1 && candle.endDay === -1 ? '' : 's'} before start`
+    return candle.time === null ? range : `${range} ${candle.time}`
+  }
+  const days =
+    candle.startDay === candle.endDay ? `Day ${dayName(candle.startDay)}` : `Day ${dayName(candle.startDay)}–${dayName(candle.endDay)}`
   return candle.time === null ? days : `${days} ${candle.time}`
 }
 

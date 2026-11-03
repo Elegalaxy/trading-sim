@@ -358,6 +358,65 @@ ul {
   border-color: #6aa2ff;
 }
 
+.report.run-end {
+  border-width: 2px;
+  border-style: solid;
+}
+
+.report.run-end h2 {
+  margin-top: 0;
+}
+
+.run-end-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 14px;
+  border-bottom: 2px solid;
+  background: #161a1e;
+  font-size: 13px;
+}
+
+.run-end-banner button {
+  padding: 2px 10px;
+}
+
+.study-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.exchange .study-actions button {
+  padding: 4px 9px;
+  font-size: 12px;
+  color: #eaecef;
+  background: #1e2329;
+  border: 1px solid #f0b90b55;
+  border-radius: 4px;
+}
+
+.exchange .study-actions button:hover:not(:disabled) {
+  border-color: #f0b90b;
+}
+
+.exchange .study-actions button:disabled {
+  color: #5e6673;
+  border-color: #2b3139;
+}
+
+.study-note,
+.slot-use {
+  color: #848e9c;
+  font-size: 12px;
+}
+
+.slot-use {
+  color: #f0b90b;
+}
+
 .bill-actions {
   display: flex;
   flex-wrap: wrap;
@@ -429,17 +488,52 @@ ul {
   margin: 0;
 }
 
-.tell {
-  color: #e2b15a;
-  margin-right: 0.35em;
-  font-size: 0.85em;
+/* Screen edge for the stat warning states (StatEdge.tsx). Above the desk, below dialogs.
+   --level runs from 0 at the warning mark to 1 at the extreme. */
+.stat-edge {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
 }
 
-.distorted {
-  background: rgba(226, 177, 90, 0.18);
-  box-shadow: inset 3px 0 0 #e2b15a;
-  border-radius: 4px;
-  padding: 2px 6px;
+.stat-edge-stress {
+  box-shadow: inset 0 0 calc(24px + 72px * var(--level)) calc(2px + 10px * var(--level))
+    rgba(214, 72, 64, calc(0.25 + 0.45 * var(--level)));
+  animation: stat-edge-pulse calc(2.4s - 1.2s * var(--level)) ease-in-out infinite;
+}
+
+.stat-edge-energy {
+  background: radial-gradient(
+    ellipse at center,
+    transparent calc(70% - 25% * var(--level)),
+    rgba(6, 8, 12, calc(0.35 + 0.4 * var(--level))) 100%
+  );
+}
+
+.stat-edge-still {
+  animation: none;
+}
+
+@keyframes stat-edge-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-edge-stress {
+    animation: none;
+  }
+}
+
+.report-filtered {
+  margin: 8px 0 0;
+  color: #f0a39c;
 }
 
 .visual-settings input {
@@ -667,9 +761,22 @@ ul {
   border-bottom: 1px solid #2b3139;
 }
 
+.tv-hint {
+  margin-left: auto;
+  color: #5e6673;
+  font-size: 11px;
+}
+
+.tv-now {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
 .tv-stage {
   position: relative;
   min-height: 0;
+  user-select: none;
 }
 
 .tv-stage .chart {
@@ -1055,14 +1162,82 @@ dl.estimate dd {
 }
 
 .exit-levels li button {
-  margin-left: auto;
+  margin-left: 4px;
+  padding: 1px 8px;
+  font-size: 12px;
 }
 
-.exit-add {
-  display: flex;
-  flex-wrap: wrap;
+/* The row spans the whole positions table, which can be wider than the panel. */
+.exits-editor {
+  position: sticky;
+  left: 0;
+  max-width: min(820px, 100%);
+}
+
+.exits-editor > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.exit-form {
+  flex-basis: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #2b3139;
+  border-radius: 4px;
+  background: #11151a;
+}
+
+.exit-row {
+  display: grid;
+  grid-template-columns: 210px auto 1fr;
   gap: 10px;
-  align-items: flex-end;
+  align-items: center;
+}
+
+.exit-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.exit-row label span {
+  min-width: 88px;
+  font-size: 12px;
+  color: #b7bdc6;
+}
+
+.exit-tp label span {
+  color: #0ecb81;
+}
+
+.exit-sl label span {
+  color: #f6465d;
+}
+
+.exit-row .size-modes button {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.exit-row input[aria-invalid='true'] {
+  border-color: #f6465d;
+}
+
+.exit-warn {
+  color: #f6465d;
+  font-size: 12px;
+}
+
+.exit-submit {
+  justify-self: start;
+}
+
+@media (max-width: 900px) {
+  .exit-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .exit-size select {

@@ -2,7 +2,14 @@
 // trading equity change, money in and out (salary, bills, interest, funding, fees), each
 // asset's move since the clock, energy and stress, and anything to act on. Payday, a bill,
 // a liquidation or a job change always opens it. Quiet days open it only while
-// "Show after every day" is on.
+// "Show after every day" is on. It also says how many feed items stress bent that
+// day, since bent items carry no mark while the day is played.
+
+function filteredText(report: Report): string {
+  const items = report.filtered === 1 ? '1 item' : `${report.filtered} items`
+  const tail = report.verified ? 'You checked the true feed.' : 'Verify shows the true feed.'
+  return `Stress bent ${items} in today's feed toward your positions. ${tail}`
+}
 
 import { useState } from 'react'
 import { formatUsd } from './money.ts'
@@ -83,6 +90,8 @@ export function DayReport({ report }: { report: Report | null }) {
             <dd>{delta(report.stressBefore, report.stressAfter)}</dd>
           </div>
         </dl>
+
+        {report.filtered > 0 ? <p className="report-filtered">{filteredText(report)}</p> : null}
 
         {report.notes.length > 0 ? (
           <ul className="report-notes" role="alert">

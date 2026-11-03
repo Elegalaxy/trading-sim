@@ -236,6 +236,23 @@ export const BIAS_CAP_PERCENT = 25
 export const VERIFY_ENERGY_COST = 2
 
 /**
+ * Free time (study.ts). Provisional. The daytime slot (08:00–16:00) is free only when
+ * jobless. The evening slot is the market session, given up before the market opens.
+ * Research earns points; verify spends one. A course is enrolled with cash and finished
+ * by study: a daytime slot gives 2 units, an evening 1.
+ */
+export const STARTING_RESEARCH_POINTS = 2
+export const RESEARCH_POINTS_MAX = 20
+export const RESEARCH_POINTS_DAYTIME = 4
+export const RESEARCH_POINTS_EVENING = 2
+export const VERIFY_RESEARCH_COST = 1
+export const COURSE_STUDY_UNITS = 6
+export const COURSE_UNITS_DAYTIME = 2
+export const COURSE_UNITS_EVENING = 1
+export const STUDY_ENERGY_DAYTIME = 4
+export const STUDY_ENERGY_EVENING = 2
+
+/**
  * Intraday session (design section 5). The market window is split into this many
  * steps of SESSION_STEP_MINUTES. 17:00 to 21:00 is 16 steps of 15 minutes. Provisional.
  */

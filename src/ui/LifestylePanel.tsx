@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { COURSE_OFFERS, LIFESTYLE_OFFERS } from '../content/lifestyle.ts'
+import { COURSE_STUDY_UNITS, COURSE_UNITS_DAYTIME, COURSE_UNITS_EVENING } from '../sim/constants.ts'
 import { lifestyleExpensesCents, projectedBillCents, upfrontCents } from '../sim/lifestyle.ts'
 import type { GameState, LifestyleCategory } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
@@ -9,7 +10,8 @@ import { dispatch } from './store.ts'
 function reasonText(reason: string): string {
   if (reason === 'insufficientFunds') return 'Not enough cash.'
   if (reason === 'alreadyAtTier') return 'That tier is already set.'
-  if (reason === 'alreadyOwned') return 'You already own that course.'
+  if (reason === 'alreadyOwned') return 'You already finished that course.'
+  if (reason === 'alreadyEnrolled') return 'Finish the course you are on first.'
   if (reason === 'invalidTier') return 'That tier is not available.'
   if (reason === 'unknownCategory') return 'That lifestyle category is unknown.'
   if (reason === 'unknownCourse') return 'That course is not for sale.'
@@ -72,7 +74,9 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
       }
       const offer = COURSE_OFFERS.find((item) => item.id === event.course)
       setTone('ok')
-      setMessage(`${offer?.name ?? event.course} bought for ${formatUsd(event.cost, 'course')}. The monthly bill did not change.`)
+      setMessage(
+        `Enrolled in ${offer?.name ?? event.course} for ${formatUsd(event.cost, 'course')}. Study in your free time to finish it (${COURSE_STUDY_UNITS} units).`,
+      )
       return
     }
     const reason = outcome.reason ?? 'rejected'
@@ -128,17 +132,25 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
       <ul className="lifestyle-list">
         {COURSE_OFFERS.map((offer) => {
           const owned = current.job.courses.includes(offer.id)
+          const enrolled = current.study.course
+          const studying = enrolled?.id === offer.id
           return (
             <li key={offer.id}>
               <button
                 type="button"
-                disabled={ended || owned || current.accounts.cashCents < offer.costCents}
+                disabled={ended || owned || enrolled !== null || current.accounts.cashCents < offer.costCents}
                 onClick={() => onCourse(offer.id)}
+                title={enrolled !== null && !studying ? 'Finish the course you are on first.' : undefined}
               >
-                {owned ? `${offer.name} (owned)` : `Buy ${offer.name}`}
+                {owned
+                  ? `${offer.name} (done)`
+                  : studying
+                    ? `${offer.name} ${enrolled.units} of ${COURSE_STUDY_UNITS}`
+                    : `Enrol in ${offer.name}`}
               </button>
               <span>
-                {formatUsd(offer.costCents, offer.name)}. Unlocks {offer.unlocks}. No monthly cost.
+                {formatUsd(offer.costCents, offer.name)} once, then {COURSE_STUDY_UNITS} units of study (a free day gives{' '}
+                {COURSE_UNITS_DAYTIME}, a skipped market {COURSE_UNITS_EVENING}). Unlocks {offer.unlocks}. No monthly cost.
               </span>
             </li>
           )

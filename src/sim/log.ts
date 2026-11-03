@@ -486,6 +486,7 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         'kind=fiCheck',
         `windowDays=${formatNumber(event.windowDays)}`,
         `passive=${formatNumber(event.passiveCents)}`,
+        `openLoss=${formatNumber(event.openLossCents)}`,
         `expenses=${formatNumber(event.expensesCents)}`,
         `streak=${formatNumber(event.streak)}`,
       ].join(' ')
@@ -519,6 +520,24 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `day=${formatNumber(event.day)}`,
         'kind=newsVerified',
         `cost=${formatNumber(event.cost)}`,
+        `points=${formatNumber(event.points)}`,
+      ].join(' ')
+    case 'studied':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=studied',
+        `slot=${formatToken(event.slot, 'slot')}`,
+        `activity=${formatToken(event.activity, 'activity')}`,
+        `points=${formatNumber(event.points)}`,
+        `course=${event.course === null ? 'none' : formatToken(event.course, 'course')}`,
+        `units=${formatNumber(event.units)}`,
+        `energyCost=${formatNumber(event.energyCost)}`,
+      ].join(' ')
+    case 'courseCompleted':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=courseCompleted',
+        `course=${formatToken(event.course, 'course')}`,
       ].join(' ')
     case 'distortion':
       return [

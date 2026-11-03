@@ -76,6 +76,7 @@ import {
   interpretReadNews,
   interpretVerify,
 } from './stats.ts'
+import { assertStudy, initialStudy, interpretStudy, resetStudyDay } from './study.ts'
 import { interpretOrder, tradingEquity } from './trading.ts'
 import {
   RUN_OUTCOMES,
@@ -138,6 +139,8 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'consume' &&
       kind !== 'newsRead' &&
       kind !== 'newsVerified' &&
+      kind !== 'studied' &&
+      kind !== 'courseCompleted' &&
       kind !== 'lifestyleChange' &&
       kind !== 'coursePurchased' &&
       kind !== 'loanTaken' &&
@@ -304,6 +307,9 @@ function assertFi(fi: FiTracker): void {
   if (!Number.isSafeInteger(fi.status.passiveCents)) {
     throw new Error(`FI passive income must be a safe integer, received ${describeValue(fi.status.passiveCents)}`)
   }
+  if (!Number.isSafeInteger(fi.status.openLossCents) || fi.status.openLossCents > 0) {
+    throw new Error(`FI open loss must be a safe integer <= 0, received ${describeValue(fi.status.openLossCents)}`)
+  }
   if (!Number.isSafeInteger(fi.status.expensesCents) || fi.status.expensesCents <= 0) {
     throw new Error(`FI expenses must be a positive safe integer, received ${describeValue(fi.status.expensesCents)}`)
   }
@@ -394,6 +400,7 @@ function assertGame(state: GameState, defs?: MarketDefinitions): void {
   assertPlayerStats(state.stats, state.consumables)
   assertLifestyle(state.lifestyle)
   assertLoan(state.loan)
+  assertStudy(state.study)
 }
 
 /**
@@ -470,6 +477,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     },
     lifestyle: initialLifestyle(),
     loan: initialLoan(),
+    study: initialStudy(),
   }
   refreshPerception(state)
   return state
@@ -535,10 +543,17 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
   } else if (type === 'cancelExit') {
     for (const event of interpretCancelExit(state, cmd)) state.pending.push(event)
   } else if (type === 'skip') {
-    const outcome = interpretSkip(state.section, state.market.day, playerIsJobless(state.job))
-    if (outcome.accepted) state.section = outcome.section
-    const events = outcome.accepted ? outcome.events : [outcome.event]
-    for (const event of events) state.pending.push(event)
+    if (state.study.used.includes('evening')) {
+      // The evening went to study, so the market stays closed today.
+      state.pending.push({ kind: 'commandRejected', day: state.market.day, command: 'skip', reason: 'studiedEvening' })
+    } else {
+      const outcome = interpretSkip(state.section, state.market.day, playerIsJobless(state.job))
+      if (outcome.accepted) state.section = outcome.section
+      const events = outcome.accepted ? outcome.events : [outcome.event]
+      for (const event of events) state.pending.push(event)
+    }
+  } else if (type === 'study') {
+    for (const event of interpretStudy(state, cmd)) state.pending.push(event)
   } else if (type === 'tick') {
     const outcome = interpretTick(state, cmd)
     if (outcome.accepted) {
@@ -681,6 +696,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const job = activeJob(state.job)
   state.section = sectionForJob(job)
   state.sleepHours = job.sleepHours
+  resetStudyDay(state)
   refreshPerception(state)
   return state
 }

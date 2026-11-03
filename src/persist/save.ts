@@ -35,6 +35,7 @@ const STATE_KEYS = [
   'perception',
   'lifestyle',
   'loan',
+  'study',
 ] as const
 const MARKET_KEYS = [
   'day',
@@ -59,6 +60,7 @@ const STAT_KEYS = ['energy', 'stress', 'consumed', 'newsReads'] as const
 const PERCEPTION_KEYS = ['day', 'shown', 'events', 'verified'] as const
 const LIFESTYLE_KEYS = ['home', 'infoFeed'] as const
 const LOAN_KEYS = ['balanceCents', 'interestDueCents', 'interestDay'] as const
+const STUDY_KEYS = ['points', 'course', 'used'] as const
 const RUN_END_KEYS = ['outcome', 'day', 'reason', 'netWorthCents', 'score'] as const
 
 export type RunMode = (typeof RUN_MODES)[number]
@@ -288,6 +290,11 @@ function checkState(value: unknown): string | null {
     const interestDay = finiteNumber(value.loan.interestDay, 'state.loan.interestDay')
     if (interestDay !== null) return interestDay
   }
+  if (!isRecord(value.study) || !sameKeys(value.study, STUDY_KEYS)) return 'shape:state.study'
+  const points = finiteNumber(value.study.points, 'state.study.points')
+  if (points !== null) return points
+  if (value.study.course !== null && !isRecord(value.study.course)) return 'shape:state.study.course'
+  if (!Array.isArray(value.study.used)) return 'shape:state.study.used'
   return walk(value, 'state')
 }
 

@@ -71,7 +71,7 @@ const TOPICS: readonly Topic[] = [
         <h3>Reading costs energy</h3>
         <p>
           Without reading you only see the top headline. Reading opens the whole feed for the day. Verify shows the true
-          feed when stress has bent what you see.
+          feed when stress has bent what you see. It costs a research point, earned in free time.
         </p>
       </>
     ),
@@ -428,7 +428,21 @@ const TOPICS: readonly Topic[] = [
           <li>Unpaid loan interest sells your worst positions, then savings.</li>
         </ul>
         <h3>Winning</h3>
-        <p>You reach financial independence when passive income covers your expenses for 5 days.</p>
+        <p>
+          You reach financial independence when passive income covers your monthly expenses for 5 days in a row, from day
+          30 on. Passive income is the last 30 days of closed trades and savings interest, minus any net loss on positions
+          still open. Salary and open profit do not count, so a winning trade only counts once you close it, and a losing
+          one counts against you even while you hold it.
+        </p>
+        <h3>Free time</h3>
+        <ul>
+          <li>Jobless, your daytime is free. Anyone can also skip the market for an evening.</li>
+          <li>Research in free time earns research points. Verify spends one.</li>
+          <li>
+            A course costs cash to enrol, then needs study in free time (a free day counts more than an evening). When it
+            is done, its jobs open.
+          </li>
+        </ul>
       </>
     ),
   },
@@ -440,11 +454,15 @@ const TOPICS: readonly Topic[] = [
         <ul>
           <li>Work, short sleep and reading the news use energy. Work, losses, margin warnings and short sleep add stress.</li>
           <li>Neither recovers on its own. Food and drink restore energy or calm stress.</li>
-          <li>Low energy or high stress puts you in a warning state, and the meters change colour.</li>
+          <li>
+            Low energy or high stress puts you in a warning state: the meters change colour and the edge of the screen
+            changes. High stress glows red, low energy darkens the corners. Both get stronger the further you go.
+          </li>
           <li>Low energy blurs and delays the news.</li>
           <li>
             High stress makes the feed lean toward what you want to hear about your positions, more as stress rises. Bent
-            items carry a small diamond: that is the tell. Verify shows the true feed.
+            items look like any other item. Verify shows the true feed, and the end-of-day report says how many items
+            were bent.
           </li>
           <li>The market itself never changes with your stats. Only what you see does.</li>
         </ul>

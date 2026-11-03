@@ -274,6 +274,15 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 - Must not change: `stateHash(market)`; the bias cap per channel; the tell on every distorted post.
 - Verification: market hash equal with social on and off; at stress 100 at most 25% of each channel is distorted; whisper hit rate measured below the low rumour tier.
 
+### Step M13: Player orders join the order flow
+
+- Status: `todo`
+- Depends on: M3, M6
+- What changes: the player's net shares in a bar join the parties' demand, so a large order moves the price for the rest of the session and into the close. After each fill the day's close is previewed again with the player's flow included and the remaining bars are rebuilt from the clock to that close, reusing the day's pre-drawn session normals so no new draws happen. Slippage (M3) then becomes the cost inside the bar.
+- Must not change: same seed and same commands give the same run. A run with no orders, or only orders below a size threshold, gives today's market.
+- Verification: the strategies hash test becomes "idle bot equals idle bot, and small orders equal idle"; a pump-and-dump bot (buy big, sell into its own push) loses money over 300 seeds; the market hash differs only after a large order.
+- Decision recorded: GAME_DESIGN section 15 criterion 9 and section 10 seeded mode are reworded to "same seed and same commands, same market" when this step lands.
+
 ### Step M11: Cap review
 
 - Status: `todo`
@@ -317,9 +326,9 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 - 3: a little. Target for M5: `followHeadlines` at 1x ends near break-even to slightly positive after costs, at any hold of 1 to 5 days (M0 baseline: median +17% a run). The Guide keeps "a few days" and never states a hold.
 - 4: C1, consensus from last released values, no randomness.
 - 5: E1, random earnings events for now. M8 is not planned.
-- 6: open. The user's first idea was order flow. With real-order parties (answer 1), the player's orders can join the same flow later as a new step after M6; that needs the seeded rule read as "same seed and same commands, same market". M3 (slippage) stays first.
+- 6: yes. After the order-flow parties exist, the player's orders join the same flow (Step M13). The seeded rule becomes "same seed and same commands, same market". M3 (slippage) stays first.
 - 7: yes. Volume becomes the liquidity measure (changes the provisional "volume is cosmetic" rule in M2).
-- 8: yes to a cap per channel that scales with stress. Open: the user suggested distorted posts carry no tell, with verify still showing the true feed. The tell is `[CONFIRMED]` in GAME_DESIGN section 9, so this needs an explicit decision, and whether it covers posts only or news too.
+- 8: yes to a cap per channel that scales with stress. The user chose to drop the per-item tell for both news and posts; verify still shows the true feed and the stress meter keeps its warning state. This changes the `[CONFIRMED]` telegraphing rule in GAME_DESIGN section 9, which has not been edited yet. Suggested with it: the end-of-day report says how many items stress filtered that day, so the player can still learn about their own bias after the fact.
 - 9: keep the 8% cap (K1) while participants are built; revisit in M11.
 - 10: government party later.
 - 11: reject old saves as damaged. There are no real players yet, only testers, who restart.

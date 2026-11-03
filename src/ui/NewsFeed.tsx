@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { VERIFY_ENERGY_COST } from '../sim/constants.ts'
+import { VERIFY_ENERGY_COST, VERIFY_RESEARCH_COST } from '../sim/constants.ts'
 import { NEWS_READ_ENERGY_COST } from '../sim/stats.ts'
 import type { HeadlineItem, JobDefinition, ShownFeed, ShownItem } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
 import { dispatch, useTradingStore } from './store.ts'
-import { Tell } from './Tell.tsx'
 
 /** A headline is a fact about today. A report or post is a rumour with a source and a reliability tier. */
 function tagText(item: ShownItem): string {
@@ -60,7 +59,9 @@ export function NewsFeed({
 }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const energy = useTradingStore().run?.game.stats.energy ?? null
+  const game = useTradingStore().run?.game ?? null
+  const energy = game?.stats.energy ?? null
+  const points = game?.study.points ?? 0
   const fx = useCosmeticFx(energy)
   const live = feed === null ? null : { feed, verified }
   const signature = live === null ? 'none' : feedSignature(live.feed, live.verified)
@@ -103,7 +104,13 @@ export function NewsFeed({
     if (!outcome.accepted) {
       const reason = outcome.reason ?? 'rejected'
       console.error(`[ui] rejected verify: ${reason}`)
-      setError(reason === 'runEnded' ? 'The run has ended.' : reason)
+      setError(
+        reason === 'runEnded'
+          ? 'The run has ended.'
+          : reason === 'noResearch'
+            ? 'No research points. Research in your free time to earn them.'
+            : reason,
+      )
       return
     }
     setError(null)
@@ -112,27 +119,28 @@ export function NewsFeed({
 
   return (
     <section className="panel">
-      <h2>
-        {fx.tell ? <Tell /> : null}
-        News
-      </h2>
+      <h2>News</h2>
       <div style={blurStyle}>
         <p>Day {shownFeed.day} headline</p>
-        <p className={top?.distorted === true ? 'distorted' : undefined}>
-          {top?.distorted === true ? <Tell /> : null}
-          {top === undefined ? 'No headline' : itemText(top)}
-        </p>
+        {/* Stress-bent items carry no mark (user decision 2026-11-03). The screen edge and the
+            meters show the state, Verify shows the true feed, and the day report counts them. */}
+        <p>{top === undefined ? 'No headline' : itemText(top)}</p>
       </div>
       <p>
         {free ? 'The first read is free.' : `Reading costs ${NEWS_READ_ENERGY_COST} energy.`}{' '}
-        {`Verifying costs ${VERIFY_ENERGY_COST}.`}
+        {`Verifying costs ${VERIFY_ENERGY_COST} energy and ${VERIFY_RESEARCH_COST} research point.`}
       </p>
       <div className="news-actions">
         <button type="button" onClick={onRead} disabled={readToday}>
           {readToday ? 'Read' : 'Read news'}
         </button>
-        <button type="button" onClick={onVerify} disabled={verified}>
-          {verified ? 'Verified' : 'Verify'}
+        <button
+          type="button"
+          onClick={onVerify}
+          disabled={verified || points < VERIFY_RESEARCH_COST}
+          title={points < VERIFY_RESEARCH_COST ? 'No research points. Research in your free time to earn them.' : undefined}
+        >
+          {verified ? 'Verified' : `Verify (${points} pts)`}
         </button>
       </div>
       {error !== null ? <p role="alert">{error}</p> : null}
@@ -144,8 +152,7 @@ export function NewsFeed({
           ) : (
             <ul>
               {shownFeed.items.map((item, index) => (
-                <li key={`${item.kind}-${index}`} className={item.distorted ? 'distorted' : undefined}>
-                  {item.distorted ? <Tell /> : null}
+                <li key={`${item.kind}-${index}`}>
                   <span className={`feed-tag feed-${item.kind}`}>{tagText(item)}</span> {bodyText(item)}
                 </li>
               ))}

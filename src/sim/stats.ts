@@ -5,7 +5,7 @@
 // Reading the news spends energy. Quiet breaks makes the first read that day free.
 // This module does not draw a random stream and does not write on the market.
 
-import { VERIFY_ENERGY_COST } from './constants.ts'
+import { VERIFY_ENERGY_COST, VERIFY_RESEARCH_COST } from './constants.ts'
 import { activeJob } from './jobs.ts'
 import type {
   CommandRejectedEvent,
@@ -243,6 +243,8 @@ export function assertStatsCommand(event: unknown): void {
     if (row.day < 0) throw new Error(`verify day must be >= 0, received ${describeValue(row.day)}`)
     const cost = assertSafeInteger(row.cost, 'verify cost')
     if (cost < 0) throw new Error(`verify cost must be >= 0, received ${describeValue(row.cost)}`)
+    const points = assertSafeInteger(row.points, 'verify points')
+    if (points < 0) throw new Error(`verify points must be >= 0, received ${describeValue(row.points)}`)
     return
   }
   throw new Error(`stats event kind is unknown, received ${describeValue(kind)}`)
@@ -267,7 +269,7 @@ function writeStat(stats: PlayerStats, stat: StatName, value: number): void {
  * Apply one change and clamp. Returns nothing when the stat does not move.
  * `delta` on the event is the applied change, so before + delta = after.
  */
-function applyDelta(
+export function applyDelta(
   state: GameState,
   day: number,
   stat: StatName,
@@ -388,17 +390,22 @@ export function interpretReadNews(state: GameState): Array<NewsReadEvent | StatC
 
 /**
  * Show today's true visible feed. The shown feed is left as it was.
- * Cost is 2 energy. The first quiet-breaks news read stays free.
+ * Cost is 2 energy and one research point (study.ts earns them). The first
+ * quiet-breaks news read stays free. A second verify the same day, or one
+ * without a point, is logged and rejected.
  * Does not change the section, the market, or the stored feed.
  */
-export function interpretVerify(state: GameState): Array<NewsVerifiedEvent | StatChangeEvent> {
+export function interpretVerify(state: GameState): Array<NewsVerifiedEvent | StatChangeEvent | CommandRejectedEvent> {
   const day = state.market.day
+  if (state.perception.verified) return [rejected(day, 'verify', 'alreadyVerified')]
+  if (state.study.points < VERIFY_RESEARCH_COST) return [rejected(day, 'verify', 'noResearch')]
   const cost = VERIFY_ENERGY_COST
-  const events: Array<NewsVerifiedEvent | StatChangeEvent> = []
+  const events: Array<NewsVerifiedEvent | StatChangeEvent | CommandRejectedEvent> = []
   const spent = applyDelta(state, day, 'energy', 'verify', -cost)
   if (spent !== null) events.push(spent)
+  state.study.points -= VERIFY_RESEARCH_COST
   state.perception.verified = true
-  events.push({ kind: 'newsVerified', day, cost })
+  events.push({ kind: 'newsVerified', day, cost, points: VERIFY_RESEARCH_COST })
   return events
 }
 

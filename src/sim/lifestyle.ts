@@ -1,4 +1,4 @@
-// Lifestyle tiers and courses. This file does not import content.
+// Lifestyle tiers and course enrolment. This file does not import content.
 // An upgrade pays 2 × the monthly cost it adds. A downgrade pays nothing back.
 // The pending bill is copied earlier and is not rewritten here.
 // Home tiers do not change energy or stress. Information feed tiers change
@@ -226,8 +226,9 @@ export type BuyCourseOutcome =
   | { accepted: false; event: CommandRejectedEvent }
 
 /**
- * Buy Basic or Finance once, from cash. The monthly bill does not change.
- * Too little cash, or a second copy, is logged and does not throw.
+ * Enrol in Basic or Finance, paid once from cash. The monthly bill does not change.
+ * The course is owned only after study (study.ts) finishes it. One course at a time.
+ * Too little cash, an owned course, or a second enrolment is logged and does not throw.
  */
 export function interpretBuyCourse(state: GameState, cmd: unknown): BuyCourseOutcome {
   const day = state.market.day
@@ -241,6 +242,7 @@ export function interpretBuyCourse(state: GameState, cmd: unknown): BuyCourseOut
     throw new Error(`courses must be a list, received ${describeValue(state.job.courses)}`)
   }
   if (state.job.courses.includes(course)) return { accepted: false, event: rejected(day, 'buyCourse', 'alreadyOwned') }
+  if (state.study.course !== null) return { accepted: false, event: rejected(day, 'buyCourse', 'alreadyEnrolled') }
   if (state.accounts.cashCents < COURSE_COST_CENTS) {
     return { accepted: false, event: rejected(day, 'buyCourse', 'insufficientFunds') }
   }
@@ -251,7 +253,7 @@ export function interpretBuyCourse(state: GameState, cmd: unknown): BuyCourseOut
   const pendingAmount = state.bill === null ? null : state.bill.amountCents
   const expensesBefore = lifestyleExpensesCents(state.lifestyle)
   state.accounts.cashCents = nextCash
-  state.job.courses.push(course)
+  state.study.course = { id: course, units: 0 }
   if (lifestyleExpensesCents(state.lifestyle) !== expensesBefore) {
     throw new Error('buying a course changed monthly expenses')
   }

@@ -102,9 +102,51 @@ function levelsSummary(levels: readonly ExitLevel[], side: 'long' | 'short'): st
   return `${part('takeProfit')} / ${part('stopLoss')}`
 }
 
+/** Profit or loss of closing `shares` of the row at `price`, before fees. */
+function pnlAt(row: PositionRow, price: number, shares: number): number {
+  const average = row.costCents / row.shares
+  return Math.round((row.side === 'long' ? price - average : average - price) * shares)
+}
+
+function percentFrom(price: number, reference: number): string {
+  const pct = ((price - reference) / reference) * 100
+  return `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`
+}
+
+/** A price `percent` away from the quote in the direction that kind of exit sits. */
+function stepPrice(row: PositionRow, kind: ExitKind, percent: number): number {
+  const up = (kind === 'takeProfit') === (row.side === 'long')
+  return Math.max(1, Math.round(row.price * (1 + (up ? percent : -percent) / 100)))
+}
+
+/** Why this level cannot be placed, in words, or null. Same rule as the sim. */
+function sideProblem(row: PositionRow, kind: ExitKind, price: number): string | null {
+  const above = price > row.price
+  const below = price < row.price
+  const name = kind === 'takeProfit' ? 'take profit' : 'stop loss'
+  const wantAbove = (kind === 'takeProfit') === (row.side === 'long')
+  if (wantAbove && !above) return `A ${row.side}'s ${name} must be above the price (${formatUsd(row.price, 'price')}).`
+  if (!wantAbove && !below) return `A ${row.side}'s ${name} must be below the price (${formatUsd(row.price, 'price')}).`
+  return null
+}
+
+type Draft = { text: string; cents: number | null; error: string | null }
+
+function readDraft(text: string, label: string): Draft {
+  if (text.trim().length === 0) return { text, cents: null, error: null }
+  const parsed = parseUsdToCents(text, label)
+  return parsed.ok ? { text, cents: parsed.cents, error: null } : { text, cents: null, error: parsed.reason }
+}
+
+function centsText(cents: number): string {
+  return (cents / 100).toFixed(2)
+}
+
 /**
- * Take profit and stop loss levels for one position. Each level closes its shares, or the
- * whole position when the shares box is empty. Up to four of each kind.
+ * Take profit and stop loss for one position. Both can be entered at once, each with quick
+ * steps from the price, and the form shows how far each is and what it would make or lose.
+ * Each level closes its shares, or the whole position when the shares box is empty.
+ * Up to four of each kind.
  */
 function ExitsEditor({
   row,
@@ -115,26 +157,62 @@ function ExitsEditor({
   levels: readonly ExitLevel[]
   onDone: (message: Message) => void
 }) {
-  const [kind, setKind] = useState<ExitKind>('takeProfit')
-  const [priceText, setPriceText] = useState('')
+  const [tpText, setTpText] = useState('')
+  const [slText, setSlText] = useState('')
   const [sharesInput, setSharesInput] = useState('')
   const asset = row.asset
+  const tp = readDraft(tpText, 'Take profit')
+  const sl = readDraft(slText, 'Stop loss')
+  const sharesParsed = sharesInput.trim().length === 0 ? null : parsePositiveInteger(sharesInput, 'Shares')
+  const shares = sharesParsed === null ? row.shares : sharesParsed.ok ? Math.min(sharesParsed.value, row.shares) : row.shares
+  const tpProblem = tp.error ?? (tp.cents === null ? null : sideProblem(row, 'takeProfit', tp.cents))
+  const slProblem = sl.error ?? (sl.cents === null ? null : sideProblem(row, 'stopLoss', sl.cents))
+  const sharesProblem =
+    sharesParsed !== null && !sharesParsed.ok
+      ? sharesParsed.reason
+      : sharesParsed !== null && sharesParsed.ok && sharesParsed.value > row.shares
+        ? `The position has ${row.shares} shares.`
+        : null
+  const ready = (tp.cents !== null || sl.cents !== null) && tpProblem === null && slProblem === null && sharesProblem === null
+  const average = Math.round(row.costCents / row.shares)
 
   function onAdd(): void {
-    const price = parseUsdToCents(priceText, kind === 'takeProfit' ? 'Take profit' : 'Stop loss')
-    if (!price.ok) return onDone({ ok: false, text: price.reason })
-    let quantity: number | undefined
-    if (sharesInput.trim().length > 0) {
-      const parsed = parsePositiveInteger(sharesInput, 'Shares')
-      if (!parsed.ok) return onDone({ ok: false, text: parsed.reason })
-      quantity = parsed.value
+    if (!ready) return
+    const quantity = sharesParsed !== null && sharesParsed.ok ? sharesParsed.value : undefined
+    const added: string[] = []
+    for (const [kind, cents] of [
+      ['takeProfit', tp.cents],
+      ['stopLoss', sl.cents],
+    ] as const) {
+      if (cents === null) continue
+      const outcome = dispatch({ type: 'addExit', asset, kind, priceCents: cents, ...(quantity === undefined ? {} : { quantity }) })
+      if (!outcome.accepted) {
+        const done = added.length > 0 ? ` ${added.join(' and ')} added.` : ''
+        return onDone({ ok: false, text: `${asset} ${KIND_LABEL[kind]}: ${reasonText(outcome.reason ?? 'rejected')}.${done}` })
+      }
+      added.push(`${KIND_LABEL[kind]} ${formatUsd(cents, 'exit')}`)
     }
-    const outcome = dispatch({ type: 'addExit', asset, kind, priceCents: price.cents, ...(quantity === undefined ? {} : { quantity }) })
-    if (!outcome.accepted) return onDone({ ok: false, text: `${asset}: ${reasonText(outcome.reason ?? 'rejected')}.` })
-    setPriceText('')
+    setTpText('')
+    setSlText('')
     setSharesInput('')
-    onDone({ ok: true, text: `${asset} ${KIND_LABEL[kind]} added.` })
+    onDone({ ok: true, text: `${asset} ${added.join(' and ')} added.` })
   }
+
+  function preview(kind: ExitKind, draft: Draft, problem: string | null) {
+    if (problem !== null) return <span className="exit-warn">{problem}</span>
+    if (draft.cents === null) return <span className="day-note">Empty: no {kind === 'takeProfit' ? 'take profit' : 'stop loss'}.</span>
+    const pnl = pnlAt(row, draft.cents, shares)
+    return (
+      <span className="day-note">
+        {percentFrom(draft.cents, row.price)} from price · about{' '}
+        <span className={pnl >= 0 ? 'pnl-gain' : 'pnl-loss'}>{formatSignedUsd(pnl, 'exit pnl')}</span> on {shares} sh
+      </span>
+    )
+  }
+
+  const steps: Record<ExitKind, readonly number[]> = { takeProfit: [2, 5, 10], stopLoss: [2, 5, 10] }
+  // Break-even only makes sense once the price has moved past the entry in the position's favour.
+  const breakEvenOk = sideProblem(row, 'stopLoss', average) === null
 
   function onRemove(level: ExitLevel): void {
     const outcome = dispatch({ type: 'cancelExit', asset, id: level.id })
@@ -147,59 +225,103 @@ function ExitsEditor({
 
   return (
     <div className="exits-editor">
+      <p className="day-note">
+        {row.side === 'long' ? 'Long' : 'Short'} {row.shares} {asset} · entry {formatAverage(row.costCents, row.shares)} · price{' '}
+        {formatUsd(row.price, 'price')}. Each level closes its shares at its own price, with no spread.
+      </p>
       {levels.length > 0 ? (
         <ul className="exit-levels">
-          {sortedLevels(levels, row.side).map((level) => (
-            <li key={level.id}>
-              <span className={level.kind === 'takeProfit' ? 'pnl-gain' : 'pnl-loss'}>
-                {KIND_LABEL[level.kind]} {formatUsd(level.priceCents, 'exit')}
-              </span>{' '}
-              closes {level.quantity === null ? 'the rest' : `${level.quantity} of ${row.shares}`}
-              <button type="button" onClick={() => onRemove(level)}>
-                Remove
-              </button>
-            </li>
-          ))}
+          {sortedLevels(levels, row.side).map((level) => {
+            const closes = level.quantity ?? row.shares
+            const pnl = pnlAt(row, level.priceCents, closes)
+            return (
+              <li key={level.id}>
+                <span className={level.kind === 'takeProfit' ? 'pnl-gain' : 'pnl-loss'}>
+                  {KIND_LABEL[level.kind]} {formatUsd(level.priceCents, 'exit')}
+                </span>
+                <span className="day-note">
+                  {percentFrom(level.priceCents, row.price)} · closes {level.quantity === null ? 'the rest' : `${level.quantity} of ${row.shares}`} ·
+                  about <span className={pnl >= 0 ? 'pnl-gain' : 'pnl-loss'}>{formatSignedUsd(pnl, 'exit pnl')}</span>
+                </span>
+                <button type="button" onClick={() => onRemove(level)}>
+                  Remove
+                </button>
+              </li>
+            )
+          })}
         </ul>
-      ) : (
-        <p className="day-note">No exits yet.</p>
-      )}
-      <div className="exit-add">
-        <div className="size-modes" role="group" aria-label="Exit kind">
-          {(['takeProfit', 'stopLoss'] as const).map((item) => (
-            <button key={item} type="button" aria-pressed={kind === item} onClick={() => setKind(item)}>
-              {item === 'takeProfit' ? 'Take profit' : 'Stop loss'}
+      ) : null}
+      <div className="exit-form">
+        {(
+          [
+            ['takeProfit', 'Take profit', tp, tpProblem, setTpText],
+            ['stopLoss', 'Stop loss', sl, slProblem, setSlText],
+          ] as const
+        ).map(([kind, title, draft, problem, setText]) => (
+          <div key={kind} className={`exit-row ${kind === 'takeProfit' ? 'exit-tp' : 'exit-sl'}`}>
+            <label>
+              <span>{title} $</span>
+              <input
+                value={draft.text}
+                onChange={(event) => setText(event.target.value)}
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="none"
+                aria-invalid={problem !== null}
+              />
+            </label>
+            <div className="size-modes" role="group" aria-label={`${title} steps`}>
+              {steps[kind].map((percent) => (
+                <button key={percent} type="button" onClick={() => setText(centsText(stepPrice(row, kind, percent)))}>
+                  {kind === 'takeProfit' ? '+' : '−'}
+                  {percent}%
+                </button>
+              ))}
+              {kind === 'stopLoss' ? (
+                <button
+                  type="button"
+                  disabled={!breakEvenOk}
+                  title={breakEvenOk ? 'Stop at the entry price.' : 'The price has not moved past the entry yet.'}
+                  onClick={() => setText(centsText(average))}
+                >
+                  Break-even
+                </button>
+              ) : null}
+            </div>
+            {preview(kind, draft, problem)}
+          </div>
+        ))}
+        <div className="exit-row">
+          <label>
+            <span>Shares</span>
+            <input
+              value={sharesInput}
+              placeholder={`all ${row.shares}`}
+              onChange={(event) => setSharesInput(event.target.value)}
+              inputMode="numeric"
+              autoComplete="off"
+              aria-invalid={sharesProblem !== null}
+            />
+          </label>
+          <div className="size-modes" role="group" aria-label="Part of the position">
+            {[25, 50, 75].map((percent) => (
+              <button
+                key={percent}
+                type="button"
+                disabled={row.shares < 2}
+                onClick={() => setSharesInput(String(Math.max(1, Math.floor((row.shares * percent) / 100))))}
+              >
+                {percent}%
+              </button>
+            ))}
+            <button type="button" onClick={() => setSharesInput('')}>
+              All
             </button>
-          ))}
+          </div>
+          {sharesProblem !== null ? <span className="exit-warn">{sharesProblem}</span> : <span className="day-note">Both levels use this size.</span>}
         </div>
-        <label>
-          Price ${' '}
-          <input value={priceText} onChange={(event) => setPriceText(event.target.value)} inputMode="decimal" autoComplete="off" />
-        </label>
-        <label>
-          Shares{' '}
-          <input
-            value={sharesInput}
-            placeholder="all"
-            onChange={(event) => setSharesInput(event.target.value)}
-            inputMode="numeric"
-            autoComplete="off"
-          />
-        </label>
-        <div className="size-modes" role="group" aria-label="Part of the position">
-          {[25, 50, 75].map((percent) => (
-            <button
-              key={percent}
-              type="button"
-              disabled={row.shares < 2}
-              onClick={() => setSharesInput(String(Math.max(1, Math.floor((row.shares * percent) / 100))))}
-            >
-              {percent}%
-            </button>
-          ))}
-        </div>
-        <button type="button" onClick={onAdd}>
-          Add
+        <button type="button" className="exit-submit" onClick={onAdd} disabled={!ready}>
+          {tp.cents !== null && sl.cents !== null ? 'Add TP and SL' : sl.cents !== null ? 'Add SL' : 'Add TP'}
         </button>
       </div>
     </div>

@@ -87,10 +87,12 @@ describe('FI hold, run end, and score', () => {
     if (position === undefined || price === undefined) throw new Error('[DEBUG fi] missing NOVA after the day')
     const unrealized = position.signedShares * price - position.costCents
     expect(unrealized).not.toBe(0)
-    const passive = realizedOn(game, 0) + realizedOn(game, 1)
+    // An open loss counts, an open gain does not.
+    const passive = realizedOn(game, 0) + realizedOn(game, 1) + Math.min(0, unrealized)
     expect(check.passiveCents).toBe(passive)
+    expect(check.openLossCents).toBe(Math.min(0, unrealized))
     expect(check.passiveCents).not.toBe(passive + salaryStandIn)
-    expect(check.passiveCents).not.toBe(passive + unrealized)
+    if (unrealized > 0) expect(check.passiveCents).not.toBe(passive + unrealized)
     expect(check.windowDays).toBe(1)
     debugFi(
       `${formatEvent(check)} fee=${fee} unrealized=${unrealized} salaryStandIn=${salaryStandIn} cash=${game.accounts.cashCents}`,
@@ -157,12 +159,12 @@ describe('FI hold, run end, and score', () => {
       }
     }
     expect(game.market.day).toBe(33)
-    expect(fourth).toBe('day=33 kind=fiCheck windowDays=30 passive=3000000 expenses=100000 streak=4')
+    expect(fourth).toBe('day=33 kind=fiCheck windowDays=30 passive=3000000 openLoss=0 expenses=100000 streak=4')
     debugFi(`4th day no win ${fourth}`)
 
     endDay(game, defs)
     const check = fiCheck(game)
-    expect(formatEvent(check)).toBe('day=34 kind=fiCheck windowDays=30 passive=3000000 expenses=100000 streak=5')
+    expect(formatEvent(check)).toBe('day=34 kind=fiCheck windowDays=30 passive=3000000 openLoss=0 expenses=100000 streak=5')
     expect(game.runEnd).toEqual({
       outcome: 'won',
       day: 34,
@@ -175,6 +177,26 @@ describe('FI hold, run end, and score', () => {
     expect(formatEvent(ended)).toBe('day=34 kind=runEnded reason=financialIndependence')
     debugFi(`5th day win ${formatEvent(check)} ${formatEvent(ended)} score=${game.runEnd?.score}`)
     expect(() => endDay(game, defs)).toThrow('end day blocked: runEnded')
+  })
+
+  it('does not win while an open loss eats the realized profit', () => {
+    const defs = market()
+    const game = createGame(defs, 'held-loss')
+    // Window profit is 30 × $50 = $1,500 against $1,000 expenses. A long bought far above the
+    // price is about $2,000 under water, so the run is not independent.
+    const price = game.market.assets.HRBU?.priceCents ?? 0
+    game.positions.HRBU = { asset: 'HRBU', signedShares: 1000, costCents: 1000 * (price + 200), leverage: 50 }
+    game.accounts.tradingCents = 2_000_000 - 1000 * (price + 200)
+    for (let day = 1; day <= FI_STREAK_FROM_DAY + FI_HOLD_DAYS; day += 1) {
+      // Book each day's profit before its close, so funding lands on the same row.
+      game.realized.push({ day, cents: 5_000 })
+      endDay(game, defs)
+    }
+    const check = fiCheck(game)
+    expect(check.openLossCents).toBeLessThan(-100_000)
+    expect(check.passiveCents).toBeLessThan(check.expensesCents)
+    expect(game.runEnd).toBeNull()
+    debugFi(`held loss ${formatEvent(check)}`)
   })
 
   it('ends a no-trade run at day 120 after the bill, without another price step', () => {

@@ -30,6 +30,7 @@ import { JobPanel } from './JobPanel.tsx'
 import { LifestylePanel } from './LifestylePanel.tsx'
 import { LoanPanel } from './LoanPanel.tsx'
 import { sessionPrice } from '../sim/session.ts'
+import { tradingEquity } from '../sim/trading.ts'
 import { buildHistory } from './history.ts'
 import { formatUsd } from './money.ts'
 import { useStoredFlag, useStoredNumber } from './storedFlag.ts'
@@ -171,7 +172,9 @@ export function Dashboard() {
   const events = run === null ? [] : [...run.game.market.log, ...run.game.log, ...run.game.perception.events]
   const payday = run === null ? null : nextPayday(run.game, MARKET_DEFINITIONS)
   const cash = run?.game.accounts.cashCents
-  const trading = run?.game.accounts.tradingCents
+  // Equity, not the cash balance: a leveraged buy borrows, so the balance alone can be far below zero.
+  const trading = run === null ? undefined : tradingEquity(run.game, MARKET_DEFINITIONS).equity
+  const tradingBalance = run?.game.accounts.tradingCents
   const savings = run?.game.accounts.savingsCents
   let changeText = '0.00%'
   let changeUp = true
@@ -211,8 +214,14 @@ export function Dashboard() {
             <dt>Cash</dt>
             <dd>{cash === undefined ? '—' : formatUsd(cash, 'cash')}</dd>
           </div>
-          <div>
-            <dt>Trading</dt>
+          <div
+            title={
+              tradingBalance === undefined
+                ? undefined
+                : `Trading equity: balance ${formatUsd(tradingBalance, 'trading balance')} plus open positions at the current price.`
+            }
+          >
+            <dt>Trading equity</dt>
             <dd>{trading === undefined ? '—' : formatUsd(trading, 'trading')}</dd>
           </div>
           <div>
@@ -224,7 +233,7 @@ export function Dashboard() {
           <p>
             {run === null
               ? 'No run yet.'
-              : `${run.mode === 'seeded' ? 'Seeded' : 'Normal'} · ${run.seed} · Day ${tradingDay(run.game)} of ${RUN_LENGTH_DAYS}`}
+              : `${run.mode === 'seeded' ? 'Seeded' : 'Normal'} · ${run.seed} · Day ${run.game.runEnd?.day ?? tradingDay(run.game)} of ${RUN_LENGTH_DAYS}`}
           </p>
           {payday === null ? null : (
             <span
@@ -318,7 +327,7 @@ export function Dashboard() {
               </button>
             </nav>
             <div className={view === 'chart' ? 'main-pane' : 'main-pane hidden'}>
-              <PriceChart asset={asset} points={points} levels={levels} marks={run?.marks.filter((mark) => mark.asset === asset)} />
+              <PriceChart asset={asset} points={points} levels={levels} marks={run?.history.filter((fill) => fill.asset === asset)} />
             </div>
             {view === 'life' ? (
               <div className="main-pane main-scroll desk desk-grid">

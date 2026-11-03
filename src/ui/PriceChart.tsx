@@ -3,8 +3,12 @@ import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
 import { buildCandles, candleRangeLabel, formatVolume, type Candle, type DaySource, type TimeframeId } from './candles.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
-import { useTradingStore, type TradeMark } from './store.ts'
-import { Tell } from './Tell.tsx'
+import { useTradingStore, type TradeRecord } from './store.ts'
+
+/** Fewest and most candles one view can hold when zooming. */
+const MIN_VISIBLE = 10
+const MAX_VISIBLE = 400
+const ZOOM_STEP = 1.15
 
 const VISIBLE: Record<TimeframeId, number> = {
   '15m': 64,
@@ -84,7 +88,7 @@ function minutesOf(time: string): number {
 }
 
 /** The candle a fill belongs to: its day, and for 15m and 1H candles its time window. */
-function markIndex(bars: readonly Candle[], mark: TradeMark, timeframe: TimeframeId): number {
+function markIndex(bars: readonly Candle[], mark: TradeRecord, timeframe: TimeframeId): number {
   const width = timeframe === '15m' ? 15 : 60
   return bars.findIndex((bar) => {
     if (mark.day < bar.startDay || mark.day > bar.endDay) return false
@@ -99,6 +103,28 @@ function priceY(price: number, low: number, span: number, top: number, height: n
   return top + (1 - (price - low) / span) * height
 }
 
+/** `TP 100 @ $50.00` for an exit, `Buy 100 @ $48.00` for an order or a limit fill. */
+function markLabel(mark: TradeRecord): string {
+  const head =
+    mark.via === 'takeProfit' ? 'TP' : mark.via === 'stopLoss' ? 'SL' : `${mark.side === 'buy' ? 'Buy' : 'Sell'}${mark.via === 'limit' ? ' limit' : ''}`
+  return `${head} ${mark.quantity} @ ${formatUsd(mark.fillCents, 'mark')}`
+}
+
+function markColor(mark: TradeRecord): string {
+  if (mark.via === 'takeProfit') return LEVEL_COLOR.takeProfit
+  if (mark.via === 'stopLoss') return LEVEL_COLOR.stopLoss
+  return mark.side === 'buy' ? UP : DOWN
+}
+
+/** Which candles are on screen: `count` of them, ending `offset` candles before the newest. */
+type Span = { count: number; offset: number }
+
+function clampSpan(span: Span, total: number): Span {
+  const count = Math.round(Math.min(Math.max(span.count, MIN_VISIBLE), Math.max(MIN_VISIBLE, Math.min(MAX_VISIBLE, total))))
+  const offset = Math.round(Math.min(Math.max(span.offset, 0), Math.max(0, total - count)))
+  return count === span.count && offset === span.offset ? span : { count, offset }
+}
+
 export function PriceChart({
   asset,
   points,
@@ -108,7 +134,7 @@ export function PriceChart({
   asset: string
   points: readonly ChartPoint[]
   levels?: readonly ChartLevel[]
-  marks?: readonly TradeMark[]
+  marks?: readonly TradeRecord[]
 }) {
   const energy = useTradingStore().run?.game.stats.energy ?? null
   const fx = useCosmeticFx(energy)
@@ -116,10 +142,21 @@ export function PriceChart({
   const [timeframe, setTimeframe] = useState<TimeframeId>('1D')
   const [hover, setHover] = useState<Hover | null>(null)
   const [size, setSize] = useState({ w: 640, h: 420 })
+  const [rawSpan, setSpan] = useState<Span>({ count: VISIBLE['1D'], offset: 0 })
+  const [drag, setDrag] = useState<{ x: number; offset: number } | null>(null)
   const stageRef = useRef<HTMLDivElement>(null)
 
-  const bars = buildCandles(view.points, timeframe).slice(-VISIBLE[timeframe])
+  const allBars = buildCandles(view.points, timeframe)
+  const span = clampSpan(rawSpan, allBars.length)
+  const end = allBars.length - span.offset
+  const bars = allBars.slice(Math.max(0, end - span.count), end)
+  const live = allBars[allBars.length - 1]
   const drawnAsset = view.asset
+  // Read by the wheel listener, which is attached once.
+  const zoomRef = useRef({ span, total: allBars.length, shown: bars.length })
+  useEffect(() => {
+    zoomRef.current = { span, total: allBars.length, shown: bars.length }
+  })
   const active = hover !== null && bars[hover.index] !== undefined ? bars[hover.index] : bars[bars.length - 1]
   const activeTone = active === undefined ? 'flat' : toneOf(active)
   const lastBar = bars[bars.length - 1]
@@ -146,10 +183,46 @@ export function PriceChart({
     debugLog('[ui]', chartLog)
   }, [chartLog])
 
+  // Wheel zoom keeps the candle under the pointer in place. React's wheel handler is passive,
+  // so it is attached here to be able to stop the page from scrolling.
+  useEffect(() => {
+    const node = stageRef.current
+    if (node === null) return
+    function onWheel(event: WheelEvent): void {
+      const { span: current, total, shown } = zoomRef.current
+      if (total === 0 || node === null) return
+      event.preventDefault()
+      const rect = node.getBoundingClientRect()
+      const plotWidth = Math.max(1, rect.width - AXIS_RIGHT - PAD_LEFT)
+      const fraction = Math.min(1, Math.max(0, (event.clientX - rect.left - PAD_LEFT) / plotWidth))
+      const count = event.deltaY > 0 ? current.count * ZOOM_STEP : current.count / ZOOM_STEP
+      const next = clampSpan({ count, offset: current.offset }, total)
+      // The candle under the pointer, counted back from the newest.
+      const fromEnd = current.offset + (1 - fraction) * shown
+      setSpan(clampSpan({ count: next.count, offset: fromEnd - (1 - fraction) * next.count }, total))
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }, [])
+
   function onTimeframe(next: TimeframeId): void {
     setHover(null)
     setTimeframe(next)
+    setSpan({ count: VISIBLE[next], offset: 0 })
   }
+
+  function onDown(event: PointerEvent<SVGSVGElement>): void {
+    if (event.button !== 0) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setDrag({ x: event.clientX, offset: span.offset })
+  }
+
+  function onUp(event: PointerEvent<SVGSVGElement>): void {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    setDrag(null)
+  }
+
+  const following = span.offset === 0 && span.count === Math.min(VISIBLE[timeframe], Math.max(MIN_VISIBLE, allBars.length))
 
   const filter = blurFilter(fx.blurPx)
   const blurStyle = filter === undefined ? undefined : { filter }
@@ -188,6 +261,11 @@ export function PriceChart({
     if (rect.width <= 0 || rect.height <= 0) return
     const x = ((event.clientX - rect.left) / rect.width) * size.w
     const y = ((event.clientY - rect.top) / rect.height) * size.h
+    if (drag !== null) {
+      // Dragging right shows older candles.
+      const moved = Math.round((event.clientX - drag.x) / slot)
+      setSpan(clampSpan({ count: span.count, offset: drag.offset + moved }, allBars.length))
+    }
     if (x < plotLeft || x >= plotRight) {
       setHover(null)
       return
@@ -207,9 +285,14 @@ export function PriceChart({
             {id}
           </button>
         ))}
+        <span className="tv-hint">Scroll to zoom, drag to look back</span>
+        {following ? null : (
+          <button type="button" className="tv-now" onClick={() => setSpan({ count: VISIBLE[timeframe], offset: 0 })}>
+            Back to now
+          </button>
+        )}
       </div>
       <div className="tv-stage" ref={stageRef} style={blurStyle}>
-        {fx.tell ? <Tell /> : null}
         {bars.length === 0 || active === undefined ? (
           <p className="tv-empty">{drawnAsset}: no candles yet. Open the market and step the clock, or end the day.</p>
         ) : (
@@ -227,7 +310,11 @@ export function PriceChart({
               role="img"
               aria-label={`${drawnAsset} ${timeframe} candles, ${bars.length} bars`}
               onPointerMove={onMove}
+              onPointerDown={onDown}
+              onPointerUp={onUp}
+              onPointerCancel={onUp}
               onPointerLeave={() => setHover(null)}
+              style={{ cursor: drag !== null ? 'grabbing' : 'crosshair', touchAction: 'none' }}
             >
               {ticks.map((tick) => {
                 const y = priceY(tick, yLow, ySpan, plotTop, priceH)
@@ -293,28 +380,61 @@ export function PriceChart({
                   </g>
                 )
               })}
-              {marks.map((mark, n) => {
-                const index = markIndex(bars, mark, timeframe)
-                const bar = bars[index]
-                if (bar === undefined) return null
-                const cx = plotLeft + (index + 0.5) * slot
-                const buy = mark.side === 'buy'
-                const color = buy ? UP : DOWN
-                const tipY = buy ? priceY(bar.low, yLow, ySpan, plotTop, priceH) + 5 : priceY(bar.high, yLow, ySpan, plotTop, priceH) - 5
-                const dir = buy ? 1 : -1
-                return (
-                  <g key={`${mark.day}-${mark.time}-${mark.side}-${n}`}>
-                    <polygon
-                      points={`${cx},${tipY} ${cx - 6},${tipY + dir * 11} ${cx + 6},${tipY + dir * 11}`}
-                      fill={color}
-                      stroke="#0b0e11"
-                    />
-                    <text x={cx} y={tipY + dir * 23} fill={color} fontSize="10" fontWeight="650" textAnchor="middle">
-                      {buy ? 'Buy' : 'Sell'} {mark.quantity} @ {formatUsd(mark.cents, 'mark')}
-                    </text>
-                  </g>
-                )
-              })}
+              {live !== undefined ? (
+                (() => {
+                  // The last price, drawn like the order lines so a level near it is easy to compare.
+                  const raw = priceY(live.close, yLow, ySpan, plotTop, priceH)
+                  const y = Math.min(plotTop + priceH, Math.max(plotTop, raw))
+                  const arrow = raw < plotTop ? '▲ ' : raw > plotTop + priceH ? '▼ ' : ''
+                  const color = toneColor(toneOf(live))
+                  return (
+                    <g>
+                      <line x1={plotLeft} x2={plotRight} y1={y} y2={y} stroke={color} strokeDasharray="2 3" opacity="0.8" />
+                      <rect x={plotRight} y={y - 8} width={AXIS_RIGHT - 2} height={16} fill={color} rx="2" />
+                      <text x={plotRight + 4} y={y + 4} fill="#0b0e11" fontSize="10" fontWeight="650">
+                        {arrow}
+                        {formatUsd(live.close, 'last price')}
+                      </text>
+                    </g>
+                  )
+                })()
+              ) : null}
+              {(() => {
+                const placed = marks
+                  .map((mark) => ({ mark, index: markIndex(bars, mark, timeframe) }))
+                  .filter((item) => bars[item.index] !== undefined)
+                // Labels only while they fit; the arrows stay and carry a tooltip.
+                const labelled = placed.length <= 12 || slot >= 14
+                const stack = new Map<string, number>()
+                return placed.map(({ mark, index }) => {
+                  const bar = bars[index]!
+                  const cx = plotLeft + (index + 0.5) * slot
+                  const buy = mark.side === 'buy'
+                  const color = markColor(mark)
+                  const dir = buy ? 1 : -1
+                  const key = `${index}:${dir}`
+                  const nth = stack.get(key) ?? 0
+                  stack.set(key, nth + 1)
+                  const base = buy ? priceY(bar.low, yLow, ySpan, plotTop, priceH) + 5 : priceY(bar.high, yLow, ySpan, plotTop, priceH) - 5
+                  const tipY = base + dir * nth * (labelled ? 24 : 13)
+                  const label = markLabel(mark)
+                  return (
+                    <g key={`${mark.n}`}>
+                      <title>{`${label} · ${candleRangeLabel(bar)}`}</title>
+                      <polygon
+                        points={`${cx},${tipY} ${cx - 6},${tipY + dir * 11} ${cx + 6},${tipY + dir * 11}`}
+                        fill={color}
+                        stroke="#0b0e11"
+                      />
+                      {labelled ? (
+                        <text x={cx} y={tipY + dir * 21 + (buy ? 2 : 0)} fill={color} fontSize="10" fontWeight="650" textAnchor="middle">
+                          {label}
+                        </text>
+                      ) : null}
+                    </g>
+                  )
+                })
+              })()}
               {hover !== null && bars[hover.index] !== undefined ? (
                 <g>
                   <line

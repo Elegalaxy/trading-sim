@@ -967,8 +967,9 @@ export type RunEndedEvent = {
 }
 
 /**
- * End-of-day FI check. `passiveCents` is the rolling window sum.
+ * End-of-day FI check. `passiveCents` is the rolling window sum plus `openLossCents`.
  * `windowDays` is how many day-numbers are in that sum.
+ * `openLossCents` is the net unrealized result of open positions when below zero, else 0.
  * `streak` counts covered days from day 30, and only those days.
  */
 export type FiCheckEvent = {
@@ -976,6 +977,7 @@ export type FiCheckEvent = {
   day: number
   windowDays: number
   passiveCents: number
+  openLossCents: number
   expensesCents: number
   streak: number
 }
@@ -1018,11 +1020,57 @@ export type NewsReadEvent = {
   cost: number
 }
 
-/** The player opened today's true visible feed. `cost` is the energy price. Quiet breaks does not waive it. */
+/**
+ * The player opened today's true visible feed. `cost` is the energy price. Quiet breaks does not waive it.
+ * `points` is the research points spent.
+ */
 export type NewsVerifiedEvent = {
   kind: 'newsVerified'
   day: number
   cost: number
+  points: number
+}
+
+/** Free-time slots. Daytime is the work section when jobless. Evening is the market session. */
+export const STUDY_SLOTS = ['daytime', 'evening'] as const
+
+export type StudySlot = (typeof STUDY_SLOTS)[number]
+
+/** Research earns points for verify. Course works toward the enrolled course. */
+export const STUDY_ACTIVITIES = ['research', 'course'] as const
+
+export type StudyActivity = (typeof STUDY_ACTIVITIES)[number]
+
+/**
+ * One free-time slot spent. `points` and `units` are the totals after it.
+ * `course` is the enrolled course for a course session, else null.
+ */
+export type StudiedEvent = {
+  kind: 'studied'
+  day: number
+  slot: StudySlot
+  activity: StudyActivity
+  points: number
+  course: CourseId | null
+  units: number
+  energyCost: number
+}
+
+/** Enough study finished the enrolled course. Its jobs are now open. */
+export type CourseCompletedEvent = {
+  kind: 'courseCompleted'
+  day: number
+  course: CourseId
+}
+
+/**
+ * Research points, the course in progress, and the slots spent today.
+ * `used` is cleared at end of day.
+ */
+export type StudyState = {
+  points: number
+  course: { id: CourseId; units: number } | null
+  used: StudySlot[]
 }
 
 /** Home and the information feed. Tier 0 is the base lifestyle. */
@@ -1051,7 +1099,7 @@ export type LifestyleChangeEvent = {
   expensesCents: number
 }
 
-/** A one-time course. It unlocks jobs and does not change monthly expenses. */
+/** Enrolment in a course, paid once. Study finishes it and unlocks its jobs. Monthly expenses do not change. */
 export type CoursePurchasedEvent = {
   kind: 'coursePurchased'
   day: number
@@ -1131,6 +1179,8 @@ export type CommandLogEvent =
   | ConsumeEvent
   | NewsReadEvent
   | NewsVerifiedEvent
+  | StudiedEvent
+  | CourseCompletedEvent
   | LifestyleChangeEvent
   | CoursePurchasedEvent
   | LoanTakenEvent
@@ -1367,7 +1417,10 @@ export type BankLoan = {
 export type FiStatus = {
   day: number
   windowDays: number
+  /** Window sum plus `openLossCents`. */
   passiveCents: number
+  /** Net open loss at that close, 0 or below. */
+  openLossCents: number
   expensesCents: number
   streak: number
 }
@@ -1427,4 +1480,6 @@ export type GameState = {
   perception: PerceptionState
   lifestyle: LifestyleState
   loan: BankLoan
+  /** Research points, the course being studied, and today's free-time slots. */
+  study: StudyState
 }

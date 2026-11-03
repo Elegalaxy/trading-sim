@@ -82,6 +82,10 @@ export type DayReport = {
   notes: string[]
   /** True when the monthly cycle (payday and bills) ran at this close. */
   payday: boolean
+  /** Feed items stress re-ordered, hid or added on the day that closed. Bent items carry no mark. */
+  filtered: number
+  /** The player used Verify that day and saw the true feed. */
+  verified: boolean
 }
 
 /** Trading account equity at a moment, for the equity chart. */
@@ -961,6 +965,8 @@ type ReportStart = {
   stress: number
   /** Price at the clock and the side held, per asset. */
   prices: Record<string, { cents: number; held: 'long' | 'short' | null }>
+  filtered: number
+  verified: boolean
 }
 
 function reportStart(game: GameState): ReportStart {
@@ -976,6 +982,9 @@ function reportStart(game: GameState): ReportStart {
     energy: game.stats.energy,
     stress: game.stats.stress,
     prices,
+    // The perception built at this day's start. End day rebuilds it for the next day.
+    filtered: game.perception.events.length,
+    verified: game.perception.verified,
   }
 }
 
@@ -1055,6 +1064,8 @@ function buildReport(game: GameState, start: ReportStart): DayReport {
     money,
     notes,
     payday,
+    filtered: start.filtered,
+    verified: start.verified,
   }
 }
 

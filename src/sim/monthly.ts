@@ -104,6 +104,7 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
       interestDueCents: state.loan.interestDueCents,
       interestDay: state.loan.interestDay,
     },
+    study: state.study,
   }
   for (const id of ids) {
     const position = state.positions[id]

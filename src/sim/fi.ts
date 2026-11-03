@@ -1,7 +1,10 @@
 // Financial independence, run end, and score. Section 8.
 // Passive income for a day is that day's realized ledger (already net of fees,
 // spread, borrow fees, and margin interest) plus savings interest received.
-// Unrealized profit and salary are not read. The job is not required to be quit.
+// Salary is not read. Open positions count only when they are losing: the net
+// unrealized result at the close is added when it is below zero, so holding a
+// losing trade cannot hide it, and an open profit cannot fake a win.
+// The job is not required to be quit.
 // The window is the last FI_WINDOW_DAYS day-numbers, starting at day 1.
 // Trades on day 0 are included in day 1, because the first check runs when the
 // day becomes 1. The hold counts only from FI_STREAK_FROM_DAY.
@@ -162,6 +165,25 @@ function windowSum(state: GameState, day: number): { windowDays: number; passive
   return { windowDays, passiveCents }
 }
 
+/**
+ * Net unrealized result of every open position at the market close, when it is
+ * below zero. 0 when flat or when open trades are net in profit.
+ */
+export function openLossCents(state: GameState): number {
+  let total = 0
+  for (const position of Object.values(state.positions)) {
+    const price = state.market.assets[position.asset]?.priceCents
+    if (price === undefined || !Number.isSafeInteger(price) || price <= 0) {
+      throw new Error(`open loss price for ${position.asset} must be a positive safe integer, received ${describeValue(price)}`)
+    }
+    // A long's cost is what it paid; a short's is what it received.
+    const marked = Math.abs(position.signedShares) * price
+    total += position.signedShares > 0 ? marked - position.costCents : position.costCents - marked
+    requireSafe(total, 'open loss')
+  }
+  return total < 0 ? total : 0
+}
+
 function rememberInterest(state: GameState, day: number, cents: number): void {
   if (cents === 0) return
   const rows = state.fi.interest
@@ -198,7 +220,10 @@ export function applyFiCheck(
   if (expensesCents <= 0) {
     throw new Error(`monthly expenses must be > 0, received ${describeValue(expensesCents)}`)
   }
-  const { windowDays, passiveCents } = windowSum(state, day)
+  const span = windowSum(state, day)
+  const windowDays = span.windowDays
+  const openLoss = openLossCents(state)
+  const passiveCents = requireSafe(span.passiveCents + openLoss, 'passive income')
   const covered = passiveCents >= expensesCents
   let streak = 0
   if (day >= FI_STREAK_FROM_DAY) {
@@ -210,8 +235,8 @@ export function applyFiCheck(
   }
   streak = requireSafe(streak, 'FI streak')
   state.fi.streak = streak
-  state.fi.status = { day, windowDays, passiveCents, expensesCents, streak }
-  const check: FiCheckEvent = { kind: 'fiCheck', day, windowDays, passiveCents, expensesCents, streak }
+  state.fi.status = { day, windowDays, passiveCents, openLossCents: openLoss, expensesCents, streak }
+  const check: FiCheckEvent = { kind: 'fiCheck', day, windowDays, passiveCents, openLossCents: openLoss, expensesCents, streak }
   const events: AccountLogEvent[] = [check]
   if (streak >= FI_HOLD_DAYS && state.runEnd === null) {
     const netWorth = netWorthCents(state, defs)

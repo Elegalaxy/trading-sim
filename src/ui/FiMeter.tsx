@@ -23,6 +23,7 @@ export function FiMeter({ game }: { game: GameState | null }) {
   const status = game.fi.status
   const windowDays = status?.windowDays ?? 0
   const passiveCents = status?.passiveCents ?? 0
+  const openLossCents = status?.openLossCents ?? 0
   const expensesCents = status?.expensesCents ?? lifestyleExpensesCents(game.lifestyle)
   const streak = status?.streak ?? 0
   if (expensesCents <= 0) {
@@ -35,7 +36,12 @@ export function FiMeter({ game }: { game: GameState | null }) {
     <section className={covered ? 'panel fi-covered' : 'panel'} aria-label="Financial independence">
       <h2>Financial independence</h2>
       <p>Window {cents(windowDays, 'FI window')} days.</p>
-      <p>Passive income {formatUsd(passiveCents, 'passive income')}.</p>
+      <p title="Closed trades and savings interest over the window, minus any net loss on open positions at the close. Open profit does not count.">
+        Passive income {formatUsd(passiveCents, 'passive income')}.
+      </p>
+      {openLossCents < 0 ? (
+        <p className="day-note">Includes {formatUsd(-openLossCents, 'open loss')} of open losses.</p>
+      ) : null}
       <p>Expenses {formatUsd(expensesCents, 'expenses')}.</p>
       <p>
         Hold {cents(streak, 'FI streak')} of {cents(FI_HOLD_DAYS, 'FI hold')}.

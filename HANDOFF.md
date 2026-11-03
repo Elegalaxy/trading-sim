@@ -1,18 +1,50 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Market depth (GAME_DESIGN section 12), plan `doc/plans/2026-11-03-market-depth.md`. M0 and M1 are done. Next are M2 (stock size and liquidity) and M3 (slippage). Step 26 playtests are still open.
-- **Recent Changes & Files Touched (uncommitted, on top of `e1ddc28`):**
-  - Step M0: `src/harness/eventStudy.ts` (new) prints `[sim] study` lines after every batch: signed moves around each effect (d−3…d5 from the close before the event day, after1/3/5 from the event-day close), rumour moves to the claimed day, capped stock-day share. Wired in `src/harness/batch.ts`.
-  - New bots in `src/harness/strategies.ts`: `followHeadlines`, `fadeHeadlines`, `buyRumour` (visible unbiased feed, 1x, a fifth of equity, `BotMemory` for exit days; `actDay` takes optional `memory`). Tests in `strategies.test.ts`.
-  - Plan: user answers recorded (Q1 real orders, Q2 yes, Q3 a little, Q4 consensus from released values, Q5 random earnings, Q7 yes, Q9 keep 8%, Q10 later, Q11 reject old saves, Q12 M0–M3 first). Section 4.1 now says M4 builds order flow. M0 Progress holds the baseline table.
-  - Baseline (seed abc, 300×120 days): stock headlines d0 +0.53%, d3 +2.15%, after3 +1.63%; true rumours +0.5% to the claimed day, false ~0; capped stock-days 0.08%. `followHeadlines` median $3,504 from $3,000 at 1x, `fadeHeadlines` $1,949, `buyRumour` $2,624.
-  - Checks: npm test 182 passed (29 files), typecheck and lint pass. No sim, content or fixture change.
+- **Current Goal:** Two pieces of work from two sessions, committed together on top of `dc33a59`: (A) telegraphing, (B) the win rule plus free time and UI fixes. Next for market depth: M2 (stock size and liquidity), then M3 (slippage). The Step 26 playtests are still open.
+- **Recent Changes & Files Touched (one commit on top of `dc33a59`):**
+  - (A) Telegraphing (user decision; changes a `[CONFIRMED]` rule):
+    - Bent news and posts carry no mark. `src/ui/Tell.tsx` is deleted.
+    - New `src/ui/StatEdge.tsx` (screen-edge glow), with `effects.ts` and `StatEdge.test.ts`.
+    - The day report counts bent items (`store.ts`, `DayReport.tsx`).
+    - Text in `Guide.tsx` and `Primer.tsx`, plus GAME_DESIGN sections 9, 14, 15 and 16.
+    - The plan has Q6 (Step M13) and Q8.
+  - (B) Win rule:
+    - `fi.ts` `openLossCents` subtracts net open loss (when below zero) from FI passive income.
+    - New field `openLossCents` on `FiStatus` and `FiCheckEvent`. Updated `log.ts`, `game.ts` assertFi and `FiMeter.tsx`.
+    - Tests in `fi.test.ts`, including a held 50x loss that does not win.
+  - (B) Free time, a new module `src/sim/study.ts` (`GameState.study`: `points`, `course`, `used`):
+    - Command `{type:'study', slot:'daytime'|'evening', activity:'research'|'course'}`.
+    - Daytime is jobless only. Evening is before the market opens; after it, `skip` is rejected with `studiedEvening`.
+    - Verify (`stats.ts`) now costs 1 point and rejects `alreadyVerified` or `noResearch`. `buyCourse` (`lifestyle.ts`) now only enrols.
+    - New constants in `constants.ts`. Save key `study` in `save.ts`; old saves are rejected.
+    - Tests in `study.test.ts`; `lifestyle.test.ts` updated.
+    - UI: `DayTimeline.tsx` ("Free time" block, study buttons, Open market disabled after an evening of study), `NewsFeed.tsx` (Verify shows points), `LifestylePanel.tsx` (enrol and progress).
+  - (B) UI:
+    - `RunEnd.tsx` is a window with a breakdown (net worth vs start, passive vs expenses, open losses, score parts) that folds to a banner.
+    - The top bar shows Trading equity (`Dashboard.tsx`), and the day is `runEnd.day` once the run ends.
+    - `candles.ts` labels use player days, and pre-run candles read "N days before start".
+    - `PriceChart.tsx`:
+      - wheel zoom (10–400 candles), drag to pan through all history, and "Back to now";
+      - a dashed last-price line with an axis tag;
+      - marks come from `run.history`, so closed trades and TP/SL fills stay, labelled TP or SL.
+    - `Positions.tsx` ExitsEditor:
+      - TP and SL entered together;
+      - ±2/5/10% steps and a break-even SL;
+      - live % and P&L, a wrong-side warning, then two `addExit` dispatches.
+    - Text: `Guide.tsx` (winning rule, free time, verify cost). GAME_DESIGN section 6 "Free time", section 8 open-loss rule, and the changelog.
+  - Checks: npm test 189 passed (31 files), typecheck and lint pass. Batch `--batch 50 --strategy random` runs clean.
+  - Browser (seed `demo`, jobless):
+    - Research day gives 6 points, and Verify shows them.
+    - The TP/SL editor adds both levels, shows them on the chart and warns on a wrong side.
+    - On 15m, pan reaches "7 days before start".
+    - After the stop loss hit, the Buy and SL marks both stay.
+    - The result window was not opened in the browser.
 - **Active Decisions / Constraints:**
-  - Open with the user: Q6 (player orders joining the order flow later, which needs "same seed and same commands, same market"), Q8 (whether distorted posts, or news too, may drop the `[CONFIRMED]` tell while verify still shows the true feed).
-  - No market party may read player state. New randomness uses derived streams (`seed#name`).
-  - The guide is a reference, not a strategy: no exact event sizes, hold lengths, hit rates or thresholds.
-  - The 8% daily cap is `[CONFIRMED]`. Old saves may be rejected as damaged (testers only).
-  - Dev server can serve a stale sim module after edits; restart on import or ReferenceError.
+  - Win rule: open losses count, open profit does not (`[PROVISIONAL]`, user decision 2026-11-03).
+  - Free-time numbers are provisional: points 4/2 (cap 20, start 2), course 6 units (2/1), energy 4/2.
+  - The fill history (and so the chart marks) is kept for this browser session only, and is lost on reload.
+  - The guide is a reference, not a strategy. The 8% daily cap is `[CONFIRMED]`. No market party reads player state.
+  - The dev server serves stale sim modules after edits; restart it on an import or ReferenceError.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Exact Next Step:** Commit M0. Get the user's answers on Q6 and Q8. Then Step M2 (per-stock `sharesOutstanding` and liquidity, per-stock session volume, Guide company size), then M3 (slippage).
+- **Exact Next Step:** (A) and (B) are committed together and pushed. The user plays a jobless run with research and a course, and confirms that the win now needs real profit. Then start M2.

@@ -444,6 +444,11 @@ export type HeadlineItem = {
   text: string
   magnitude: number
   top: boolean
+  /**
+   * The event's price direction. The text names the fact, not the move, so the bias
+   * reads this field. Absent on calendar headlines and on feeds saved before it existed.
+   */
+  direction?: 'up' | 'down'
 }
 
 /**
@@ -463,6 +468,8 @@ export type RumourItem = {
   /** Low-tier false rumours only. */
   noise: boolean
   visibility: VisibilityRequirement[]
+  /** The claimed price direction, true or false. Absent on feeds saved before it existed. */
+  direction?: 'up' | 'down'
 }
 
 export type FeedItem = HeadlineItem | RumourItem

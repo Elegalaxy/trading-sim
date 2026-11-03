@@ -51,12 +51,15 @@ export type FiredHeadline = {
   eventId: string
   text: string
   magnitude: number
+  /** Price direction of an ordinary event. Calendar outcomes leave it out. */
+  direction?: 'up' | 'down'
 }
 
 type FalseSlot = {
   eventId: string
   eventDay: number
   claim: string
+  direction: 'up' | 'down'
 }
 
 function assertHeadline(fired: FiredHeadline, index: number): void {
@@ -76,6 +79,9 @@ function assertHeadline(fired: FiredHeadline, index: number): void {
       `fired headline[${index}] magnitude must be a finite number >= 0, received ${describeValue(fired.magnitude)}`,
     )
   }
+  if (fired.direction !== undefined && fired.direction !== 'up' && fired.direction !== 'down') {
+    throw new Error(`fired headline[${index}] direction must be up or down, received ${describeValue(fired.direction)}`)
+  }
 }
 
 /** Headlines in input order. The first largest magnitude is the top headline. */
@@ -94,13 +100,17 @@ export function buildHeadlines(fired: readonly FiredHeadline[]): HeadlineItem[] 
       topMagnitude = item.magnitude
     }
   }
-  return fired.map((item, index) => ({
-    kind: 'headline',
-    eventId: item.eventId,
-    text: item.text,
-    magnitude: item.magnitude,
-    top: index === topIndex,
-  }))
+  return fired.map((item, index) => {
+    const headline: HeadlineItem = {
+      kind: 'headline',
+      eventId: item.eventId,
+      text: item.text,
+      magnitude: item.magnitude,
+      top: index === topIndex,
+    }
+    if (item.direction !== undefined) headline.direction = item.direction
+    return headline
+  })
 }
 
 export function assertFeedDefinitions(defs: MarketDefinitions): void {
@@ -208,6 +218,7 @@ function falseSlots(defs: MarketDefinitions, taken: ReadonlySet<string>, day: nu
             eventId,
             eventDay,
             claim: claimText(eventType, target, direction),
+            direction,
           })
         }
       }
@@ -244,6 +255,7 @@ function rumourFromSource(
       targetEventId: event.id,
       noise: false,
       visibility: [...source.visibility],
+      direction: event.direction,
     }
   }
   if (openSlots.length === 0) return null
@@ -260,6 +272,7 @@ function rumourFromSource(
     targetEventId: slot.eventId,
     noise: source.tier === 'low',
     visibility: [...source.visibility],
+    direction: slot.direction,
   }
 }
 
@@ -328,17 +341,19 @@ export function publishFeed(state: MarketState, defs: MarketDefinitions, fired: 
 }
 
 function copyHeadline(item: HeadlineItem): HeadlineItem {
-  return {
+  const copy: HeadlineItem = {
     kind: 'headline',
     eventId: item.eventId,
     text: item.text,
     magnitude: item.magnitude,
     top: item.top,
   }
+  if (item.direction !== undefined) copy.direction = item.direction
+  return copy
 }
 
 function copyRumour(item: RumourItem): RumourItem {
-  return {
+  const copy: RumourItem = {
     kind: 'rumour',
     sourceId: item.sourceId,
     tier: item.tier,
@@ -350,6 +365,8 @@ function copyRumour(item: RumourItem): RumourItem {
     noise: item.noise,
     visibility: [...item.visibility],
   }
+  if (item.direction !== undefined) copy.direction = item.direction
+  return copy
 }
 
 /**

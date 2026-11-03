@@ -462,7 +462,12 @@ function firedHeadlines(
   const fired: FiredHeadline[] = []
   for (const event of state.scheduled) {
     if (event.eventDay !== state.day) continue
-    fired.push({ eventId: event.id, text: event.headline, magnitude: event.magnitudePercent })
+    fired.push({
+      eventId: event.id,
+      text: event.headline,
+      magnitude: event.magnitudePercent,
+      direction: event.direction,
+    })
   }
   for (const item of calendarEvents) {
     fired.push({

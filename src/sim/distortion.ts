@@ -84,7 +84,7 @@ function assertStream(stream: RngStream): void {
 }
 
 function copyHeadline(item: HeadlineItem, distorted: boolean): ShownNewsItem {
-  return {
+  const copy: ShownNewsItem = {
     kind: 'headline',
     eventId: item.eventId,
     text: item.text,
@@ -92,10 +92,12 @@ function copyHeadline(item: HeadlineItem, distorted: boolean): ShownNewsItem {
     top: item.top,
     distorted,
   }
+  if (item.direction !== undefined) copy.direction = item.direction
+  return copy
 }
 
 function copyRumour(item: RumourItem, distorted: boolean): ShownNewsItem {
-  return {
+  const copy: ShownNewsItem = {
     kind: 'rumour',
     sourceId: item.sourceId,
     tier: item.tier,
@@ -108,6 +110,8 @@ function copyRumour(item: RumourItem, distorted: boolean): ShownNewsItem {
     visibility: [...item.visibility],
     distorted,
   }
+  if (item.direction !== undefined) copy.direction = item.direction
+  return copy
 }
 
 function copyNews(item: FeedItem, distorted: boolean): ShownNewsItem {
@@ -225,7 +229,14 @@ function itemTarget(item: FeedItem): string | null {
   return match?.[1] ?? null
 }
 
-function itemDirection(text: string): 'up' | 'down' | null {
+/**
+ * The item's price direction. Headlines and rumours carry it, because fact wording
+ * ("NOVA earnings miss") names no direction. Feeds saved before the field existed
+ * fall back to the words "up" and "down" in the text.
+ */
+function itemDirection(item: FeedItem): 'up' | 'down' | null {
+  if (item.direction === 'up' || item.direction === 'down') return item.direction
+  const text = itemText(item)
   const up = /(?:^|[^A-Za-z])up(?:[^A-Za-z]|$)/.test(text)
   const down = /(?:^|[^A-Za-z])down(?:[^A-Za-z]|$)/.test(text)
   if (up === down) return null
@@ -262,7 +273,7 @@ function openSides(positions: Readonly<Record<string, OpenPosition>>): Map<strin
 
 function stanceFor(item: FeedItem, sides: ReadonlyMap<string, Side>): Stance {
   const asset = itemTarget(item)
-  const direction = itemDirection(itemText(item))
+  const direction = itemDirection(item)
   if (asset === null || direction === null) return 'neutral'
   const side = sides.get(asset)
   if (side === undefined) return 'neutral'

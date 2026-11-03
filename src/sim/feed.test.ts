@@ -185,6 +185,35 @@ describe('news feed', () => {
     debugFeed(`fired day=${headline.day} event=${headline.eventId} top=${headline.top}`)
   })
 
+  it('stamps headlines and rumours with the price direction behind their fact wording', () => {
+    const earnings = eventType('earningsBeat', 0.2, 4)
+    earnings.headline = '{target} earnings {direction}'
+    earnings.directionWords = { up: 'beat', down: 'miss', none: 'in line' }
+    const defs: MarketDefinitions = { assets: ASSETS, environment: [], events: [earnings], sources: [...SOURCES] }
+    const state = createMarket(defs, 'facts')
+    const word = { up: 'beat', down: 'miss' } as const
+    let headlines = 0
+    let rumours = 0
+    let falseRumours = 0
+    for (let day = 0; day < 30; day += 1) {
+      for (const item of state.feed.items) {
+        const text = item.kind === 'headline' ? item.text : item.claim
+        if (item.direction === undefined) throw new Error(`[DEBUG feed] ${item.kind} "${text}" has no direction`)
+        expect(text.endsWith(word[item.direction])).toBe(true)
+        if (item.kind === 'headline') headlines += 1
+        else {
+          rumours += 1
+          if (!item.truth) falseRumours += 1
+        }
+      }
+      stepMarketDay(state, defs)
+    }
+    debugFeed(`fact directions headlines=${headlines} rumours=${rumours} false=${falseRumours}`)
+    expect(headlines).toBeGreaterThan(0)
+    expect(falseRumours).toBeGreaterThan(0)
+    expect(rumours).toBeGreaterThan(falseRumours)
+  })
+
   it('keeps each tier within 5 points of its hidden hit rate over 20 seeds and 120 days', { timeout: 30000 }, () => {
     const defs: MarketDefinitions = {
       assets: ASSETS,

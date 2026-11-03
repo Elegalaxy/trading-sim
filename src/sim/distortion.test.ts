@@ -244,6 +244,38 @@ describe('biased news', () => {
     for (const event of [...long.events, ...short.events]) debugDistortion(formatEvent(event))
   })
 
+  it('reads the direction field when fact wording names no direction', () => {
+    const fact = (text: string, direction: 'up' | 'down' | undefined, index: number): HeadlineItem => {
+      const item = { ...headline('NOVA', 'note', index), text }
+      if (direction !== undefined) item.direction = direction
+      return item
+    }
+    const feed = {
+      day: 4,
+      items: [
+        fact('NOVA product launch', undefined, 0),
+        fact('NOVA earnings miss', 'down', 1),
+        headline('BLSW', 'note', 2),
+        fact('NOVA raises guidance', 'up', 3),
+        headline('HRBU', 'note', 4),
+        headline('KSR', 'note', 5),
+        headline('BLSW', 'note', 6),
+        headline('HRBU', 'note', 7),
+      ],
+    }
+    const long = shownFeed(feed, position('NOVA', 4), 100, createRng('long').distortion, POSTS, 6)
+    expect(long.events.map((event) => event.action)).toEqual(['reweight', 'hide'])
+    expect(texts(long.feed.items)).not.toContain('NOVA earnings miss')
+    expect(long.feed.items[0]).toMatchObject({ text: 'NOVA raises guidance', direction: 'up', distorted: true })
+
+    const short = shownFeed(feed, position('NOVA', -4), 100, createRng('short').distortion, POSTS, 6)
+    expect(short.events.map((event) => event.action)).toEqual(['reweight', 'hide'])
+    expect(texts(short.feed.items)).not.toContain('NOVA raises guidance')
+    expect(short.feed.items[0]).toMatchObject({ text: 'NOVA earnings miss', direction: 'down', distorted: true })
+
+    for (const event of [...long.events, ...short.events]) debugDistortion(formatEvent(event))
+  })
+
   it('generates a low-reliability social post and leaves the other streams alone', () => {
     const feed = {
       day: 5,

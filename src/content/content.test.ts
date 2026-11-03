@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { lookupPolicyChances } from '../sim/calendar.ts'
+import { shownFeed } from '../sim/distortion.ts'
 import { createMarket, stepMarketDay } from '../sim/market.ts'
+import { createRng } from '../sim/rng.ts'
 import { formatEvent } from '../sim/log.ts'
 import type { FairValueChangeEvent, LogEvent } from '../sim/types.ts'
 import { CALENDAR_DEFINITIONS } from './calendar.ts'
@@ -266,5 +268,26 @@ describe('provisional content', () => {
       { id: 'nightOut', name: 'Night out', costCents: 6_000, energy: 0, stress: -25 },
     ])
     debugContent(`consumables=${CONSUMABLE_DEFINITIONS.map((item) => item.id).join(',')}`)
+  })
+
+  it('lets stress bias real fact-worded news, not only generated posts', () => {
+    const state = createMarket(MARKET_DEFINITIONS, 'demo')
+    const actions = new Map<string, number>()
+    for (let day = 0; day < 30; day += 1) {
+      stepMarketDay(state, MARKET_DEFINITIONS)
+      for (const item of state.feed.items) {
+        const eventId = item.kind === 'headline' ? item.eventId : item.targetEventId
+        const asset = eventId.split(':')[1]
+        if (asset === undefined || !STOCKS.includes(asset) || item.direction === undefined) continue
+        // Hold the side this item argues against, so the bias can hide it.
+        const signedShares = item.direction === 'up' ? -10 : 10
+        const positions = { [asset]: { asset, signedShares, costCents: 1000 } }
+        const result = shownFeed(state.feed, positions, 100, createRng(`bias-${day}-${asset}`).distortion, [], state.feed.day)
+        for (const event of result.events) actions.set(event.action, (actions.get(event.action) ?? 0) + 1)
+      }
+    }
+    debugContent(`real-news bias actions=${JSON.stringify(Object.fromEntries(actions))}`)
+    expect(actions.get('hide') ?? 0).toBeGreaterThan(0)
+    expect(actions.get('generate') ?? 0).toBe(0)
   })
 })

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { DEFAULT_LEVERAGE } from '../sim/constants.ts'
+import { previewCopy } from '../sim/past.ts'
 import { sessionPrice } from '../sim/session.ts'
 import { interpretOrder, leverageOf, tradingEquity } from '../sim/trading.ts'
 import { ORDER_SIDES, type GameState, type OrderSide } from '../sim/types.ts'
@@ -70,7 +71,7 @@ function quoteOrder(
   if (game.section !== 'market') return { accepted: false, reason: 'marketClosed' }
   let clone: GameState
   try {
-    clone = structuredClone(game)
+    clone = previewCopy(game)
   } catch (error) {
     console.error('[ui] order estimate clone failed', error)
     throw error

@@ -78,6 +78,7 @@ import {
   interpretVerify,
 } from './stats.ts'
 import { assertFills } from './fills.ts'
+import { recordPastDay } from './past.ts'
 import { assertStudy, initialStudy, interpretStudy, resetStudyDay } from './study.ts'
 import { interpretOrder, tradingEquity } from './trading.ts'
 import {
@@ -404,6 +405,10 @@ function assertGame(state: GameState, defs?: MarketDefinitions): void {
   assertLoan(state.loan)
   assertStudy(state.study)
   assertFills(state.fills)
+  // The full row check walks every bar, so it runs on load (`assertPast`), not on every command.
+  if (!Array.isArray(state.past) || state.past.length > RUN_LENGTH_DAYS) {
+    throw new Error(`game past must be a list of at most ${RUN_LENGTH_DAYS} days, received ${describeValue(state.past)}`)
+  }
   if (state.social !== undefined) assertSocial(state.social, state.market.day)
 }
 
@@ -483,6 +488,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     loan: initialLoan(),
     study: initialStudy(),
     fills: [],
+    past: [],
   }
   if (defs.social !== undefined) {
     state.social = createSocial(seed)
@@ -695,6 +701,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   // Limits and exits keep working through the rest of today's session.
   const resting = advanceClock(state, defs, state.session.clock, SESSION_STEPS)
   assertPolicyRateEntry(state.market, defs)
+  const closedBars = state.session.bars
   stepMarketDay(state.market, defs, effectiveOrderFlow(state, defs))
   state.orderFlow = {}
   state.session = buildSession(state.market, defs, state.session.streams)
@@ -704,6 +711,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const policyRate = readPolicyRatePercent(state.market, defs)
   const savings = settleSavings(state.accounts, state.market.day, policyRate)
   const endEquity = tradingEquity(state, defs).equity
+  recordPastDay(state, closedBars, endEquity)
   const statEvents = applyEndOfDayStats(state, workedJob, sleptHours, equityAtStart, endEquity, traded)
   const jobEvents = applyDueJobChange(state)
   const monthly = isMonthlyCycleDay(state.market.day) ? applyMonthlyCycle(state, defs) : []

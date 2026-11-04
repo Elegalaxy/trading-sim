@@ -129,17 +129,16 @@ export function Dashboard() {
     if (def === undefined) throw new Error(`unknown asset ${asset}`)
     shares = def.sharesOutstanding
     points.push(...buildHistory(run.seed, asset, def.startPriceCents, Math.max(def.dailyVolatility, 0.006)))
-    const rows = run.closes
+    const rows = run.game.past
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i]
       const before = i === 0 ? undefined : rows[i - 1]
       const close = row?.prices[asset]
-      const open = before?.prices[asset] ?? row?.bars?.[asset]?.[0]?.open ?? close
+      const open = before?.prices[asset] ?? row?.bars[asset]?.[0]?.open ?? close
       if (row === undefined || close === undefined || open === undefined) {
         throw new Error(`chart is missing ${asset} on day ${row?.day ?? i}`)
       }
-      if (before === undefined && row.bars === undefined) continue
-      points.push({ day: row.day - 1, open, close, bars: row.bars?.[asset] ?? null })
+      points.push({ day: row.day - 1, open, close, bars: row.bars[asset] ?? null })
     }
     const session = run.game.session
     const sessionBars = session.bars[asset]

@@ -75,7 +75,9 @@ const FILL_KEYS = [
   'slippageCents',
   'via',
 ] as const
-const FILL_VIAS = ['market', 'limit', 'takeProfit', 'stopLoss', 'liquidation', 'forcedSale'] as const
+const PAST_KEYS = ['day', 'prices', 'bars', 'equityCents'] as const
+const BAR_KEYS = ['open', 'high', 'low', 'close', 'volume'] as const
+const FILL_VIAS =['market', 'limit', 'takeProfit', 'stopLoss', 'liquidation', 'forcedSale'] as const
 const RUN_END_KEYS =['outcome', 'day', 'reason', 'netWorthCents', 'score'] as const
 
 export type RunMode = (typeof RUN_MODES)[number]
@@ -263,6 +265,32 @@ function checkRunEnd(value: unknown): string | null {
   return finiteNumber(value.score, 'state.runEnd.score')
 }
 
+/** The closed-day record: one row per day in rising order, with whole-cent amounts. */
+function checkPast(value: unknown): string | null {
+  if (!Array.isArray(value)) return 'shape:state.past'
+  let before = 0
+  for (let index = 0; index < value.length; index += 1) {
+    const at = `state.past[${index}]`
+    const row: unknown = value[index]
+    if (!isRecord(row) || !sameKeys(row, PAST_KEYS)) return `shape:${at}`
+    const day = finiteNumber(row.day, `${at}.day`)
+    if (day !== null) return day
+    if (!Number.isSafeInteger(row.day) || (row.day as number) <= before) return `shape:${at}.day`
+    before = row.day as number
+    const equity = finiteNumber(row.equityCents, `${at}.equityCents`)
+    if (equity !== null) return equity
+    if (!isRecord(row.prices) || !isRecord(row.bars)) return `shape:${at}`
+    for (const [id, list] of Object.entries(row.bars)) {
+      if (!Array.isArray(list)) return `shape:${at}.bars.${id}`
+      for (let step = 0; step < list.length; step += 1) {
+        const bar: unknown = list[step]
+        if (!isRecord(bar) || !sameKeys(bar, BAR_KEYS)) return `shape:${at}.bars.${id}[${step}]`
+      }
+    }
+  }
+  return null
+}
+
 function checkFills(value: unknown): string | null {
   if (!Array.isArray(value)) return 'shape:state.fills'
   for (let index = 0; index < value.length; index += 1) {
@@ -286,10 +314,14 @@ function checkFills(value: unknown): string | null {
 
 function checkState(value: unknown): string | null {
   // Saves from before the fill ledger have no `fills`. They load with an empty one.
-  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'social', 'orderFlow'])) return 'shape:state'
+  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'past', 'social', 'orderFlow'])) return 'shape:state'
   if (value.fills !== undefined) {
     const fills = checkFills(value.fills)
     if (fills !== null) return fills
+  }
+  if (value.past !== undefined) {
+    const past = checkPast(value.past)
+    if (past !== null) return past
   }
   if (value.orderFlow !== undefined && !isRecord(value.orderFlow)) return 'shape:state.orderFlow'
   if (value.social !== undefined) {

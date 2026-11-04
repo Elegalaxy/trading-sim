@@ -197,6 +197,41 @@ describe('local save', () => {
     expect(inspectSave(extra).ok).toBe(false)
   })
 
+  it('keeps the closed days, checks their rows, and loads a save from before them', () => {
+    const game = createGame(DEFS, 'demo')
+    playUntil(game, 3)
+    expect(game.past.map((row) => row.day)).toEqual([1, 2, 3])
+    const storage = memory()
+    writeSave({ mode: 'seeded', seed: 'demo', state: game }, storage)
+    const loaded = assertLoaded(loadSave(storage))
+    expect(loaded.state.past).toEqual(game.past)
+    expect(loaded.state.past[0]?.bars.NOVA).toHaveLength(16)
+
+    const raw = storage.raw(SAVE_KEY)
+    if (raw === null) throw new Error('[DEBUG save] missing save')
+    const oldSave = JSON.parse(raw) as { state: Record<string, unknown> }
+    delete oldSave.state.past
+    expect(inspectSave(oldSave).ok).toBe(true)
+
+    const backwards = JSON.parse(raw) as { state: { past: Array<Record<string, unknown>> } }
+    backwards.state.past[1]!.day = 1
+    const order = inspectSave(backwards)
+    expect(order.ok).toBe(false)
+    if (!order.ok) expect(order.reason).toBe('shape:state.past[1].day')
+
+    const nonFinite = JSON.parse(raw) as { state: { past: Array<Record<string, unknown>> } }
+    nonFinite.state.past[0]!.equityCents = Number.POSITIVE_INFINITY
+    const infinite = inspectSave(nonFinite)
+    expect(infinite.ok).toBe(false)
+    if (!infinite.ok) expect(infinite.reason).toBe('non-finite:state.past[0].equityCents')
+
+    const badBar = JSON.parse(raw) as { state: { past: Array<{ bars: Record<string, Array<Record<string, unknown>>> }> } }
+    delete badBar.state.past[0]!.bars.NOVA![0]!.volume
+    const bar = inspectSave(badBar)
+    expect(bar.ok).toBe(false)
+    if (!bar.ok) expect(bar.reason).toBe('shape:state.past[0].bars.NOVA[0]')
+  })
+
   it('keeps the same state hash at day 120 after a mid-run save', () => {
     const straight = createGame(DEFS, 'demo')
     const paused = createGame(DEFS, 'demo')

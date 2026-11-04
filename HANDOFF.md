@@ -1,26 +1,21 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** The market depth plan (M0 to M13) is built and merged into `main` (fast-forward to `0fdce7f`, 2026-11-04). The branch `market-depth-m7` and its worktree `.claude/worktrees/market-depth-m7` are no longer needed. Fill history H1 to H3 is in (`e256d83`); H4 is next. The Step 26 playtests and the market-depth playtest are still open.
-  - M7 calendar consensus (`sim/calendar.ts`, `consensusFlow`, calendar panel). M9 liquidity grabs (`sim/session.ts`, `SessionState.streams.levels`). M10 social feed (`sim/social.ts`, `content/socialFeed.ts`, posts under the news, `GameState.social`). M13 player orders in the order flow (`addOrderFlow`, `effectiveOrderFlow`, `GameState.orderFlow`, a free share of 2% of daily trading). M11 cap review (8% kept, 1.2% of days capped). M12 docs and a Who else trades Guide page.
-  - Open for you: (1) the 50x short bot's upper tail returned after M13 because its own push helps it (GAME_DESIGN section 16): more depth days or more slippage? (2) Only market orders add flow; stops, limit fills and liquidations do not yet. (3) The seeded playtest. (4) Old saves are rejected (session `levels`, `social`, `participants`).
-  - 241 tests pass, typecheck and lint clean.
-- **Fill history, H1 to H3 (committed in `e256d83`):**
-  - New `src/sim/fills.ts` (`recordFill`, `assertFills`, `closeTime`, `FILLS_MAX` 20,000) and `fills.test.ts` (12 tests).
-  - `GameState.fills: FillRecord[]` (`types.ts`): one row per market order, limit fill, TP, SL, liquidation (fee = trade fee plus liquidation fee) and forced sale for missed loan interest. Each row has `n`, asset, day, `HH:MM` time, side, quantity, fill price, fee, realized P&L or null, slippage, `via`.
-  - Rows are appended in `trading.ts` (`interpretOrder` takes `via` and `time`), `resting.ts` (exits, limit fills), `margin.ts`, `loan.ts`. `monthly.ts` cover-check scratch gets `fills: []`, so previews never write.
-  - `save.ts`: `fills` is optional in `inspectSave` (old saves load); `continueGame` in `store.ts` starts it empty. Row shape checked. Test in `save.test.ts`.
-  - UI: History, P&L and chart marks read `game.fills`. `TradeRecord`, `collectFills`, `marks` are removed from `store.ts`. History labels Liquidation and Forced sale; the chart marks them (dark red, amber).
-  - Checks: typecheck and lint pass. `npm test`: everything passes except the other session's `participants.test.ts`. Browser (seed `demo`, port 5175): a trade, End day, reload, the History row is still there.
-  - **Known gap (H4):** after a reload the chart has no candle for past days, so the Buy/Sell/TP/SL marks do not show. H4 saves the past days' 15-minute bars (`closes`) and the equity curve. The `closes` and `equity` types live in `ui/store.ts`, and `persist` may import sim types only, so decide where the shape goes first (e.g. a sim-side `GameState` field or a typed envelope field).
+- **Current Goal:** The market depth plan (M0 to M13) and the fill history plan (H1 to H4) are built. What is left is playtesting and two balance questions. The Step 26 playtests and a market-depth playtest are still open.
+- **Fill history (`doc/plans/2026-11-04-save-fill-history.md`), all four steps done:**
+  - H1 to H3 (`e256d83`): `GameState.fills` ledger (`src/sim/fills.ts`). One row per market order, limit fill, TP, SL, liquidation and forced sale. History, P&L and chart marks read it.
+  - H4: `GameState.past` (`src/sim/past.ts`, `recordPastDay`, `assertPast`, `previewCopy`). After each End day it keeps the session bars, the closes and the closing equity. A record only.
+  - `save.ts`: `fills` and `past` are optional in `inspectSave`, so old saves load with them empty; `continueGame` fills them in and runs `assertPast`. `social` and `orderFlow` are optional too.
+  - UI: `run.closes` is gone; `Dashboard.tsx` builds the chart from `game.past`. The Equity tab restarts from one point per past day (intraday points of past days are not kept).
+  - `previewCopy` (a state copy without `past` and `fills`) is used by the order preview (`resting.ts`, `OrderPanel.tsx`) and the margin test; without it the 200-seed margin test took 94 s instead of 8 s. Save size is about 650 KB at day 119.
+  - Not done: a History line in the Guide.
+- **Market depth (`doc/plans/2026-11-03-market-depth.md`):** M7 calendar consensus, M9 liquidity grabs, M10 social feed (`GameState.social`), M13 player orders in the order flow (`GameState.orderFlow`), M11 cap review (8% kept), M12 docs and a "Who else trades" Guide page. Open for the user: (1) the 50x short bot's upper tail returned after M13 (GAME_DESIGN section 16): more depth days or more slippage? (2) Only market orders add flow; stops, limit fills and liquidations do not yet. (3) The seeded playtest.
+- **Checks on the merge of the H4 branch with main:** typecheck and lint clean, `npm test` 248 passed (38 files). Browser check of H4 (before the merge, seed `demo`): trade, End day twice, reload; the Buy mark shows on 1D and 15m and the Equity line keeps days 1 to 3.
 - **Active Decisions / Constraints:**
-  - Fill history: sim ledger, H4 yes (after H3), old saves load with an empty ledger, no mid-day saves.
-  - The 15-minute clock step costs nothing (`[CONFIRMED]`, 2026-11-04).
-  - Win rule: open losses count, open profit does not (`[PROVISIONAL]`). Liquidations keep paying slippage (decided 2026-11-04).
-  - Telegraphing: bent items are unmarked; stress and energy show as a screen-edge effect (`StatEdge.tsx`).
-  - Free-time numbers are provisional: points 4/2 (cap 20, start 2), course 6 units (2/1), energy 4/2.
-  - Sizes and liquidity are placeholders. The guide is a reference, not a strategy. The 8% daily cap is `[CONFIRMED]`. No market party reads player state yet (M13 changes that).
-  - `GameState.fills` is required: any hand-built GameState needs `fills: []`.
-  - The dev server serves stale modules after edits. Restart it on a ReferenceError or an odd render error. A restart may pick another port (5175 now), which has its own localStorage.
+  - Fill history: sim ledger and closed-day record, old saves load empty, no mid-day saves.
+  - The 15-minute clock step costs nothing (`[CONFIRMED]`). Liquidations keep paying slippage. Win rule: open losses count (`[PROVISIONAL]`).
+  - `GameState.fills` and `GameState.past` are required: any hand-built GameState needs `fills: []` and `past: []`.
+  - The user wants every commit followed by a push and a merge into `main`.
+  - The dev server serves stale modules after edits; restart on a ReferenceError. It may pick another port, which has its own localStorage. `.claude/launch.json` is untracked, so a worktree needs its own copy and a `node_modules` junction.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Exact Next Step:** H4 and the Guide line (H5). M4 continues in its own session after the Step 26 playtests.
+- **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, and the market-depth playtest) and answers the two balance questions. Then the Guide line for History if wanted.

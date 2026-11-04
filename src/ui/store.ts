@@ -1,5 +1,5 @@
-// UI session. Market rules stay in src/sim. Daily closes are kept here because
-// MarketState.log is replaced on every endDay.
+// UI session. Market rules stay in src/sim. Closed days (bars, closes, equity) live on
+// GameState.past, because MarketState.log is replaced on every endDay.
 
 import { useSyncExternalStore } from 'react'
 import { CONSUMABLE_DEFINITIONS, JOB_DEFINITIONS, MARKET_DEFINITIONS, SOCIAL_POST_DEFINITIONS } from '../content/index.ts'
@@ -9,11 +9,12 @@ import { recordScore } from '../persist/scores.ts'
 import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
+import { assertPast } from '../sim/past.ts'
 import { assertResting, upgradeResting } from '../sim/resting.ts'
 import { sessionPrice } from '../sim/session.ts'
 import { bentPostCount } from '../sim/social.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
-import type { ForcedSaleEvent, GameState, LiquidationEvent, SessionBar } from '../sim/types.ts'
+import type { ForcedSaleEvent, GameState, LiquidationEvent } from '../sim/types.ts'
 import { playerDay } from './days.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
@@ -21,13 +22,6 @@ import { formatUsd } from './money.ts'
 const SEED_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-'
 const DEFAULT_SEED_LENGTH = 8
 const definitions = MARKET_DEFINITIONS
-
-export type CloseRow = {
-  day: number
-  prices: Readonly<Record<string, number>>
-  /** The session that led into this close, one list of 15-minute bars per asset. Absent on a loaded save. */
-  bars?: Readonly<Record<string, readonly SessionBar[]>>
-}
 
 /** One money line in the end-of-day report. Positive is money in. */
 export type ReportLine = { label: string; cents: number }
@@ -74,7 +68,6 @@ export type TradingRun = {
   /** True after this session has stored the score for the current ending. */
   scoreStored: boolean
   game: GameState
-  closes: readonly CloseRow[]
   summary: DaySummary | null
   /** Liquidations from the game log for the summary day. The next command replaces that log. */
   liquidations: readonly LiquidationEvent[]
@@ -197,23 +190,6 @@ function commandLabel(cmd: unknown): string {
   return type
 }
 
-function readPrices(game: GameState): Record<string, number> {
-  const prices: Record<string, number> = {}
-  for (const def of definitions.assets) {
-    const asset = game.market.assets[def.id]
-    if (asset === undefined) {
-      throw new Error(`missing close for ${def.id} on day ${game.market.day}`)
-    }
-    if (!Number.isSafeInteger(asset.priceCents) || asset.priceCents <= 0) {
-      throw new Error(
-        `close for ${def.id} on day ${game.market.day} must be a positive safe integer, received ${asset.priceCents}`,
-      )
-    }
-    prices[def.id] = asset.priceCents
-  }
-  return prices
-}
-
 /**
  * Reset to day 0. Does not advance the market.
  * Seeded uses the entered seed. Normal draws a new seed from crypto.getRandomValues.
@@ -267,7 +243,6 @@ export function startGame(seed: string, jobId = 'jobless', mode: string = 'seede
     mode,
     scoreStored: false,
     game,
-    closes: [],
     summary: null,
     liquidations: [],
     forcedSales: [],
@@ -322,20 +297,19 @@ export function continueGame(save: SaveFile): string | null {
     assertResting(game.resting)
     // Saves from before the fill ledger have none. They start it empty.
     if ((game as { fills?: unknown }).fills === undefined) game.fills = []
+    // The same for the closed-day record. The chart then has candles again from the next End day.
+    if ((game as { past?: unknown }).past === undefined) game.past = []
+    assertPast(game.past)
   } catch (error) {
     console.error('[save] rejected reason=shape', error)
     debugLog('[save]', 'rejected reason=shape')
     return DAMAGED_SAVE_MESSAGE
   }
   let summary: DaySummary | null = null
-  let closes: CloseRow[] = []
   let liquidations: LiquidationEvent[] = []
   let forcedSales: ForcedSaleEvent[] = []
   try {
-    if (game.market.day > 0) {
-      summary = daySummary(game.market.log)
-      closes = [{ day: game.market.day, prices: readPrices(game) }]
-    }
+    if (game.market.day > 0) summary = daySummary(game.market.log)
     liquidations = readLiquidations(game)
     forcedSales = readForcedSales(game)
   } catch (error) {
@@ -348,11 +322,11 @@ export function continueGame(save: SaveFile): string | null {
     mode: checked.save.mode,
     scoreStored: game.runEnd !== null,
     game,
-    closes,
     summary,
     liquidations,
     forcedSales,
-    equity: [],
+    // Past days keep their closing equity; the points of the day in progress start again.
+    equity: game.past.map((row) => ({ day: row.day, clock: 0, equityCents: row.equityCents })),
     report: null,
   }
   recordEquity()
@@ -727,7 +701,6 @@ export function endDay(): void {
     return
   }
   const dayBefore = run.game.market.day
-  const sessionBars = run.game.session.bars
   const before = reportStart(run.game)
   try {
     simEndDay(run.game, definitions)
@@ -750,7 +723,6 @@ export function endDay(): void {
       mode: run.mode,
       scoreStored: run.scoreStored,
       game: run.game,
-      closes: run.closes,
       summary: run.summary,
       liquidations: readLiquidations(run.game),
       forcedSales: readForcedSales(run.game),
@@ -763,7 +735,6 @@ export function endDay(): void {
     publish()
     return
   }
-  const prices = readPrices(run.game)
   const summary = daySummary(run.game.market.log)
   const liquidations = readLiquidations(run.game)
   const forcedSales = readForcedSales(run.game)
@@ -775,7 +746,6 @@ export function endDay(): void {
     mode: run.mode,
     scoreStored: run.scoreStored,
     game: run.game,
-    closes: [...run.closes, { day, prices, bars: sessionBars }],
     summary,
     liquidations,
     forcedSales,

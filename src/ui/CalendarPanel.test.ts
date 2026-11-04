@@ -12,7 +12,9 @@ describe('calendar panel', () => {
     const raw = upcomingCalendar(game.market, 30).find((item) => item.kind === 'growthRelease' && item.day === 10)
     expect(raw?.outcome).toBeDefined()
     const early = playerCalendar(game.market, 30).find((item) => item.kind === 'growthRelease' && item.day === 10)
-    expect(early).toEqual({ kind: 'growthRelease', day: 10 })
+    // The consensus is public from the roll; the roll and the outcome are not.
+    expect(early).toEqual({ kind: 'growthRelease', day: 10, expected: raw?.expected })
+    expect(raw?.expected).toBeDefined()
     // Trading day 10 is when the release prints.
     endDay(game, MARKET_DEFINITIONS)
     endDay(game, MARKET_DEFINITIONS)

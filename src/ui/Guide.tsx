@@ -258,7 +258,7 @@ const TOPICS: readonly Topic[] = [
     title: 'Calendar',
     body: (
       <>
-        <p>Every 30-day month has three scheduled releases. You see the date in advance and the result on the day.</p>
+        <p>Every 30-day month has three scheduled releases. You see the date in advance, what most people expect a few days before, and the result on the day. The headline says whether the result beat or missed what was expected.</p>
         <table>
           <thead>
             <tr>
@@ -285,7 +285,7 @@ const TOPICS: readonly Topic[] = [
             </tr>
           </tbody>
         </table>
-        <p>A result in line with expectations moves prices only a little. Hikes get likelier while inflation runs high.</p>
+        <p>A result in line with expectations moves prices only a little, because part of it is already in the price. A surprise moves them more. Hikes get likelier while inflation runs high.</p>
       </>
     ),
   },
@@ -298,6 +298,12 @@ const TOPICS: readonly Topic[] = [
           <li>A rumour claims an event a few days ahead. A true one is followed by the event. A false one by nothing.</li>
           <li>High-tier sources are right most of the time, medium a little more often than not, low less often than not.</li>
           <li>Acting on a rumour gets you in early, at the risk of being wrong.</li>
+          <li>
+            Under the news there is a feed of posts from other traders: opinions, whispers about what might be coming,
+            and reactions to moves as they happen. They are less reliable than any rumour source, and they tend to
+            show what the crowd already thinks, which is not the same as what comes next. When you are stressed, posts
+            that agree with what you hold get louder and some that disagree go missing.
+          </li>
           <li>Better feeds and some jobs unlock better sources.</li>
         </ul>
       </>
@@ -337,6 +343,44 @@ const TOPICS: readonly Topic[] = [
     ),
   },
   {
+    id: 'participants',
+    title: 'Who else trades',
+    body: (
+      <>
+        <p>
+          You are not alone in the market. Prices move because other people buy and sell, and the sizes and timing differ
+          from run to run. None of this is a rule. It is the cast.
+        </p>
+        <ul>
+          <li>
+            <strong>Funds that hear early.</strong> Some news leaks. Now and then a fund buys or sells in the day or two
+            before an announcement, so part of the move is already in the price.
+          </li>
+          <li>
+            <strong>Fast traders.</strong> Professionals react to news the moment it prints, usually before you can read
+            it. How fully they react changes from market to market.
+          </li>
+          <li>
+            <strong>The crowd.</strong> Small traders chase rumours and good headlines, and some sell when the news
+            arrives. A thin stock feels the crowd more than a big one. The posts under the news are the crowd talking.
+          </li>
+          <li>
+            <strong>Trend followers.</strong> They buy what has been rising and sell what has been falling, until the
+            trend turns.
+          </li>
+          <li>
+            <strong>Level hunters.</strong> Prices sometimes poke through obvious levels, such as round numbers or a
+            recent high or low, and come back.
+          </li>
+        </ul>
+        <p>
+          Big stocks are deep and shrug off orders. Small stocks are thin, so the same money moves them more, yours
+          included.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'orders',
     title: 'Orders and positions',
     body: (
@@ -354,6 +398,12 @@ const TOPICS: readonly Topic[] = [
             liquidations pay it too. Limit orders and take profits fill at their own price and pay none. The order panel
             shows the cost before you send. A thinly traded stock, or a high leverage on your whole account, hits it
             first.
+          </li>
+          <li>
+            A very large market order is also real demand. Everyone else in the market sees it, so it can push the price
+            for the rest of the day and into the close, and the effect fades over the days after. Ordinary orders are
+            far too small to be noticed. A thin stock moves more than a deep one. Pushing the price rarely pays: the
+            slippage you pay going in is usually bigger than the push you get.
           </li>
           <li>
             A limit buy waits below the price, a limit sell above it. It fills when the price reaches it, at your price or

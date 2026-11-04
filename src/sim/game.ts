@@ -61,7 +61,8 @@ import {
   interpretCancelExit,
   pruneExits,
 } from './resting.ts'
-import { buildSession, assertSession, createSessionStreams, interpretTick } from './session.ts'
+import { addOrderFlow, buildSession, assertSession, createSessionStreams, effectiveOrderFlow, interpretTick } from './session.ts'
+import { assertSocial, buildSocialDay, createSocial } from './social.ts'
 import { settleFunding } from './funding.ts'
 import { settleMargin } from './margin.ts'
 import { createMarket, stepMarketDay } from './market.ts'
@@ -408,6 +409,7 @@ function assertGame(state: GameState, defs?: MarketDefinitions): void {
   if (!Array.isArray(state.past) || state.past.length > RUN_LENGTH_DAYS) {
     throw new Error(`game past must be a list of at most ${RUN_LENGTH_DAYS} days, received ${describeValue(state.past)}`)
   }
+  if (state.social !== undefined) assertSocial(state.social, state.market.day)
 }
 
 /**
@@ -488,6 +490,10 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     fills: [],
     past: [],
   }
+  if (defs.social !== undefined) {
+    state.social = createSocial(seed)
+    buildSocialDay(state.social, state.market, state.session, defs)
+  }
   refreshPerception(state)
   return state
 }
@@ -532,7 +538,13 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
       })
     } else {
       const outcome = interpretOrder(state, defs, cmd)
-      for (const event of outcome.events) state.pending.push(event)
+      for (const event of outcome.events) {
+        state.pending.push(event)
+        // A market order is real demand: it joins the day's order flow and can move the rest of the session.
+        if (event.kind === 'orderFill') {
+          addOrderFlow(state, defs, event.asset, (event.side === 'buy' ? 1 : -1) * event.quantity * event.fillPrice)
+        }
+      }
       for (const event of pruneExits(state)) state.pending.push(event)
     }
   } else if (type === 'limitOrder' || type === 'setExits' || type === 'addExit') {
@@ -690,8 +702,10 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const resting = advanceClock(state, defs, state.session.clock, SESSION_STEPS)
   assertPolicyRateEntry(state.market, defs)
   const closedBars = state.session.bars
-  stepMarketDay(state.market, defs)
+  stepMarketDay(state.market, defs, effectiveOrderFlow(state, defs))
+  state.orderFlow = {}
   state.session = buildSession(state.market, defs, state.session.streams)
+  if (state.social !== undefined) buildSocialDay(state.social, state.market, state.session, defs)
   const traded = settleTradingAccount(state, defs, equityAtStart)
   const pruned = pruneExits(state)
   const policyRate = readPolicyRatePercent(state.market, defs)

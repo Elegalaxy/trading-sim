@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { MARKET_DEFINITIONS } from '../content/index.ts'
-import { createGame, endDay } from '../sim/game.ts'
+import { applyCommand, createGame, endDay } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { createEventStudy, finishStudyRun, recordStudyDay, startStudyRun, studyLines } from './eventStudy.ts'
@@ -37,14 +37,26 @@ describe('high-leverage strategies', () => {
     }
   })
 
-  it('do not change the market', () => {
-    const traded = createGame(defs, 'bot')
+  it('move the market only because their order is large (market depth M13)', () => {
     const idle = createGame(defs, 'bot')
-    actDay('longNova50', traded, defs, null)
+    const idleAgain = createGame(defs, 'bot')
     actDay('hold', idle, defs, null)
-    endDay(traded, defs)
+    actDay('hold', idleAgain, defs, null)
     endDay(idle, defs)
-    expect(stateHash(traded.market)).toBe(stateHash(idle.market))
+    endDay(idleAgain, defs)
+    expect(stateHash(idle.market)).toBe(stateHash(idleAgain.market))
+    const traded = createGame(defs, 'bot')
+    actDay('longNova50', traded, defs, null)
+    endDay(traded, defs)
+    // A whole account at 50x is far beyond the free share of NOVA's daily trading.
+    expect(stateHash(traded.market)).not.toBe(stateHash(idle.market))
+    expect(traded.market.assets.NOVA.priceCents).toBeGreaterThan(idle.market.assets.NOVA.priceCents)
+    const small = createGame(defs, 'bot')
+    applyCommand(small, defs, { type: 'skip' })
+    applyCommand(small, defs, { type: 'order', asset: 'NOVA', side: 'buy', quantity: 20, leverage: 5 })
+    expect(small.positions.NOVA?.signedShares).toBe(20)
+    endDay(small, defs)
+    expect(stateHash(small.market)).toBe(stateHash(idle.market))
   })
 
   it('hold an open position and do not add to it', () => {

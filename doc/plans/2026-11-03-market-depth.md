@@ -232,27 +232,34 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M5: News traders
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M4
 - Files to create or change: `src/sim/participants.ts`, `src/content/participants.ts`, tests, price log fixture
 - What changes: on a headline, news traders price in a regime-dependent share of the remaining effect, sometimes above 1, decaying. This is the knob that sets the post-headline edge.
 - Verification: event study day +1 to +3 drift falls toward the target the user picks (question 3); overshoot-then-reversal visible on some seeds.
+- Progress: done 2026-11-04. `newsFlow` in `sim/participants.ts`: on each day a stock has an effect applied, `move = news x (fair + pending effect - price)`, where `pending` is what its active effects still have to apply and `news` is the run's efficiency (regime draw after the informed one, 0.4 to 0.7 in `content/participants.ts`). It lands on the day fair value first moves, before the headline is readable. `ParticipantState.news`, `ParticipantFlowEvent.party` is `informed` or `news`, `priceStep.flow` is the sum. Depth does not scale it (public news).
+- Result (seed abc, 300 runs): stock headlines `after3` 1.45% to 0.77% (1x hold, costs are about 0.5% a round trip); day 0 move 0.40% to 1.83%, so the move is now in the price by day 2. `followHeadlines` median $2,992 (M0 $3,504, M4 $3,392): break-even, as chosen in Question 3. `fadeHeadlines` $2,261, random $2,864 (M4 $2,923). Efficiency 0.3 to 0.6 left `followHeadlines` at $3,110, 0.5 to 0.9 at $2,815 with 2.3% of stock-days capped. Capped stock-days rose from 0.07% to 1.3% at the chosen range (event days hit the 8% cap more often, flagged for M11).
+- Finding: `buyRumour` median rose from $2,624 (M0) to $3,069 and a true rumour now runs 1.9% to its claim day (was 0.55%), because news traders move the price more on the event day while false rumours stay flat. The edge moved from headlines to rumours, as the plan's risks section predicted. M6 (retail crowd) is the party meant to add sell-the-news and a false-rumour pump.
 
 ### Step M6: Retail crowd and momentum bots
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M5
 - Files to create or change: `src/sim/participants.ts`, `src/content/participants.ts`, tests, price log fixture
 - What changes: per-stock crowd mood from rumours (all sources), headlines and recent returns; rumour shares leave on resolution; momentum bots. Crowd scale by size.
 - Verification: event study shows rumour-day run-ups and false-rumour unwinds; capped-day share recorded; no run-away trends over 300 seeds (largest offset logged).
+- Progress: done 2026-11-04. `startPartyDay`, `crowdFlow`, `momentumFlow` in `sim/participants.ts`. `ParticipantState` gains `heat` (crowd regime, third draw), `shares` (event id to signed belief), `chase`, `mood`, `closes`. The crowd reads the feed the player reads (`state.feed` for today), adds `tierWeight` (low 0.3, medium 0.6, high 1) per rumour signed by its claimed direction, headlines add `headlineWeight` 0.15 that fades 50% a day, and it trades capital $60k x heat x the change in total mood. A rumour's share is deleted on its event day (a false rumour has an id for a day that never fires), so the crowd sells into the news and unwinds a false rumour. Trend followers: $30k x clamp(3-day move / 3%). Neither draws. Capital is in dollars, so a thin stock moves more (NOVA $60k is 0.6% per unit of mood, BLSW 0.15%). The batch study now reports `maxGapPercent` and `maxFlowPercent`.
+- Result (seed abc, 300 runs): capped stock-days 1.2% (unchanged from M5; first try with crowd $200k gave 4.7%, so the crowd was cut to $60k). Largest gap between price and fair value 11.2%, largest one-step flow 11.5% (trimmed by the 8% cap): no run-away. `followHeadlines` median $3,124 (M5 $2,992, so slightly positive), headline `after3` 1.03%. `buyRumour` median $2,900 (M5 $3,069, M0 $2,624). True rumours run 1.6% to their claim day (M5 1.9%), false ones -0.09% and flat two days later: pumped then unwound. Random bot $2,873. Fixture regenerated, non-price lines identical.
 
 ### Step M7: Calendar consensus
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M4, user answer 4
 - Files to create or change: `src/sim/calendar.ts` (consensus from released values), `src/sim/market.ts` (`calendarHeadline`), `src/sim/participants.ts` (consensus offset), `src/sim/types.ts` (`UpcomingCalendarItem.expected`), `src/ui/CalendarPanel.tsx`, `src/ui/days.ts`, `src/content/calendar.ts` (wording), price log fixture
 - What changes: option C1. The calendar shows the consensus; headlines read against it; the anchor prices it in.
 - Must not change: calendar outcome rolls and their effect on fair value; `playerCalendar` still hides outcomes until their day.
+- Progress: done 2026-11-04 on branch `market-depth-m7`. `consensusOutcome`, `outcomeWord`, `calendarHeadlineText` in `sim/calendar.ts`; `CalendarRoll.expected` (stored at the roll), `UpcomingCalendarItem.expected`, `CalendarItemEvent.expected` (not in the log line). `consensusFlow` in `sim/participants.ts` (new definitions `consensus`: $300k, 3% reference), a fifth party `consensus`. `playerCalendar` keeps `expected` while hiding roll and outcome; the calendar panel prints `expected` and, on the day, `result`; the Guide has a line. The effect keyed by outcome and every roll are unchanged.
+- Result (seed abc, 300 runs): calendar releases move less on the day (growth day-0 0.90% to 0.81%, inflation 0.88% to 0.77%, policy 1.29% to 1.21%) and run up a little before (growth `d-3` 0.31 to 0.20). It is modest because the consensus is mostly `inline`, whose own effect is small. Capped days and the largest gap are unchanged (1.2%, 11.4%). Fixture: exactly the three calendar headline lines differ besides prices.
 
 ### Step M8 (only if the user picks E2): Scheduled earnings
 
@@ -262,43 +269,50 @@ Each step follows the definition of done in the first-playable plan, section 2.3
 
 ### Step M9: Liquidity grabs in the session
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M2
 - Files to create or change: `src/sim/session.ts` (third session stream from the unused `info` member of `#session`), `src/sim/types.ts`, `src/persist/save.ts`, `src/sim/session.test.ts`
 - What changes: on some days a bar's wick reaches a public level (round price, prior day's high or low) and returns. Levels come from public prices only, never from `state.resting`.
 - Must not change: closes, `intraday` and `volume` draws, the 12% band, any fixture.
 - Verification: test that two games with different resting orders get identical bars.
+- Progress: done 2026-11-04 on branch `market-depth-m7`. `SessionState.streams.levels` (from the `info` member of `#session`), `applyGrab` in `sim/session.ts` (three floats per stock per day: chance 25%, bar, level). Levels: the next round price above the bar's high or below its low, and the high and low of the participants' recent closes, within 1.5% of the open; the wick overshoots by 0.1%. Only a bar's high or low widens, so no close, path or other stream moves. Persist rejects a session without `levels`. Tests: some bars grab a round price over 60 days, and two games with different resting orders get identical bars for 10 days. No market fixture changed.
 
 ### Step M10: Social feed "Y"
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M1, M6
 - Files to create or change: `src/sim/social.ts`, `src/sim/social.test.ts`, `src/sim/distortion.ts` (per-channel cap, `restyle`), `src/sim/game.ts`, `src/sim/types.ts`, `src/content/socialPosts.ts`, `src/persist/save.ts`, a feed panel in `src/ui/`, `src/ui/Guide.tsx`
 - What changes: section 7 of this plan.
 - Must not change: `stateHash(market)`; the bias cap per channel; the tell on every distorted post.
 - Verification: market hash equal with social on and off; at stress 100 at most 25% of each channel is distorted; whisper hit rate measured below the low rumour tier.
+- Progress: done 2026-11-04 on branch `market-depth-m7`. `sim/social.ts` (`createSocial`, `buildSocialDay`, `shownPosts`, `bentPostCount`), `SocialDefinitions`/`SocialPost`/`SocialState` in types, `MarketDefinitions.social`, `GameState.social` (optional), content in `content/socialFeed.ts`, built in `game.ts` after the session (create and each day). Stream `createRng(seed + '#social').market`. Posts panel under the news in `NewsFeed.tsx`; the day report count includes bent posts; Guide line. Stress: hide posts against a position and promote posts for it to the loaded wording, up to `distortionCap(visible posts, stress)`, in feed order and with no draw; no tell (Q8 decision); verify shows the calm feed. This is a simpler route than the plan's `restyle` action in `distortion.ts`: the news channel and its stream are untouched.
+- Result: market hash and session bars identical with the feed on and off (tested over 25 days); whisper hit rate 0.28 over 12 seeds x 30 days (lowest rumour tier 0.35); 10.7 posts a day of which 3.8 whispers; chatter hidden until the clock reaches it; at most a quarter of posts bent at stress 100, none at 60.
 
 ### Step M13: Player orders join the order flow
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M3, M6
 - What changes: the player's net shares in a bar join the parties' demand, so a large order moves the price for the rest of the session and into the close. After each fill the day's close is previewed again with the player's flow included and the remaining bars are rebuilt from the clock to that close, reusing the day's pre-drawn session normals so no new draws happen. Slippage (M3) then becomes the cost inside the bar.
 - Must not change: same seed and same commands give the same run. A run with no orders, or only orders below a size threshold, gives today's market.
 - Verification: the strategies hash test becomes "idle bot equals idle bot, and small orders equal idle"; a pump-and-dump bot (buy big, sell into its own push) loses money over 300 seeds; the market hash differs only after a large order.
+- Progress: done 2026-11-04 on branch `market-depth-m7`, narrower than the text above: only market orders add flow (not limit fills, take profits, stops or liquidations, which fire inside the clock loop and would rebuild bars mid-iteration). `GameState.orderFlow` (net signed value per stock today, reset when the day ends); `effectiveOrderFlow` (free up to 2% of daily traded value, `PLAYER_FLOW_FREE_SHARE`) is passed as a third argument to `stepMarketDay` and into the close preview; `orderFlowMove` in `sim/participants.ts` is a sixth party `player` whose demand is a plain number (the module still reads no player state). `addOrderFlow` in `sim/session.ts` re-previews the close with the new flow and bends the remaining bars by a share of the change that grows to all of it at the close, so no draw and no stored normals are needed and the last bar still equals the close End day prints. An order at the close adds nothing.
+- Result: idle equals idle, a 20-share order equals idle (hash and bars), a 1,200-share order moves the later bars and the close up and leaves played bars alone, and End day prints the previewed close; a buy-1,000-then-sell-after-8-bars bot loses on average over 120 seeds. Batch (seed abc, 100 runs): backstop use as after M3, but the 50x short's 90th percentile is $23,561 again (was $0): its own push helps it. Flagged in GAME_DESIGN section 16 as open. The hash test in `strategies.test.ts` now says idle equals idle and small orders equal idle. GAME_DESIGN criterion 9 and the seeded-run rule are reworded.
 - Decision recorded: GAME_DESIGN section 15 criterion 9 and section 10 seeded mode are reworded to "same seed and same commands, same market" when this step lands.
 
 ### Step M11: Cap review
 
-- Status: `todo`
+- Status: `done`
 - Depends on: M6
 - What changes: compare capped-day share with M0. If the user picks K2, K3 or K4, implement it as its own change with a fixture regeneration.
+- Progress: done 2026-11-04. Capped stock-days are 1.2% (seed abc, 300 runs) against 0.08% at M0 and the 3% mark, so K1 stays and no change is brought to the user. The largest gap between price and fair value is 11.4%.
 
 ### Step M12: Design doc, Guide and playtest
 
-- Status: `todo`
+- Status: `done`
 - Depends on: the steps the user takes
 - Files to create or change: `doc/GAME_DESIGN.md` (sections 5, 7, 9, 12, changelog, only rules the user decided), `src/ui/Guide.tsx` (rough terms: who trades, consensus, slippage as an account rule)
 - Verification: a seeded playtest records whether patterns felt readable, unfair or invisible.
+- Progress: done 2026-11-04 apart from the playtest. GAME_DESIGN section 5 (price rules, social feed, consensus), section 12 (ideas marked built), section 15 criterion 9 and section 16 are updated, and the Guide has a Who else trades page plus lines on consensus, posts, slippage and large orders, with no market numbers beyond account rules. The seeded playtest (readable, unfair or invisible) needs a person and is still open; record it here and in section 15.
 
 ## 10. Risks
 

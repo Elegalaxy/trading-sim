@@ -5,6 +5,10 @@
 // market state is not touched except for the `intraday` and `volume` streams. The
 // real step at End day then prints exactly the previewed close, so a day never
 // jumps at the close. The market, events, info and distortion streams are never read.
+// Liquidity grabs: on some stock-days one bar's wick reaches a public level and returns.
+// Levels come only from public prices (round prices, the recent closes), never from the
+// player's resting orders. Closes and the other two session streams are unaffected: the
+// grab only widens one bar's high or low and draws its own `levels` stream.
 // Bars past the clock are hidden from the player. Orders fill at the quote at the
 // clock. Margin, interest, borrow fees and liquidation still use the daily close.
 // Volume is display only. It does not feed back into prices, spread or fills.
@@ -16,6 +20,10 @@ import {
   SESSION_BAND_NUMERATOR,
   SESSION_BASE_NOTIONAL_CENTS,
   SESSION_EVENT_VOLUME_BOOST,
+  PLAYER_FLOW_FREE_SHARE,
+  SESSION_GRAB_CHANCE,
+  SESSION_GRAB_OVERSHOOT_PPM,
+  SESSION_GRAB_REACH_PPM,
   SESSION_MOVE_VOLUME_BOOST,
   SESSION_NOISE_SCALE,
   SESSION_STEP_MINUTES,
@@ -32,6 +40,7 @@ import type {
   GameState,
   MarketDefinitions,
   MarketState,
+  RngStream,
   SessionBar,
   SessionState,
 } from './types.ts'
@@ -73,10 +82,14 @@ type ClosePreview = {
  * The prices the next End day will print. Runs the real step on a copy and
  * reads nothing back into the market. Null when there is no next step.
  */
-function previewNextStep(market: MarketState, defs: MarketDefinitions): ClosePreview | null {
+function previewNextStep(
+  market: MarketState,
+  defs: MarketDefinitions,
+  orderFlow?: Readonly<Record<string, number>>,
+): ClosePreview | null {
   if (market.day >= RUN_LENGTH_DAYS) return null
   const copy = structuredClone(market)
-  stepMarketDay(copy, defs)
+  stepMarketDay(copy, defs, orderFlow)
   const closes: Record<string, number> = {}
   for (const def of defs.assets) closes[def.id] = copy.assets[def.id].priceCents
   const eventful = new Set<string>()
@@ -148,7 +161,49 @@ function barsFromPath(
 /** The session streams for a new run. Derived from the seed, apart from the market streams. */
 export function createSessionStreams(seed: string): SessionState['streams'] {
   const streams = createRng(`${seed}#session`)
-  return { intraday: streams.market, volume: streams.events }
+  return { intraday: streams.market, volume: streams.events, levels: streams.info }
+}
+
+/** Spacing of the round prices traders watch: $1 under $20, $5 under $100, $10 above. */
+function roundStep(open: number): number {
+  if (open < 2000) return 100
+  if (open < 10000) return 500
+  return 1000
+}
+
+/**
+ * Maybe let one bar's wick run through a public level and return. Always draws three floats from
+ * `levels` (chance, bar, level) so the draw count does not depend on what the bars look like.
+ * The close of the bar, and so the path and the day's close, are not changed.
+ */
+function applyGrab(bars: SessionBar[], open: number, recentCloses: readonly number[], levels: RngStream): void {
+  const chance = nextFloat(levels)
+  const pick = nextFloat(levels)
+  const choice = nextFloat(levels)
+  if (chance >= SESSION_GRAB_CHANCE) return
+  const index = Math.min(bars.length - 1, Math.floor(pick * bars.length))
+  const bar = bars[index]
+  const step = roundStep(open)
+  const reach = (open * SESSION_GRAB_REACH_PPM) / 1_000_000
+  const overshoot = Math.max(1, Math.round((open * SESSION_GRAB_OVERSHOOT_PPM) / 1_000_000))
+  const found: Array<{ level: number; above: boolean }> = []
+  const above = (Math.floor(bar.high / step) + 1) * step
+  const below = (Math.ceil(bar.low / step) - 1) * step
+  found.push({ level: above, above: true })
+  if (below > 0) found.push({ level: below, above: false })
+  if (recentCloses.length > 0) {
+    const recentHigh = Math.max(...recentCloses)
+    const recentLow = Math.min(...recentCloses)
+    if (recentHigh > bar.high) found.push({ level: recentHigh, above: true })
+    if (recentLow < bar.low) found.push({ level: recentLow, above: false })
+  }
+  const near = found.filter((item) => Math.abs(item.level - bar.close) <= reach)
+  if (near.length === 0) return
+  const chosen = near[Math.min(near.length - 1, Math.floor(choice * near.length))]
+  const low = bandLow(open)
+  const high = bandHigh(open)
+  if (chosen.above) bar.high = clampTo(Math.max(bar.high, chosen.level + overshoot), low, high)
+  else bar.low = clampTo(Math.min(bar.low, chosen.level - overshoot), low, high)
 }
 
 /** The session for the market's current day. Draws only the two session streams it is given. */
@@ -234,7 +289,68 @@ export function buildSession(
       volumesById[def.id],
     )
   }
+  for (const def of stocks) {
+    applyGrab(bars[def.id], market.assets[def.id].priceCents, market.participants?.closes[def.id] ?? [], streams.levels)
+  }
   return { day: market.day, clock: 0, bars, streams }
+}
+
+/**
+ * The player's net order flow after the free share, per stock, in cents. This is what the market
+ * step sees. Orders up to the free share leave the market exactly as it was.
+ */
+export function effectiveOrderFlow(state: GameState, defs: MarketDefinitions): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const def of defs.assets) {
+    const net = state.orderFlow?.[def.id] ?? 0
+    if (def.kind !== 'stock' || net === 0) continue
+    const free = (def.liquidityNotionalCents ?? SESSION_BASE_NOTIONAL_CENTS) * PLAYER_FLOW_FREE_SHARE
+    const excess = Math.abs(net) - free
+    if (excess > 0) out[def.id] = Math.sign(net) * excess
+  }
+  return out
+}
+
+/**
+ * Add a market order to the day's order flow and, if that changes the close, bend the rest of the
+ * session toward the new close. Bars already played stay as they were. The remaining bars keep
+ * their shape and move by a share of the change that grows to all of it at the close, so the
+ * close the session ends on is exactly the close End day will print. Draws nothing. An order at
+ * the close has no time left to be felt, so it adds nothing.
+ */
+export function addOrderFlow(state: GameState, defs: MarketDefinitions, assetId: string, signedCents: number): void {
+  if (defs.participants === undefined || signedCents === 0) return
+  const clock = state.session.clock
+  if (clock >= SESSION_STEPS) return
+  const flow = { ...(state.orderFlow ?? {}) }
+  flow[assetId] = (flow[assetId] ?? 0) + signedCents
+  state.orderFlow = flow
+  const preview = previewNextStep(state.market, defs, effectiveOrderFlow(state, defs))
+  if (preview === null) return
+  const remaining = SESSION_STEPS - clock
+  for (const def of defs.assets) {
+    const bars = state.session.bars[def.id]
+    const delta = preview.closes[def.id] - bars[SESSION_STEPS - 1].close
+    if (delta === 0) continue
+    const low = bandLow(bars[0].open)
+    const high = bandHigh(bars[0].open)
+    const shiftAt = (index: number): number => Math.round((delta * (index - clock)) / remaining)
+    for (let j = clock; j < SESSION_STEPS; j += 1) {
+      const bar = bars[j]
+      const before = shiftAt(j)
+      const after = shiftAt(j + 1)
+      const mid = Math.round((before + after) / 2)
+      const open = clampTo(bar.open + before, low, high)
+      const close = j === SESSION_STEPS - 1 ? preview.closes[def.id] : clampTo(bar.close + after, low, high)
+      bars[j] = {
+        open,
+        close,
+        high: Math.max(open, close, clampTo(bar.high + mid, low, high)),
+        low: Math.min(open, close, clampTo(bar.low + mid, low, high)),
+        volume: bar.volume,
+      }
+    }
+  }
 }
 
 /** Stock prices at step `i` as asset states, so the index formula can be reused. */
@@ -286,6 +402,11 @@ export function assertSession(session: SessionState, day: number, defs: MarketDe
   }
   if (typeof session.streams !== 'object' || session.streams === null) {
     throw new Error(`session streams must be an object, received ${describeValue(session.streams)}`)
+  }
+  for (const name of ['intraday', 'volume', 'levels'] as const) {
+    if (typeof session.streams[name] !== 'object' || session.streams[name] === null) {
+      throw new Error(`session stream ${name} must be an object, received ${describeValue(session.streams[name])}`)
+    }
   }
   if (typeof session.bars !== 'object' || session.bars === null) {
     throw new Error(`session bars must be an object, received ${describeValue(session.bars)}`)

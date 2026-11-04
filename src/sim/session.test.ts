@@ -128,6 +128,43 @@ describe('intraday session', () => {
     expect(() => createGame(bad({ liquidityNotionalCents: 1.5 }), 'demo')).toThrow(/liquidityNotionalCents/)
   })
 
+  it('lets some wicks run through a round price and come back, without moving a close', () => {
+    const game = createGame(defs, 'grabs')
+    let grabs = 0
+    for (let day = 0; day < 60; day += 1) {
+      for (const id of ['NOVA', 'HRBU']) {
+        const bars = game.session.bars[id]
+        const open = bars[0].open
+        const step = open < 2000 ? 100 : open < 10000 ? 500 : 1000
+        for (const bar of bars) {
+          const top = Math.max(bar.open, bar.close)
+          const level = (Math.floor(top / step) + 1) * step
+          if (bar.high > level && top < level) grabs += 1
+        }
+      }
+      endDay(game, defs)
+      applyCommand(game, defs, { type: 'skip' })
+    }
+    expect(grabs).toBeGreaterThan(0)
+  })
+
+  it('builds the same bars whatever the player has resting', () => {
+    const plain = createGame(defs, 'levels')
+    const busy = createGame(defs, 'levels')
+    applyCommand(busy, defs, { type: 'skip' })
+    applyCommand(plain, defs, { type: 'skip' })
+    const price = busy.market.assets.NOVA.priceCents
+    const round = Math.floor(price / 500) * 500
+    applyCommand(busy, defs, { type: 'limitOrder', asset: 'NOVA', side: 'buy', quantity: 1, limitCents: round - 100 })
+    applyCommand(busy, defs, { type: 'order', asset: 'NOVA', side: 'buy', quantity: 1 })
+    applyCommand(busy, defs, { type: 'addExit', asset: 'NOVA', kind: 'stopLoss', priceCents: round - 50 })
+    for (let day = 0; day < 10; day += 1) {
+      expect(busy.session.bars).toEqual(plain.session.bars)
+      endDay(busy, defs)
+      endDay(plain, defs)
+    }
+  })
+
   it('stays flat on day 120, which has no next step', () => {
     const game = createGame(defs, 'demo')
     for (let day = 0; day < 120; day += 1) {

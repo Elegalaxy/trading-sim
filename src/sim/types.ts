@@ -150,6 +150,8 @@ export type CalendarRoll = {
   day: number
   roll: number
   outcome: CalendarOutcome
+  /** The consensus, fixed when the outcome is rolled (market depth M7). It does not depend on the roll. */
+  expected: CalendarOutcome
   applied: boolean
 }
 
@@ -161,6 +163,8 @@ export type UpcomingCalendarItem = {
   day: number
   roll?: number
   outcome?: CalendarOutcome
+  /** The consensus. Present from the day the item is rolled, three days ahead. */
+  expected?: CalendarOutcome
 }
 
 /** Who can see a rumour source. The feed is generated for every source, then filtered. */
@@ -201,11 +205,48 @@ export type ParticipantDefinitions = {
     /** An event of this many percent or more trades at full size. Smaller ones trade in proportion. */
     magnitudeRefPercent: number
   }
+  news: {
+    /**
+     * Share of the gap to news-adjusted fair value that news traders close each day a stock has
+     * news in play, on top of the pull. The run's regime draws from this range. Above 1 overshoots.
+     */
+    efficiencyMin: number
+    efficiencyMax: number
+  }
+  consensus: {
+    /** Cents traders put behind the expected effect of a calendar release, at full size on the last day. */
+    capitalCents: number
+    /** An expected effect of this many percent or more trades at full size. */
+    magnitudeRefPercent: number
+  }
+  crowd: {
+    /** Cents of retail money behind a full mood swing in one stock. A thin stock moves more. */
+    capitalCents: number
+    /** The run's regime scales the crowd's money by a draw from this range. */
+    heatMin: number
+    heatMax: number
+    /** How strongly a rumour of each source tier sways the crowd, from 0 to 1. */
+    tierWeight: Readonly<Record<SourceTier, number>>
+    /** How strongly a headline sways the crowd after the fact, from 0 to 1. */
+    headlineWeight: number
+    /** Share of the after-the-fact mood that fades each day. */
+    chaseDecay: number
+  }
+  momentum: {
+    /** Cents trend followers put behind a clear trend in one stock. */
+    capitalCents: number
+    /** Days of closes the trend is read over. */
+    lookbackDays: number
+    /** A move of this many percent over the look-back is a full-size trend. */
+    thresholdPercent: number
+  }
 }
 
 export type MarketDefinitions = {
   assets: readonly AssetDefinition[]
   participants?: ParticipantDefinitions
+  /** The social feed. Omitted means no posts and no social-stream draws. */
+  social?: SocialDefinitions
   /** Growth, inflation, policy rate, and any later entries. Order is the drift order. */
   environment: readonly EnvironmentEntryDefinition[]
   /** Rolled in this order, then each type's targets in listed order. */
@@ -360,7 +401,7 @@ export type ParticipantFlowEvent = {
   kind: 'participantFlow'
   day: number
   asset: string
-  party: 'informed'
+  party: 'informed' | 'news' | 'crowd' | 'momentum' | 'consensus' | 'player'
   /** Signed cents of demand. Positive buys. */
   demandCents: number
   depthCents: number
@@ -477,6 +518,8 @@ export type CalendarItemEvent = {
   item: CalendarItemKind
   roll: number
   outcome: CalendarOutcome
+  /** The consensus the outcome is judged against. Not part of the log line. */
+  expected: CalendarOutcome
   before: EnvironmentView[]
   after: EnvironmentView[]
 }
@@ -540,6 +583,59 @@ export type SocialPostDefinition = {
   sourceId: string
   direction: 'up' | 'down'
   text: string
+}
+
+/**
+ * One kind of retail poster in the always-on social feed (market depth M10). Text templates take
+ * `{asset}`. `mood` says which crowd direction the persona posts in, or `any`.
+ */
+export type SocialPersona = {
+  id: string
+  mood: 'up' | 'down' | 'any'
+  /** Plain wording. */
+  calm: readonly string[]
+  /** The same post with the emotion turned up. Stress swaps it in for posts that agree with a position. */
+  loaded: readonly string[]
+}
+
+export type SocialDefinitions = {
+  personas: readonly SocialPersona[]
+  /** Chance a stock has a mood post today. */
+  moodPostChance: number
+  /** Crowd mood below this size, either way, is a coin flip. */
+  moodThreshold: number
+  /** Chance a scheduled event gets a true whisper, before the boost for an event informed money knows. */
+  whisperTrueChance: number
+  whisperLeakBoost: number
+  /** False whisper slots a day, each with this chance of posting. They keep the hit rate low. */
+  falseWhispersPerDay: number
+  falseWhisperChance: number
+  whisperCalm: string
+  whisperLoaded: Readonly<Record<'up' | 'down', string>>
+  /** A bar that moves at least this many percent can draw a chatter post. */
+  chatterThresholdPercent: number
+  maxChatterPerDay: number
+  chatterCalm: Readonly<Record<'up' | 'down', string>>
+}
+
+/** A post in the social feed. `truth` is hidden and only whispers have one. `time` is the session time of chatter. */
+export type SocialPost = {
+  id: string
+  kind: 'mood' | 'whisper' | 'chatter'
+  persona: string
+  asset: string
+  direction: 'up' | 'down'
+  calm: string
+  loaded: string
+  time: string | null
+  truth: boolean | null
+}
+
+/** The social feed's own stream and today's posts. Never read by the market. */
+export type SocialState = {
+  stream: RngStream
+  day: number
+  posts: SocialPost[]
 }
 
 /** A headline or rumour in the shown feed. `distorted` is the tell. */
@@ -1300,7 +1396,7 @@ export type SessionState = {
    * Own streams, kept off the market so a session can never move a market hash.
    * They advance once per day, when the session is built.
    */
-  streams: { intraday: RngStream; volume: RngStream }
+  streams: { intraday: RngStream; volume: RngStream; levels: RngStream }
 }
 
 /**
@@ -1316,6 +1412,18 @@ export type ParticipantState = {
   stream: RngStream
   /** The run's regime: scales every leak chance. Never shown. */
   informed: number
+  /** The run's news-trader efficiency (a share of the gap closed each news day). Never shown. */
+  news: number
+  /** The run's crowd regime: scales the crowd's money. Never shown. */
+  heat: number
+  /** Crowd belief in each rumoured event, signed. A rumour's share leaves when its day comes. */
+  shares: Record<string, number>
+  /** Crowd mood chasing headlines, per stock, signed, fading. */
+  chase: Record<string, number>
+  /** The crowd's total mood per stock after the last step. The crowd trades the change. */
+  mood: Record<string, number>
+  /** The last few closes per stock, oldest first, for the trend followers. */
+  closes: Record<string, number[]>
   /** Scheduled event ids that informed money knows about. */
   leaked: string[]
 }
@@ -1547,6 +1655,14 @@ export type GameState = {
   fills: FillRecord[]
   /** One row per closed day, oldest first: the session that led into the close and the closing equity. */
   past: PastDay[]
+  /** Social feed. Absent when the definitions have none. Never read by the market. */
+  social?: SocialState
+  /**
+   * Net value the player bought (positive) or sold (negative) with market orders in each stock
+   * today, in cents. It joins the market's order flow (plan market depth, Step M13) and is reset
+   * when the day ends. Absent means none.
+   */
+  orderFlow?: Record<string, number>
 }
 
 /**

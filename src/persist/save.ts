@@ -189,11 +189,18 @@ function checkStream(value: unknown, path: string): string | null {
 }
 
 function checkParticipants(value: unknown): string | null {
-  if (!isRecord(value) || !sameKeys(value, ['stream', 'informed', 'leaked'])) return 'shape:state.market.participants'
+  if (!isRecord(value) || !sameKeys(value, ['stream', 'informed', 'news', 'heat', 'shares', 'chase', 'mood', 'closes', 'leaked'])) return 'shape:state.market.participants'
   const found = checkStream(value.stream, 'state.market.participants.stream')
   if (found !== null) return found
   const informed = finiteNumber(value.informed, 'state.market.participants.informed')
   if (informed !== null) return informed
+  const news = finiteNumber(value.news, 'state.market.participants.news')
+  if (news !== null) return news
+  const heat = finiteNumber(value.heat, 'state.market.participants.heat')
+  if (heat !== null) return heat
+  for (const key of ['shares', 'chase', 'mood', 'closes'] as const) {
+    if (!isRecord(value[key])) return `shape:state.market.participants.${key}`
+  }
   if (!Array.isArray(value.leaked) || value.leaked.some((id) => typeof id !== 'string')) {
     return 'shape:state.market.participants.leaked'
   }
@@ -307,7 +314,7 @@ function checkFills(value: unknown): string | null {
 
 function checkState(value: unknown): string | null {
   // Saves from before the fill ledger have no `fills`. They load with an empty one.
-  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'past'])) return 'shape:state'
+  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'past', 'social', 'orderFlow'])) return 'shape:state'
   if (value.fills !== undefined) {
     const fills = checkFills(value.fills)
     if (fills !== null) return fills
@@ -315,6 +322,14 @@ function checkState(value: unknown): string | null {
   if (value.past !== undefined) {
     const past = checkPast(value.past)
     if (past !== null) return past
+  }
+  if (value.orderFlow !== undefined && !isRecord(value.orderFlow)) return 'shape:state.orderFlow'
+  if (value.social !== undefined) {
+    const social = value.social
+    if (!isRecord(social) || !sameKeys(social, ['stream', 'day', 'posts'])) return 'shape:state.social'
+    const found = checkStream(social.stream, 'state.social.stream')
+    if (found !== null) return found
+    if (!Number.isSafeInteger(social.day) || !Array.isArray(social.posts)) return 'shape:state.social.posts'
   }
   const market = checkMarket(value.market)
   if (market !== null) return market
@@ -324,6 +339,7 @@ function checkState(value: unknown): string | null {
   const sessionClock = finiteNumber(value.session.clock, 'state.session.clock')
   if (sessionClock !== null) return sessionClock
   if (!isRecord(value.session.bars) || !isRecord(value.session.streams)) return 'shape:state.session.bars'
+  if (!sameKeys(value.session.streams, ['intraday', 'volume', 'levels'])) return 'shape:state.session.streams'
   if (!isRecord(value.resting) || !sameKeys(value.resting, RESTING_KEYS)) return 'shape:state.resting'
   const nextId = finiteNumber(value.resting.nextId, 'state.resting.nextId')
   if (nextId !== null) return nextId

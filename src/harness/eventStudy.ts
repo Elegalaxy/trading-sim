@@ -52,6 +52,10 @@ export type EventStudy = {
   rumours: RumourSample[]
   trueRumoured: Set<string>
   cappedStockDays: number
+  /** Largest gap between a stock's price and its fair value after a step, in percent of fair value. */
+  maxGapPercent: number
+  /** Largest move that order-flow parties added to one stock in one step, in percent of its price. */
+  maxFlowPercent: number
   stockDays: number
 }
 
@@ -67,6 +71,8 @@ export function createEventStudy(defs: MarketDefinitions): EventStudy {
     rumours: [],
     trueRumoured: new Set(),
     cappedStockDays: 0,
+    maxGapPercent: 0,
+    maxFlowPercent: 0,
     stockDays: 0,
   }
 }
@@ -99,6 +105,8 @@ function readEffects(study: EventStudy, log: readonly LogEvent[]): void {
     if (event.kind === 'priceStep' && study.stockIds.has(event.asset)) {
       study.stockDays += 1
       if (event.capped) study.cappedStockDays += 1
+      study.maxGapPercent = Math.max(study.maxGapPercent, (Math.abs(event.gapAfter) / event.fair) * 100)
+      if (event.flow !== undefined) study.maxFlowPercent = Math.max(study.maxFlowPercent, (Math.abs(event.flow) / event.previous) * 100)
     }
     if (event.kind !== 'effectApplied' || event.dayIndex !== 0 || event.delta === 0) continue
     study.effects.push({
@@ -225,6 +233,7 @@ export function studyLines(study: EventStudy): string[] {
   const share = study.stockDays === 0 ? 0 : study.cappedStockDays / study.stockDays
   lines.push(
     `[sim] study cappedStockDayShare=${share.toFixed(6)} cappedStockDays=${study.cappedStockDays} stockDays=${study.stockDays}`,
+    `[sim] study maxGapPercent=${study.maxGapPercent.toFixed(2)} maxFlowPercent=${study.maxFlowPercent.toFixed(2)}`,
   )
   const groups = [...study.series.keys()].sort(groupOrder)
   for (const group of groups) {

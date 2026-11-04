@@ -386,6 +386,84 @@ export function lookupPolicyChances(
   return { hold: cell.hold, up: cell.up, down: cell.down }
 }
 
+/** The most likely outcome of a chance row. Ties go to the middle outcome (inline, hold). */
+function mostLikely<T extends string>(chances: ReadonlyArray<readonly [T, number]>, middle: T): T {
+  let best = middle
+  let bestChance = chances.find(([outcome]) => outcome === middle)?.[1] ?? -1
+  for (const [outcome, chance] of chances) {
+    if (chance > bestChance) {
+      best = outcome
+      bestChance = chance
+    }
+  }
+  return best
+}
+
+function releasedValue(environment: readonly EnvironmentEntryState[], id: string): number {
+  const entry = environment.find((item) => item.id === id)
+  if (entry === undefined) throw new Error(`calendar references missing environment entry ${id}`)
+  return entry.lastReleased ?? environmentValue(environment, id)
+}
+
+/**
+ * The consensus for a calendar item (market depth M7, option C1): the most likely outcome in the
+ * chance table at the band of the last *released* values, so forecasters lag the hidden value.
+ * Before the first release it uses the current value. It draws nothing.
+ */
+export function consensusOutcome(
+  calendar: CalendarDefinitions,
+  environment: readonly EnvironmentEntryState[],
+  kind: CalendarItemKind,
+): CalendarOutcome {
+  const growth = releasedValue(environment, calendar.growthEntryId)
+  const inflation = releasedValue(environment, calendar.inflationEntryId)
+  if (kind === 'policyDecision') {
+    const chances = lookupPolicyChances(calendar, inflation, growth)
+    return mostLikely(
+      [
+        ['hold', chances.hold],
+        ['up', chances.up],
+        ['down', chances.down],
+      ],
+      'hold',
+    )
+  }
+  const cell =
+    kind === 'growthRelease'
+      ? releaseCell(calendar.growthRelease, bandOf(growth, calendar.growthLowBelow, calendar.growthHighAt), 'growth release')
+      : releaseCell(calendar.inflationRelease, bandOf(inflation, calendar.inflationLowBelow, calendar.inflationHighAt), 'inflation release')
+  return mostLikely(
+    [
+      ['inline', cell.inline],
+      ['above', cell.above],
+      ['below', cell.below],
+    ],
+    'inline',
+  )
+}
+
+/** Plain words for an outcome of a kind: stronger, hotter, hike and so on. */
+export function outcomeWord(kind: CalendarItemKind, outcome: CalendarOutcome): string {
+  if (kind === 'policyDecision') return outcome === 'up' ? 'hike' : outcome === 'down' ? 'cut' : 'hold'
+  if (outcome === 'inline') return 'in line'
+  if (kind === 'growthRelease') return outcome === 'above' ? 'stronger' : 'weaker'
+  return outcome === 'above' ? 'hotter' : 'cooler'
+}
+
+const RANK: Record<string, number> = { below: -1, inline: 0, above: 1 }
+
+/** The headline for a calendar item, judged against the consensus. */
+export function calendarHeadlineText(kind: CalendarItemKind, outcome: CalendarOutcome, expected: CalendarOutcome): string {
+  if (kind === 'policyDecision') {
+    return `Policy rate ${outcomeWord(kind, outcome)}, ${outcome === expected ? 'as expected' : 'not expected'}`
+  }
+  const name = kind === 'growthRelease' ? 'Growth data' : 'Inflation data'
+  const diff = RANK[outcome] - RANK[expected]
+  if (diff === 0) return `${name} as expected`
+  const word = outcomeWord(kind, diff > 0 ? 'above' : 'below')
+  return `${name} ${word} than expected`
+}
+
 function releaseCell(cells: readonly ReleaseChanceCell[], band: CalendarBand, label: string): ReleaseChanceCell {
   const cell = cells.find((row) => row.band === band)
   if (cell === undefined) throw new Error(`no ${label} chances for band ${band}`)
@@ -451,7 +529,7 @@ export function upcomingCalendar(state: MarketState, days: number): UpcomingCale
       items.push({ kind: rule.kind, day })
       continue
     }
-    items.push({ kind: rule.kind, day, roll: rolled.roll, outcome: rolled.outcome })
+    items.push({ kind: rule.kind, day, roll: rolled.roll, outcome: rolled.outcome, expected: rolled.expected })
   }
   return items
 }
@@ -472,11 +550,13 @@ export function rollCalendarForDay(state: MarketState, defs: MarketDefinitions, 
   }
   const roll = nextFloat(state.streams.events)
   const outcome = outcomeFor(defs.calendar, state.environment, rule.kind, roll)
+  const expected = consensusOutcome(defs.calendar, state.environment, rule.kind)
   state.calendarRolls.push({
     kind: rule.kind,
     day: eventDay,
     roll,
     outcome,
+    expected,
     applied: false,
   })
 }
@@ -590,6 +670,7 @@ export function beginCalendarDay(state: MarketState, defs: MarketDefinitions): C
       item: item.kind,
       roll: item.roll,
       outcome: item.outcome,
+      expected: item.expected,
       before,
       after,
     },

@@ -1,3 +1,4 @@
+import { outcomeWord } from '../sim/calendar.ts'
 import type { CalendarItemKind, MarketState } from '../sim/types.ts'
 import { playerCalendar } from './days.ts'
 
@@ -23,7 +24,9 @@ export function CalendarPanel({ market }: { market: MarketState | null }) {
         <ul>
           {items.map((item) => (
             <li key={`${item.kind}-${item.day}`}>
-              {`Day ${item.day}: ${LABELS[item.kind]}${item.outcome === undefined ? '' : ` — ${item.outcome}`}`}
+              {`Day ${item.day}: ${LABELS[item.kind]}`}
+              {item.expected === undefined ? '' : ` — expected: ${outcomeWord(item.kind, item.expected)}`}
+              {item.outcome === undefined ? '' : ` — result: ${outcomeWord(item.kind, item.outcome)}`}
             </li>
           ))}
         </ul>

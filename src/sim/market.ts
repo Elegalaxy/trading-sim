@@ -3,7 +3,13 @@
 // The day-ahead feed draws the info stream, and only for rumours. Distortion is not drawn.
 // Mutates `state` and returns it: the streams inside the state advance in place.
 
-import { assertCalendarDefinitions, beginCalendarDay, calendarRulesFrom, rollCalendarForDay } from './calendar.ts'
+import {
+  assertCalendarDefinitions,
+  beginCalendarDay,
+  calendarHeadlineText,
+  calendarRulesFrom,
+  rollCalendarForDay,
+} from './calendar.ts'
 import {
   CENTS_PER_UNIT,
   DAILY_MOVE_CAP_DENOMINATOR,
@@ -15,7 +21,18 @@ import {
 } from './constants.ts'
 import { assertEnvironmentDefinitions, driftEnvironment, initialEnvironment } from './environment.ts'
 import { applyDueEffects, assertEventDefinitions, rollEventsForDay } from './events.ts'
-import { assertParticipantDefinitions, assignLeaks, createParticipants, informedFlow } from './participants.ts'
+import {
+  assertParticipantDefinitions,
+  assignLeaks,
+  consensusFlow,
+  createParticipants,
+  crowdFlow,
+  informedFlow,
+  momentumFlow,
+  newsFlow,
+  orderFlowMove,
+  startPartyDay,
+} from './participants.ts'
 import { assertFeedDefinitions, assertFeedState, publishFeed, type FiredHeadline } from './feed.ts'
 import { createRng, nextNormal } from './rng.ts'
 import {
@@ -28,6 +45,7 @@ import {
   type MarketDefinitions,
   type MarketState,
   type NoiseRollEvent,
+  type ParticipantFlowEvent,
   type PriceStepEvent,
 } from './types.ts'
 
@@ -360,7 +378,11 @@ function tagCalendarEffects(events: Array<EffectAppliedEvent | FairValueChangeEv
  * A calendar float, when day+3 is a calendar date, is drawn after that day's ordinary event rolls.
  * Rumours read only the info stream, after that pre-roll. Headlines do not draw.
  */
-export function stepMarketDay(state: MarketState, defs: MarketDefinitions): MarketState {
+export function stepMarketDay(
+  state: MarketState,
+  defs: MarketDefinitions,
+  orderFlow?: Readonly<Record<string, number>>,
+): MarketState {
   assertDefinitions(defs)
   assertState(state, defs)
   if (state.day >= Number.MAX_SAFE_INTEGER) {
@@ -375,6 +397,9 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
   const effects = applyDueEffects(state, defs)
   tagCalendarEffects(effects)
   for (const event of effects) state.log.push(event)
+  const inPlay = new Set<string>()
+  for (const event of effects) if (event.kind === 'effectApplied') inPlay.add(event.asset)
+  const partyDay = startPartyDay(state, defs)
 
   for (const def of defs.assets) {
     if (def.kind !== 'stock') continue
@@ -384,8 +409,18 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
     const fair = asset.fairValue
     const pull = ((fair - previous) * FAIR_VALUE_PULL_NUMERATOR) / FAIR_VALUE_PULL_DENOMINATOR
     const noise = z * def.dailyVolatility * previous
-    const flow = informedFlow(state, defs, def)
-    const rawMove = flow === null ? pull + noise : pull + noise + flow.moveCents
+    const flows = [
+      informedFlow(state, defs, def),
+      newsFlow(state, defs, def, inPlay),
+      crowdFlow(state, defs, def, partyDay),
+      momentumFlow(state, defs, def),
+      consensusFlow(state, defs, def),
+      orderFlowMove(state, defs, def, orderFlow?.[def.id] ?? 0),
+    ].filter(
+      (item): item is ParticipantFlowEvent => item !== null,
+    )
+    const flowMove = flows.reduce((sum, item) => sum + item.moveCents, 0)
+    const rawMove = flows.length === 0 ? pull + noise : pull + noise + flowMove
     const applied = applyCappedMove(previous, rawMove)
     const noiseEvent: NoiseRollEvent = { kind: 'noiseRoll', day, asset: def.id, z }
     const priceEvent: PriceStepEvent = {
@@ -396,7 +431,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
       fair,
       pull,
       noise,
-      ...(flow === null ? {} : { flow: flow.moveCents }),
+      ...(flows.length === 0 ? {} : { flow: flowMove }),
       rawMove,
       cappedMove: applied.delta,
       capped: applied.capped,
@@ -404,7 +439,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
       gapAfter: fair - applied.newPrice,
     }
     state.log.push(noiseEvent)
-    if (flow !== null) state.log.push(flow)
+    for (const item of flows) state.log.push(item)
     state.log.push(priceEvent)
     asset.priceCents = applied.newPrice
   }
@@ -452,9 +487,7 @@ export function stepMarketDay(state: MarketState, defs: MarketDefinitions): Mark
 }
 
 function calendarHeadline(item: CalendarItemEvent): string {
-  if (item.item === 'growthRelease') return `Growth release ${item.outcome}`
-  if (item.item === 'inflationRelease') return `Inflation release ${item.outcome}`
-  return `Policy rate ${item.outcome}`
+  return calendarHeadlineText(item.item, item.outcome, item.expected)
 }
 
 /** Largest absolute sector effect for this outcome, in percent of fair value. The summary does not see this number's source. */

@@ -63,10 +63,13 @@ export function nextPayday(game: GameState, defs: MarketDefinitions): Payday | n
 /**
  * Upcoming dates as the player may see them. The sim rolls an outcome three days ahead, so an
  * outcome is shown only from the day being traded (`market.day + 1`), when its headline prints.
+ * The consensus is public from the roll, three days ahead.
  */
 export function playerCalendar(market: MarketState, days: number): UpcomingCalendarItem[] {
   const today = market.day + 1
   return upcomingCalendar(market, days).map((item) =>
-    item.day <= today ? item : { kind: item.kind, day: item.day },
+    item.day <= today
+      ? item
+      : { kind: item.kind, day: item.day, ...(item.expected === undefined ? {} : { expected: item.expected }) },
   )
 }

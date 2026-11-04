@@ -1,7 +1,7 @@
 # Trading Sim: Consumable Items and Lifestyle Benefits
 
 Date: 2026-11-04  
-Status: draft. No step starts before the user answers the questions in section 7. Every number here is a placeholder, provisional in this plan only.  
+Status: draft. Question 1 answered (option B, items with trade-offs). No step starts before the user answers questions 2 to 8 in section 7. Every number here is a placeholder, provisional in this plan only.  
 Design source of truth: [../GAME_DESIGN.md](../GAME_DESIGN.md), section 6 (Expenses and lifestyle) and section 9 (Stats). It closes the `[OPEN]` item list in section 9 and open question 1 in section 17. It changes no `[CONFIRMED]` rule; where an option would, it says so.  
 Format: like [2026-11-03-market-depth.md](2026-11-03-market-depth.md). Step ids are `L1`, `L2`… Status values: `todo`, `done`, `verified`, `failed`, `blocked`.
 
@@ -122,7 +122,7 @@ Section 6 says lifestyle "sets trading time and usable capital". Today only the 
 
 ## 7. Questions for the user
 
-1. **Item model:** A (flat list), B (trade-offs and next-morning effects, recommended) or C (B plus tolerance)?
+1. **Item model:** A (flat list), B (trade-offs and next-morning effects, recommended) or C (B plus tolerance)? **Answer (2026-11-04): B.**
 2. **The item list:** keep the table in 4.2 as the starting point, or change names, prices or effects?
 3. **Overnight recovery:** add a base recovery scaled by Home tier (recommended)? Should it skip short-sleep nights?
 4. **Home extras:** kitchen, quiet room, home office as in 5.1?

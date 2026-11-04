@@ -18,4 +18,5 @@
   - The user wants every commit followed by a push and a merge into `main`.
   - The dev server serves stale modules after edits; restart on a ReferenceError. It may pick another port, which has its own localStorage. `.claude/launch.json` is untracked, so a worktree needs its own copy and a `node_modules` junction.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
+- **Next plan (draft, 2026-11-04):** consumable items and lifestyle benefits, `doc/plans/2026-11-04-items-and-lifestyle.md` (steps L0–L6). Today Home tiers do nothing and nothing recovers on its own. Waiting on the user's answers to the plan's questions 1–8.
 - **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, and the market-depth playtest) and answers the two balance questions. 

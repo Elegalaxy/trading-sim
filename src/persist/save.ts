@@ -224,6 +224,10 @@ function checkMarket(value: unknown): string | null {
   if (month !== null) return month
   if (!Array.isArray(value.calendarRules.schedule)) return 'shape:state.market.calendarRules.schedule'
   if (!Array.isArray(value.calendarRolls)) return 'shape:state.market.calendarRolls'
+  // Rolls from before the consensus have no `expected`, and their headline would read wrong.
+  if (value.calendarRolls.some((roll) => !isRecord(roll) || typeof roll.expected !== 'string')) {
+    return 'shape:state.market.calendarRolls.expected'
+  }
   if (!Array.isArray(value.scheduled)) return 'shape:state.market.scheduled'
   if (!Array.isArray(value.active)) return 'shape:state.market.active'
   if (!Array.isArray(value.log)) return 'shape:state.market.log'

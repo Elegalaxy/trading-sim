@@ -300,6 +300,11 @@ export function continueGame(save: SaveFile): string | null {
     // The same for the closed-day record. The chart then has candles again from the next End day.
     if ((game as { past?: unknown }).past === undefined) game.past = []
     assertPast(game.past)
+    // A save must carry the order-flow parties and the social feed the definitions run, or it would play without them.
+    if ((definitions.participants !== undefined) !== (game.market.participants !== undefined)) {
+      throw new Error('save has no order-flow parties')
+    }
+    if ((definitions.social !== undefined) !== (game.social !== undefined)) throw new Error('save has no social feed')
   } catch (error) {
     console.error('[save] rejected reason=shape', error)
     debugLog('[save]', 'rejected reason=shape')

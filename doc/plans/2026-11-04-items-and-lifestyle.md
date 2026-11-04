@@ -1,7 +1,7 @@
 # Trading Sim: Consumable Items and Lifestyle Benefits
 
 Date: 2026-11-04  
-Status: draft. Question 1 answered (option B, items with trade-offs). No step starts before the user answers questions 2 to 8 in section 7. Every number here is a placeholder, provisional in this plan only.  
+Status: all questions answered 2026-11-04 (the recommended answers, see section 7). Not started: the user asked to hold the build. Every number here is a placeholder, provisional in this plan only.  
 Design source of truth: [../GAME_DESIGN.md](../GAME_DESIGN.md), section 6 (Expenses and lifestyle) and section 9 (Stats). It closes the `[OPEN]` item list in section 9 and open question 1 in section 17. It changes no `[CONFIRMED]` rule; where an option would, it says so.  
 Format: like [2026-11-03-market-depth.md](2026-11-03-market-depth.md). Step ids are `L1`, `L2`… Status values: `todo`, `done`, `verified`, `failed`, `blocked`.
 
@@ -123,10 +123,10 @@ Section 6 says lifestyle "sets trading time and usable capital". Today only the 
 ## 7. Questions for the user
 
 1. **Item model:** A (flat list), B (trade-offs and next-morning effects, recommended) or C (B plus tolerance)? **Answer (2026-11-04): B.**
-2. **The item list:** keep the table in 4.2 as the starting point, or change names, prices or effects?
-3. **Overnight recovery:** add a base recovery scaled by Home tier (recommended)? Should it skip short-sleep nights?
-4. **Home extras:** kitchen, quiet room, home office as in 5.1?
-5. **Information feed extras:** the free first read and free-energy Verify, or leave the feed as it is?
-6. **New categories:** which of Health, Equipment, Transport, or none?
-7. **Trading conditions:** may Equipment lower the trading fee (a broker tier)? It changes a rule players already know.
-8. **Upgrade price:** keep "an upgrade costs twice the monthly amount it adds", or change it?
+2. **The item list:** keep the table in 4.2 as the starting point, or change names, prices or effects? **Answer: keep the table as the starting point.**
+3. **Overnight recovery:** add a base recovery scaled by Home tier (recommended)? Should it skip short-sleep nights? **Answer: yes, and it skips short-sleep nights.**
+4. **Home extras:** kitchen, quiet room, home office as in 5.1? **Answer: yes.**
+5. **Information feed extras:** the free first read and free-energy Verify, or leave the feed as it is? **Answer: add both.**
+6. **New categories:** which of Health, Equipment, Transport, or none? **Answer: Health and Equipment; no Transport.**
+7. **Trading conditions:** may Equipment lower the trading fee (a broker tier)? It changes a rule players already know. **Answer: yes, tier 2 lowers the fee from 0.1% to 0.08%.**
+8. **Upgrade price:** keep "an upgrade costs twice the monthly amount it adds", or change it? **Answer: keep it.**

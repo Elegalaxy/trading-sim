@@ -8,7 +8,7 @@
   - `save.ts`: `fills` and `past` are optional in `inspectSave`, so old saves load with them empty; `continueGame` fills them in and runs `assertPast`. `social` and `orderFlow` are optional too.
   - UI: `run.closes` is gone; `Dashboard.tsx` builds the chart from `game.past`. The Equity tab restarts from one point per past day (intraday points of past days are not kept).
   - `previewCopy` (a state copy without `past` and `fills`) is used by the order preview (`resting.ts`, `OrderPanel.tsx`) and the margin test; without it the 200-seed margin test took 94 s instead of 8 s. Save size is about 650 KB at day 119.
-  - Not done: a History line in the Guide.
+  - The Guide has a History section (page Orders, `Guide.tsx`).
 - **Market depth (`doc/plans/2026-11-03-market-depth.md`):** M7 calendar consensus, M9 liquidity grabs, M10 social feed (`GameState.social`), M13 player orders in the order flow (`GameState.orderFlow`), M11 cap review (8% kept), M12 docs and a "Who else trades" Guide page. Open for the user: (1) the 50x short bot's upper tail returned after M13 (GAME_DESIGN section 16): more depth days or more slippage? (2) Only market orders add flow; stops, limit fills and liquidations do not yet. (3) The seeded playtest.
 - **Checks on the merge of the H4 branch with main:** typecheck and lint clean, `npm test` 248 passed (38 files). Browser check of H4 (before the merge, seed `demo`): trade, End day twice, reload; the Buy mark shows on 1D and 15m and the Equity line keeps days 1 to 3.
 - **Active Decisions / Constraints:**
@@ -18,4 +18,4 @@
   - The user wants every commit followed by a push and a merge into `main`.
   - The dev server serves stale modules after edits; restart on a ReferenceError. It may pick another port, which has its own localStorage. `.claude/launch.json` is untracked, so a worktree needs its own copy and a `node_modules` junction.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, and the market-depth playtest) and answers the two balance questions. Then the Guide line for History if wanted.
+- **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, and the market-depth playtest) and answers the two balance questions. 

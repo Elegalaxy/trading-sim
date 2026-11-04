@@ -1,7 +1,7 @@
 # Trading Sim: Save the Fill History
 
 Date: 2026-11-04  
-Status: all questions answered 2026-11-04 (A; H4 yes, after H3; old saves load with an empty ledger; no mid-day saves). H1 to H3 are done (M3 is committed). H4 is next, and the chart marks wait on it. Numbers here are placeholders.  
+Status: all questions answered 2026-11-04 (A; H4 yes, after H3; old saves load with an empty ledger; no mid-day saves). All steps are done (H1 to H3 in `e256d83`, H4 and H5 merged into `main`). Numbers here are placeholders.  
 Design source of truth: [../GAME_DESIGN.md](../GAME_DESIGN.md). This plan changes no `[CONFIRMED]` rule.  
 Format: like [2026-11-03-market-depth.md](2026-11-03-market-depth.md). Step ids are `H1`, `H2`… Status values: `todo`, `done`, `verified`, `failed`, `blocked`.
 
@@ -52,7 +52,7 @@ The save already stores `GameState`, so the ledger is saved and restored with no
 | H2 | `save.ts`: `'fills'` in `STATE_KEYS`, shape check per row. Old saves without `fills` load with an empty ledger through an upgrade step like `upgradeResting` (see Q3). Test: save, load, rows are equal; an old save loads. | done. `fills` is optional in `inspectSave` and `continueGame` fills it in. Test in `save.test.ts`. |
 | H3 | UI: History, P&L and chart marks read `game.fills`. Remove `collectFills` and `TradeRecord`. History labels for liquidation and forced sale; the chart marks them in their own colour. Browser check: trade, take a TP, end the day, reload, and every row and mark is still there. | done for History and P&L (checked: a trade, End day, reload, the row is there). `TradeRecord`, `collectFills` and the unused `marks` are removed from `store.ts`. The chart marks do not show after a reload yet, because the reloaded chart has no candle for past days; that is H4. |
 | H4 (Q2) | Also save the chart's 15-minute bars of past days and the equity curve. See Q2 for size. | done, on the worktree branch `worktree-h4-save-chart`. The sim keeps `GameState.past: PastDay[]` (`src/sim/past.ts`): after each End day, the session that led into the close, the closing prices and the closing trading equity. The UI's `closes` is gone; the chart reads `game.past`, and the Equity tab restarts from one point per past day (the intraday points of past days are not kept). Old saves load with an empty record, and the chart has candles again from the next End day. Size: about 650 KB of JSON at day 119. Previews copy the state without `past` and `fills` (`previewCopy`), because the copy ran on every order try. Browser check (seed `demo`): trade, End day twice, reload, the Buy mark shows on 1D and 15m and the Equity line keeps days 1 to 3. |
-| H5 | Guide line ("History keeps the whole run, including liquidations"), changelog, HANDOFF. | partly done: changelog and HANDOFF. The Guide has no History text yet; add it with H4. |
+| H5 | Guide line ("History keeps the whole run, including liquidations"), changelog, HANDOFF. | done. The Guide has a History section on the Orders page. |
 
 Order: H1 to H3 start after M3 (slippage) is committed, because they share `trading.ts`, `resting.ts` and `margin.ts`.
 

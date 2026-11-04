@@ -438,6 +438,15 @@ const TOPICS: readonly Topic[] = [
           </li>
           <li>When the position closes or flips, its remaining exits are cancelled.</li>
         </ul>
+        <h3>History</h3>
+        <ul>
+          <li>
+            The History tab lists every fill of the run, newest first: your market and limit orders, take profits and stop
+            losses, liquidations and the forced sales that cover missed loan interest.
+          </li>
+          <li>Each row shows the day, the time of the 15-minute bar, the price, the fee and the profit or loss it closed.</li>
+          <li>The list is saved with the run, so it is still there after you reload. The chart marks the same fills.</li>
+        </ul>
       </>
     ),
   },

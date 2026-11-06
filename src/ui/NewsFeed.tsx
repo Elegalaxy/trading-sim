@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { VERIFY_ENERGY_COST, VERIFY_RESEARCH_COST } from '../sim/constants.ts'
+import { INFO_FREE_READ_TIER, INFO_FREE_VERIFY_TIER, VERIFY_ENERGY_COST, VERIFY_RESEARCH_COST } from '../sim/constants.ts'
 import { shownPosts } from '../sim/social.ts'
 import { NEWS_READ_ENERGY_COST } from '../sim/stats.ts'
 import type { HeadlineItem, JobDefinition, ShownFeed, ShownItem } from '../sim/types.ts'
@@ -63,7 +63,7 @@ export function NewsFeed({
   const game = useTradingStore().run?.game ?? null
   const energy = game?.stats.energy ?? null
   const points = game?.study.points ?? 0
-  const fx = useCosmeticFx(energy)
+  const fx = useCosmeticFx(energy, game?.lifestyle.equipment ?? 0)
   const live = feed === null ? null : { feed, verified }
   const signature = live === null ? 'none' : feedSignature(live.feed, live.verified)
   const delayed = useDelayedValue<FeedSnapshot | null>('news-feed', live, fx.delayMs, signature)
@@ -83,7 +83,9 @@ export function NewsFeed({
   // The feed is fixed for the day, so one read shows all of it. A read already paid for stays open.
   const readToday = newsReads > 0
   const listOpen = open || readToday
-  const free = job?.perk === 'quietBreaks' && newsReads === 0
+  const feedTier = game?.lifestyle.infoFeed ?? 0
+  const free = (job?.perk === 'quietBreaks' || feedTier >= INFO_FREE_READ_TIER) && newsReads === 0
+  const verifyEnergy = feedTier >= INFO_FREE_VERIFY_TIER ? 0 : VERIFY_ENERGY_COST
   const filter = blurFilter(fx.blurPx)
   const blurStyle = filter === undefined ? undefined : { filter }
 
@@ -130,7 +132,9 @@ export function NewsFeed({
       </div>
       <p>
         {free ? 'The first read is free.' : `Reading costs ${NEWS_READ_ENERGY_COST} energy.`}{' '}
-        {`Verifying costs ${VERIFY_ENERGY_COST} energy and ${VERIFY_RESEARCH_COST} research point.`}
+        {verifyEnergy === 0
+          ? `Verifying costs ${VERIFY_RESEARCH_COST} research point and no energy.`
+          : `Verifying costs ${verifyEnergy} energy and ${VERIFY_RESEARCH_COST} research point.`}
       </p>
       <div className="news-actions">
         <button type="button" onClick={onRead} disabled={readToday}>

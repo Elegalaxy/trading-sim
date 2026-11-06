@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { EQUIPMENT_FX_TIER } from '../sim/constants.ts'
 import { ENERGY_WARNING_BELOW, STRESS_WARNING_ABOVE } from '../sim/stats.ts'
 
 // Provisional cosmetic scale (plan section 2.4). Display only: no simulation calls.
@@ -103,7 +104,8 @@ export function setReduceVisualEffects(reduceVisualEffects: boolean): void {
   for (const listener of settingsListeners) listener()
 }
 
-export function cosmeticFx(energy: number, reduced: boolean): CosmeticFx {
+/** Equipment tier 1 (a second screen) halves the blur and the delay. The tell stays. */
+export function cosmeticFx(energy: number, reduced: boolean, equipmentTier = 0): CosmeticFx {
   if (!Number.isSafeInteger(energy) || energy < 0 || energy > 100) {
     console.error(`[fx] energy must be an integer from 0 to 100, received ${String(energy)}`)
     return IDLE_FX
@@ -115,9 +117,10 @@ export function cosmeticFx(energy: number, reduced: boolean): CosmeticFx {
   const tell = energy < FX_CLEAR_AT_ENERGY
   if (reduced || !tell) return { blurPx: 0, delayMs: 0, tell }
   const drop = FX_CLEAR_AT_ENERGY - energy
+  const scale = equipmentTier >= EQUIPMENT_FX_TIER ? 0.5 : 1
   return {
-    blurPx: (drop * FX_MAX_BLUR_PX) / FX_CLEAR_AT_ENERGY,
-    delayMs: (drop * FX_MAX_DELAY_MS) / FX_CLEAR_AT_ENERGY,
+    blurPx: (drop * FX_MAX_BLUR_PX * scale) / FX_CLEAR_AT_ENERGY,
+    delayMs: (drop * FX_MAX_DELAY_MS * scale) / FX_CLEAR_AT_ENERGY,
     tell,
   }
 }
@@ -153,10 +156,10 @@ export function blurFilter(blurPx: number): string | undefined {
   return `blur(${formatBlurPx(blurPx)}px)`
 }
 
-export function useCosmeticFx(energy: number | null): CosmeticFx {
+export function useCosmeticFx(energy: number | null, equipmentTier = 0): CosmeticFx {
   const reduced = useVisualSettings().reduceVisualEffects
   if (energy === null) return IDLE_FX
-  return cosmeticFx(energy, reduced)
+  return cosmeticFx(energy, reduced, equipmentTier)
 }
 
 export function useDelayedValue<T>(channel: string, value: T, delayMs: number, signature: string): T {

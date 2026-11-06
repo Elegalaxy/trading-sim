@@ -7,6 +7,10 @@
 import {
   BASE_MONTHLY_EXPENSES_CENTS,
   COURSE_COST_CENTS,
+  EQUIPMENT_MAX_TIER,
+  EQUIPMENT_TIER_COST_CENTS,
+  HEALTH_MAX_TIER,
+  HEALTH_TIER_COST_CENTS,
   HOME_MAX_TIER,
   HOME_TIER_COST_CENTS,
   INFO_FEED_MAX_TIER,
@@ -47,11 +51,20 @@ function isCourse(value: unknown): value is CourseId {
 }
 
 function maxTier(category: LifestyleCategory): number {
-  return category === 'home' ? HOME_MAX_TIER : INFO_FEED_MAX_TIER
+  if (category === 'home') return HOME_MAX_TIER
+  if (category === 'infoFeed') return INFO_FEED_MAX_TIER
+  return category === 'health' ? HEALTH_MAX_TIER : EQUIPMENT_MAX_TIER
 }
 
 function tierCostCents(category: LifestyleCategory): number {
-  return category === 'home' ? HOME_TIER_COST_CENTS : INFO_FEED_TIER_COST_CENTS
+  if (category === 'home') return HOME_TIER_COST_CENTS
+  if (category === 'infoFeed') return INFO_FEED_TIER_COST_CENTS
+  return category === 'health' ? HEALTH_TIER_COST_CENTS : EQUIPMENT_TIER_COST_CENTS
+}
+
+/** The tier of a category. Health and Equipment are absent in older saves and count as 0. */
+export function tierOf(lifestyle: LifestyleState, category: LifestyleCategory): number {
+  return lifestyle[category] ?? 0
 }
 
 function requireTier(value: number, category: LifestyleCategory): number {
@@ -62,9 +75,9 @@ function requireTier(value: number, category: LifestyleCategory): number {
   return value
 }
 
-/** Both tiers start at the base. No course is owned. */
+/** Every category starts at the base. No course is owned. */
 export function initialLifestyle(): LifestyleState {
-  return { home: 0, infoFeed: 0 }
+  return { home: 0, infoFeed: 0, health: 0, equipment: 0 }
 }
 
 /** Reject a lifestyle block that could not have come from `initialLifestyle` plus commands. */
@@ -74,17 +87,18 @@ export function assertLifestyle(lifestyle: LifestyleState): void {
   }
   requireTier(lifestyle.home, 'home')
   requireTier(lifestyle.infoFeed, 'infoFeed')
+  requireTier(tierOf(lifestyle, 'health'), 'health')
+  requireTier(tierOf(lifestyle, 'equipment'), 'equipment')
 }
 
 /**
- * Base 1E plus each Home tier and each information-feed tier.
+ * Base 1E plus each tier of Home, the information feed, Health and Equipment.
  * The staff discount is not applied here. Courses are not included.
  */
 export function lifestyleExpensesCents(lifestyle: LifestyleState): number {
   assertLifestyle(lifestyle)
-  const home = lifestyle.home * HOME_TIER_COST_CENTS
-  const info = lifestyle.infoFeed * INFO_FEED_TIER_COST_CENTS
-  const total = BASE_MONTHLY_EXPENSES_CENTS + home + info
+  let total = BASE_MONTHLY_EXPENSES_CENTS
+  for (const category of LIFESTYLE_CATEGORIES) total += tierOf(lifestyle, category) * tierCostCents(category)
   if (!Number.isSafeInteger(total) || total <= 0) {
     throw new Error(`monthly expenses are not a positive safe integer, received ${describeValue(total)}`)
   }
@@ -97,7 +111,7 @@ export function lifestyleExpensesCents(lifestyle: LifestyleState): number {
  */
 export function upfrontCents(category: LifestyleCategory, from: number, to: number): number {
   if (!isCategory(category)) {
-    throw new Error(`lifestyle category must be home or infoFeed, received ${describeValue(category)}`)
+    throw new Error(`lifestyle category must be home, infoFeed, health or equipment, received ${describeValue(category)}`)
   }
   const start = requireTier(from, category)
   const end = requireTier(to, category)
@@ -116,11 +130,21 @@ export function projectedBillCents(state: GameState): number {
   return billDueForJob(state.job, state.market.day, lifestyleExpensesCents(state.lifestyle)).amountCents
 }
 
+/** True when the other categories can make up the rest of `expensesCents` at some tiers. */
 function tierFitsExpenses(category: LifestyleCategory, tier: number, expensesCents: number): boolean {
   const rest = expensesCents - BASE_MONTHLY_EXPENSES_CENTS - tier * tierCostCents(category)
   if (!Number.isSafeInteger(rest) || rest < 0) return false
-  if (category === 'home') return rest % INFO_FEED_TIER_COST_CENTS === 0 && rest / INFO_FEED_TIER_COST_CENTS <= INFO_FEED_MAX_TIER
-  return rest % HOME_TIER_COST_CENTS === 0 && rest / HOME_TIER_COST_CENTS <= HOME_MAX_TIER
+  const others = LIFESTYLE_CATEGORIES.filter((other) => other !== category)
+  const reach = (index: number, left: number): boolean => {
+    const other = others[index]
+    if (other === undefined) return left === 0
+    for (let step = 0; step <= maxTier(other); step += 1) {
+      const next = left - step * tierCostCents(other)
+      if (next >= 0 && reach(index + 1, next)) return true
+    }
+    return false
+  }
+  return reach(0, rest)
 }
 
 /** Pending lifestyle and course lines. A bad line is a broken state and throws. */
@@ -135,7 +159,7 @@ export function assertLifestyleCommand(event: unknown): void {
       throw new Error(`lifestyle change day must be a safe integer >= 0, received ${describeValue(row.day)}`)
     }
     if (!isCategory(row.category)) {
-      throw new Error(`lifestyle change category must be home or infoFeed, received ${describeValue(row.category)}`)
+      throw new Error(`lifestyle change category must be a lifestyle category, received ${describeValue(row.category)}`)
     }
     const from = requireTier(row.from, row.category)
     const to = requireTier(row.to, row.category)
@@ -200,7 +224,7 @@ export function interpretSetLifestyle(state: GameState, cmd: unknown): SetLifest
     return { accepted: false, event: rejected(day, 'setLifestyle', 'invalidTier') }
   }
   assertLifestyle(state.lifestyle)
-  const from = state.lifestyle[category]
+  const from = tierOf(state.lifestyle, category)
   if (from === tier) return { accepted: false, event: rejected(day, 'setLifestyle', 'alreadyAtTier') }
   const upfront = upfrontCents(category, from, tier)
   if (state.accounts.cashCents < upfront) {

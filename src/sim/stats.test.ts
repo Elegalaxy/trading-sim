@@ -74,23 +74,26 @@ describe('energy, stress, sleep, and consumables', () => {
     expect(office.stats).toMatchObject({ energy: 80, stress: 20 })
     expect(office.section).toBe('work')
     endDay(office, market())
-    expect(office.stats).toMatchObject({ energy: 70, stress: 28 })
-    expect(changes(office, 'energy').map((event) => event.cause)).toEqual(['job'])
+    // Home tier 0 still recovers a little after a full night: +4 energy, -3 stress.
+    expect(office.stats).toMatchObject({ energy: 74, stress: 25 })
+    expect(changes(office, 'energy').map((event) => event.cause)).toEqual(['job', 'homeRecovery'])
     expect(changes(office, 'energy')[0]).toMatchObject({ before: 80, cause: 'job', delta: -10, after: 70 })
+    expect(changes(office, 'energy')[1]).toMatchObject({ before: 70, cause: 'homeRecovery', delta: 4, after: 74 })
     expect(changes(office, 'stress')[0]).toMatchObject({ before: 20, cause: 'job', delta: 8, after: 28 })
+    expect(changes(office, 'stress')[1]).toMatchObject({ before: 28, cause: 'homeRecovery', delta: -3, after: 25 })
     endDay(office, market())
     endDay(office, market())
-    expect(office.stats.energy).toBe(50)
-    expect(office.stats.stress).toBe(44)
+    expect(office.stats.energy).toBe(62)
+    expect(office.stats.stress).toBe(35)
     expect(office.log.some((event) => event.kind === 'consume')).toBe(false)
     debugStats(`office 3 days no food energy=${office.stats.energy} stress=${office.stats.stress}`)
 
     const expected = [
-      { id: 'jobless', energy: 80, stress: 20, shortSleep: false },
-      { id: 'shopAssistant', energy: 75, stress: 22, shortSleep: false },
+      { id: 'jobless', energy: 84, stress: 17, shortSleep: false },
+      { id: 'shopAssistant', energy: 79, stress: 19, shortSleep: false },
       { id: 'nightWarehouse', energy: 52, stress: 36, shortSleep: true },
-      { id: 'tradingFloor', energy: 68, stress: 35, shortSleep: false },
-      { id: 'freelanceAnalyst', energy: 74, stress: 26, shortSleep: false },
+      { id: 'tradingFloor', energy: 72, stress: 32, shortSleep: false },
+      { id: 'freelanceAnalyst', energy: 78, stress: 23, shortSleep: false },
     ]
     for (const row of expected) {
       const game = start(row.id)
@@ -260,11 +263,14 @@ describe('energy, stress, sleep, and consumables', () => {
     expect(isLargeDrawdown(0, -1)).toBe(false)
     const boundary = start('jobless')
     const exactly = applyEndOfDayStats(boundary, activeJob(boundary.job), boundary.sleepHours, 100_000, 90_000, [])
-    expect(boundary.stats.stress).toBe(30)
-    expect(exactly.map((event) => event.cause)).toEqual(['drawdown'])
+    expect(boundary.stats.stress).toBe(27)
+    expect(exactly.map((event) => event.cause)).toEqual(['drawdown', 'homeRecovery', 'homeRecovery'])
     const inside = start('jobless')
-    expect(applyEndOfDayStats(inside, activeJob(inside.job), 8, 100_000, 90_001, [])).toEqual([])
-    expect(inside.stats.stress).toBe(20)
+    expect(applyEndOfDayStats(inside, activeJob(inside.job), 8, 100_000, 90_001, []).map((event) => event.cause)).toEqual([
+      'homeRecovery',
+      'homeRecovery',
+    ])
+    expect(inside.stats.stress).toBe(17)
     debugStats('large drawdown is a 10% equity drop from the start of the day; no drawdown log flag')
 
     const defs = market(0)
@@ -281,11 +287,13 @@ describe('energy, stress, sleep, and consumables', () => {
     expect(margin.some((event) => event.kind === 'wipeOut')).toBe(true)
     expect(isLargeDrawdown(startEquity, endEquity)).toBe(true)
     const spikes = applyEndOfDayStats(wiped, activeJob(wiped.job), wiped.sleepHours, startEquity, endEquity, margin)
-    expect(wiped.stats.stress).toBe(63)
+    expect(wiped.stats.stress).toBe(60)
     expect(spikes.map((event) => `${event.cause}:${event.delta}`)).toEqual([
       'drawdown:10',
       'marginWarning:8',
       'wipeOut:25',
+      'homeRecovery:4',
+      'homeRecovery:-3',
     ])
     debugStats(
       `wipe day start=${startEquity} end=${endEquity} stress=${wiped.stats.stress} causes=${spikes.map((event) => event.cause).join(',')}`,
@@ -302,9 +310,9 @@ describe('energy, stress, sleep, and consumables', () => {
     const after = tradingEquity(lived, market(0)).equity
     expect(isLargeDrawdown(before, after)).toBe(true)
     expect(lived.log.some((event) => event.kind === 'marginWarning')).toBe(true)
-    expect(changes(lived, 'stress').map((event) => event.cause)).toEqual(['drawdown', 'marginWarning'])
-    expect(lived.stats.stress).toBe(38)
-    expect(lived.stats.energy).toBe(80)
+    expect(changes(lived, 'stress').map((event) => event.cause)).toEqual(['drawdown', 'marginWarning', 'homeRecovery'])
+    expect(lived.stats.stress).toBe(35)
+    expect(lived.stats.energy).toBe(84)
     debugStats(`endDay drawdown ${before}->${after} stress=${lived.stats.stress} energy=${lived.stats.energy}`)
   })
 
@@ -318,7 +326,8 @@ describe('energy, stress, sleep, and consumables', () => {
       stepMarketDay(alone, defs)
       expect(stateHash(game.market)).toBe(stateHash(alone))
     }
-    expect(game.stats).toMatchObject({ energy: 80, stress: 20, consumed: [], newsReads: 0 })
+    // Ten full nights of Home tier 0 recovery take a jobless player to the ceiling and the floor.
+    expect(game.stats).toMatchObject({ energy: 100, stress: 0, consumed: [], newsReads: 0 })
     expect(game.accounts.cashCents).toBe(STARTING_CASH_CENTS)
     expect(game.accounts.tradingCents).toBe(STARTING_TRADING_CENTS)
     expect(ENERGY_WARNING_BELOW).toBe(40)

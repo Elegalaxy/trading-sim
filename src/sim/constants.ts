@@ -103,6 +103,33 @@ export const HOME_TIER_COST_CENTS = 15_000
 export const INFO_FEED_MAX_TIER = 2
 export const INFO_FEED_TIER_COST_CENTS = 10_000
 export const LIFESTYLE_UPFRONT_MULTIPLIER = 2
+/**
+ * Home overnight recovery by tier 0 to 3 (plan items and lifestyle, Step L2). It is applied at
+ * End day after the job and sleep costs, and only after a full night's sleep.
+ */
+export const HOME_RECOVERY_ENERGY: readonly number[] = [4, 7, 10, 13]
+export const HOME_RECOVERY_STRESS: readonly number[] = [3, 5, 7, 9]
+/** Home tier that has a kitchen, so the home-cooked meal can be made. */
+export const HOME_KITCHEN_TIER = 1
+/** Home tier with a quiet room: the short-sleep penalty is halved. */
+export const HOME_QUIET_ROOM_TIER = 2
+/** Home tier with a home office: stress from a large drawdown or a margin warning is halved. */
+export const HOME_OFFICE_TIER = 3
+/** Health (a gym membership): one tier. The gym session is free, and the job alone cannot push stress past the ceiling. */
+export const HEALTH_MAX_TIER = 1
+export const HEALTH_TIER_COST_CENTS = 8_000
+export const HEALTH_STRESS_CEILING = 90
+/** Equipment: tier 1 halves the low-energy blur and delay, tier 2 lowers the trading fee. */
+export const EQUIPMENT_MAX_TIER = 2
+export const EQUIPMENT_TIER_COST_CENTS = 6_000
+export const EQUIPMENT_FX_TIER = 1
+export const EQUIPMENT_FEE_TIER = 2
+/** The trading fee at Equipment tier 2: 0.08% instead of 0.1%. */
+export const EQUIPMENT_FEE_NUMERATOR = 8
+export const EQUIPMENT_FEE_DENOMINATOR = 10_000
+/** Information feed tier 1 makes the first news read of a day free, tier 2 makes Verify cost no energy. */
+export const INFO_FREE_READ_TIER = 1
+export const INFO_FREE_VERIFY_TIER = 2
 export const COURSE_COST_CENTS = 50_000
 
 /**

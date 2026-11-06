@@ -388,8 +388,8 @@ const TOPICS: readonly Topic[] = [
         <h3>Market and limit orders</h3>
         <ul>
           <li>
-            A market order fills now at the price at the clock, plus half the spread, plus a 0.1% fee. The spread widens
-            on a stock&apos;s news days.
+            A market order fills now at the price at the clock, plus half the spread, plus a 0.1% fee (0.08% with the pro
+            platform from Equipment). The spread widens on a stock&apos;s news days.
           </li>
           <li>
             A big order pays slippage on top. Up to 5% of the shares traded in the current 15-minute bar it is free.
@@ -520,7 +520,10 @@ const TOPICS: readonly Topic[] = [
       <>
         <ul>
           <li>Work, short sleep and reading the news use energy. Work, losses, margin warnings and short sleep add stress.</li>
-          <li>Neither recovers on its own. Food and drink restore energy or calm stress.</li>
+          <li>
+            A full night of sleep at home restores a little of both, more with a better Home. Food, drink and care
+            restore more, at a cost. See Food, sleep and home.
+          </li>
           <li>
             Low energy or high stress puts you in a warning state: the meters change colour and the edge of the screen
             changes. High stress glows red, low energy darkens the corners. Both get stronger the further you go.
@@ -532,6 +535,34 @@ const TOPICS: readonly Topic[] = [
             were bent.
           </li>
           <li>The market itself never changes with your stats. Only what you see does.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: 'care',
+    title: 'Food, sleep and home',
+    body: (
+      <>
+        <h3>Items</h3>
+        <ul>
+          <li>Each item can be bought once a day from cash, and it does not take a part of the day.</li>
+          <li>Some have a catch. An energy drink crashes the next morning. A night out leaves you tired. Coffee adds a little stress.</li>
+          <li>Next-morning effects land when you end the day, so the list shows both what you get now and what comes later.</li>
+          <li>A home-cooked meal needs a kitchen, which comes with Home tier 1. The gym session is free with a Health membership.</li>
+        </ul>
+        <h3>Sleep and home</h3>
+        <ul>
+          <li>After a full night of sleep your Home restores some energy and calms some stress. The better the Home, the more.</li>
+          <li>A short night skips that recovery and costs energy and stress instead. A quiet room (Home tier 2) halves that cost.</li>
+          <li>A home office (Home tier 3) halves the stress from a big losing day and from a margin warning.</li>
+        </ul>
+        <h3>Other upgrades</h3>
+        <ul>
+          <li>Information feed tier 1 makes your first news read each day free. Tier 2 makes Verify cost no energy, though it still costs a research point.</li>
+          <li>Health is a gym membership. Your job alone can no longer push your stress past 90.</li>
+          <li>Equipment tier 1 is a second screen: the blur and delay from low energy are halved. Tier 2 is a pro platform with a lower trading fee.</li>
+          <li>Every upgrade raises your monthly bill, and a downgrade gives nothing back.</li>
         </ul>
       </>
     ),

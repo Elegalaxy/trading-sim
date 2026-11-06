@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { COURSE_OFFERS, LIFESTYLE_OFFERS } from '../content/lifestyle.ts'
 import { COURSE_STUDY_UNITS, COURSE_UNITS_DAYTIME, COURSE_UNITS_EVENING } from '../sim/constants.ts'
-import { lifestyleExpensesCents, projectedBillCents, upfrontCents } from '../sim/lifestyle.ts'
+import { lifestyleExpensesCents, projectedBillCents, tierOf, upfrontCents } from '../sim/lifestyle.ts'
 import type { GameState, LifestyleCategory } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
@@ -99,12 +99,20 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
       ) : null}
       <ul className="lifestyle-list">
         {LIFESTYLE_OFFERS.map((offer) => {
-          const tierNow = current.lifestyle[offer.id]
+          const tierNow = tierOf(current.lifestyle, offer.id)
           return (
             <li key={offer.id}>
               <p>
                 {offer.name} tier {tierNow}. {offer.note}
               </p>
+              <ul className="tier-benefits">
+                {offer.benefits.map((text, tier) => (
+                  <li key={tier} className={tier === tierNow ? 'tier-now' : undefined}>
+                    Tier {tier}
+                    {tier > 0 ? ` (+${formatUsd(tier * offer.tierCostCents, 'tier monthly')} a month)` : ''}: {text}
+                  </li>
+                ))}
+              </ul>
               {Array.from({ length: offer.maxTier + 1 }, (_, tier) => {
                 const upfront = upfrontCents(offer.id, tierNow, tier)
                 const label =

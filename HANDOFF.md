@@ -18,5 +18,12 @@
   - The user wants every commit followed by a push and a merge into `main`.
   - The dev server serves stale modules after edits; restart on a ReferenceError. It may pick another port, which has its own localStorage. `.claude/launch.json` is untracked, so a worktree needs its own copy and a `node_modules` junction.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Next plan (draft, 2026-11-04):** consumable items and lifestyle benefits, `doc/plans/2026-11-04-items-and-lifestyle.md` (steps L0–L6). Today Home tiers do nothing and nothing recovers on its own. All eight questions are answered (items with trade-offs, Home recovery and extras, feed extras, Health and Equipment, Equipment tier 2 lowers the fee to 0.08%, upgrade price unchanged). The user asked to hold the build until they say start.
-- **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, and the market-depth playtest) and answers the two balance questions. 
+- **Items and lifestyle (`doc/plans/2026-11-04-items-and-lifestyle.md`), built 2026-11-04, steps L0 to L6:**
+  - Eight items (`content/consumables.ts`) with optional `nextEnergy`/`nextStress` (End day applies them as `consumeNext`), `requiresHome` (kitchen, Home tier 1) and `freeWithHealth`. `consumablePrice` and `tierOf` are the helpers.
+  - Home recovers energy and stress each night after a full sleep (`HOME_RECOVERY_*`, cause `homeRecovery`). Tier 2: short-sleep penalty halved. Tier 3: drawdown and margin-warning stress halved. Feed tier 1: first read free; tier 2: Verify costs no energy.
+  - New lifestyle categories Health (gym free, job stress capped at 90) and Equipment (tier 1 halves blur and delay, tier 2 fee 0.08%). `LifestyleState.health/equipment` are optional; `tierOf` reads them.
+  - Saves from before load with Health/Equipment at 0 and get the current item menu (`continueGame`).
+  - `npm run sim -- --seed abc --days 120 --care 30` prints item spend and warning days by job and Home tier (`harness/care.ts`).
+  - UI: `Consumables.tsx`, `LifestylePanel.tsx`, `NewsFeed.tsx`, `effects.ts`, a Guide page "Food, sleep and home". Tests: `care.test.ts`, plus updated stats, lifestyle, content, save and old-save tests (271 pass).
+  - Open for the user (plan section 8): Home does not repay its monthly cost in item savings; the night-shift job needs Home 1 (96% warning days at Home 0).
+- **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, the market-depth playtest, and a night-shift run for the new care loop) and answers the balance questions: the market-depth two, and the two in the items plan section 8. 

@@ -176,8 +176,9 @@ export function PriceChart({
   levels?: readonly ChartLevel[]
   marks?: readonly FillRecord[]
 }) {
-  const energy = useTradingStore().run?.game.stats.energy ?? null
-  const fx = useCosmeticFx(energy)
+  const game = useTradingStore().run?.game ?? null
+  const energy = game?.stats.energy ?? null
+  const fx = useCosmeticFx(energy, game?.lifestyle.equipment ?? 0)
   const view = useDelayedValue('price-chart', { asset, points }, fx.delayMs, chartSignature(asset, points))
   const [timeframe, setTimeframe] = useState<TimeframeId>('1D')
   const [hover, setHover] = useState<Hover | null>(null)

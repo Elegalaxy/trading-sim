@@ -1219,14 +1219,17 @@ export type StudyState = {
 }
 
 /** Home and the information feed. Tier 0 is the base lifestyle. */
-export const LIFESTYLE_CATEGORIES = ['home', 'infoFeed'] as const
+export const LIFESTYLE_CATEGORIES = ['home', 'infoFeed', 'health', 'equipment'] as const
 
 export type LifestyleCategory = (typeof LIFESTYLE_CATEGORIES)[number]
 
-/** Tiers above the base. Home recovery is not stored here and is not applied. */
+/** Tiers above the base. What a tier does lives in the sim (stats.ts, trading.ts, lifestyle.ts). */
 export type LifestyleState = {
   home: number
   infoFeed: number
+  /** Absent in saves from before Health and Equipment. Read it with `tierOf`. */
+  health?: number
+  equipment?: number
 }
 
 /**
@@ -1548,6 +1551,13 @@ export type ConsumableDefinition = {
   costCents: number
   energy: number
   stress: number
+  /** Added at the next End day, after the day's own costs (an energy drink's crash, a hangover). */
+  nextEnergy?: number
+  nextStress?: number
+  /** Lowest Home tier that can make or use it (a home-cooked meal needs a kitchen). */
+  requiresHome?: number
+  /** Costs nothing with the Health membership. */
+  freeWithHealth?: boolean
 }
 
 /** Energy, stress, and what was used since the last end of day. */

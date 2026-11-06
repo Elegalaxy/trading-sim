@@ -1,21 +1,31 @@
 import { useState } from 'react'
 import { activeJob } from '../sim/jobs.ts'
+import { tierOf } from '../sim/lifestyle.ts'
+import { consumablePrice } from '../sim/stats.ts'
 import type { ConsumableDefinition, GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
 import { dispatch } from './store.ts'
 
-function effectText(item: ConsumableDefinition): string {
+function amounts(energy: number, stress: number): string {
   const parts: string[] = []
-  if (item.energy !== 0) parts.push(`${item.energy > 0 ? '+' : ''}${item.energy} energy`)
-  if (item.stress !== 0) parts.push(`${item.stress > 0 ? '+' : ''}${item.stress} stress`)
-  if (parts.length === 0) return 'No stat change'
+  if (energy !== 0) parts.push(`${energy > 0 ? '+' : ''}${energy} energy`)
+  if (stress !== 0) parts.push(`${stress > 0 ? '+' : ''}${stress} stress`)
   return parts.join(', ')
+}
+
+function effectText(item: ConsumableDefinition): string {
+  const now = amounts(item.energy, item.stress)
+  const next = amounts(item.nextEnergy ?? 0, item.nextStress ?? 0)
+  const parts = [now.length === 0 ? 'No change now' : `Now ${now}`]
+  if (next.length > 0) parts.push(`next morning ${next}`)
+  return parts.join('; ')
 }
 
 function reasonText(reason: string): string {
   if (reason === 'insufficientFunds') return 'Not enough cash.'
   if (reason === 'alreadyConsumed') return 'Already used today.'
+  if (reason === 'needsKitchen') return 'You need a kitchen: upgrade Home to tier 1.'
   if (reason === 'unknownItem') return 'That item is not for sale.'
   if (reason === 'runEnded') return 'The run has ended.'
   if (reason === 'notStarted') return 'Start a game first.'
@@ -60,7 +70,7 @@ export function Consumables({ game }: { game: GameState | null }) {
   return (
     <section className="panel" aria-label="Food and drink">
       <h2>Food and drink</h2>
-      <p>Once per item per day. Paid from cash. Does not take a section of the day.</p>
+      <p>Once per item per day. Paid from cash. Does not take a section of the day. A night at home also restores you; a better Home restores more.</p>
       {steady ? <p>Steady routine: stress recovery from food and drink is 10% higher.</p> : null}
       {game.consumables.length === 0 ? (
         <p>Nothing is for sale.</p>
@@ -68,18 +78,22 @@ export function Consumables({ game }: { game: GameState | null }) {
         <ul className="consumable-list">
           {game.consumables.map((item) => {
             const used = game.stats.consumed.includes(item.id)
+            const price = consumablePrice(game, item)
+            const locked = item.requiresHome !== undefined && tierOf(game.lifestyle, 'home') < item.requiresHome
             return (
               <li key={item.id}>
                 <button
                   type="button"
                   onClick={() => onBuy(item)}
-                  disabled={used || game.runEnd !== null || game.accounts.cashCents < item.costCents}
+                  disabled={used || locked || game.runEnd !== null || game.accounts.cashCents < price}
+                  title={locked ? 'Needs a kitchen (Home tier 1).' : undefined}
                 >
                   {used ? `${item.name} (used today)` : item.name}
                 </button>
                 <span>
-                  {formatUsd(item.costCents, item.name)}. {effectText(item)}.
-                  {game.accounts.cashCents < item.costCents ? ' Cash is too low.' : ''}
+                  {price === 0 ? 'Free (Health membership)' : formatUsd(price, item.name)}. {effectText(item)}.
+                  {locked ? ' Needs a kitchen (Home tier 1).' : ''}
+                  {!locked && game.accounts.cashCents < price ? ' Cash is too low.' : ''}
                 </span>
               </li>
             )

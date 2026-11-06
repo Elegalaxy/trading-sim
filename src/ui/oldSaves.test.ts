@@ -4,7 +4,11 @@ import { MARKET_DEFINITIONS as defs } from '../content/index.ts'
 import { DAMAGED_SAVE_MESSAGE, SAVE_VERSION, type SaveFile } from '../persist/save.ts'
 import { applyCommand, createGame, endDay } from '../sim/game.ts'
 import type { GameState } from '../sim/types.ts'
-import { continueGame } from './store.ts'
+import { continueGame, getSnapshot } from './store.ts'
+
+function useTradingStoreSnapshot() {
+  return getSnapshot().run
+}
 
 function save(mutate: (state: Record<string, any>) => void, days = 0): SaveFile {
   const game = createGame(defs, 'old')
@@ -21,6 +25,17 @@ function save(mutate: (state: Record<string, any>) => void, days = 0): SaveFile 
 describe('saves from before the market depth work', () => {
   it('load when current', () => {
     expect(continueGame(save(() => {}))).toBeNull()
+  })
+
+  it('load with a lifestyle from before Health and Equipment, and get the current item menu', () => {
+    const old = save((s) => {
+      s.lifestyle = { home: 1, infoFeed: 0 }
+      s.consumables = [{ id: 'coffee', name: 'Coffee', costCents: 1_000, energy: 15, stress: 0 }]
+    })
+    expect(continueGame(old)).toBeNull()
+    const loaded = useTradingStoreSnapshot()
+    expect(loaded?.game.lifestyle).toEqual({ home: 1, infoFeed: 0, health: 0, equipment: 0 })
+    expect(loaded?.game.consumables.map((item) => item.id)).toContain('gymSession')
   })
 
   it('say the save is damaged for calendar rolls without a consensus (before it)', () => {

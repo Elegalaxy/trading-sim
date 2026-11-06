@@ -63,6 +63,9 @@ import {
   SLIPPAGE_FREE_SHARE,
   SLIPPAGE_K,
   SLIPPAGE_MAX_PPM,
+  EQUIPMENT_FEE_DENOMINATOR,
+  EQUIPMENT_FEE_NUMERATOR,
+  EQUIPMENT_FEE_TIER,
   SLIPPAGE_VOLATILITY_FLOOR,
   SPREAD_PPM_MAX,
   SPREAD_PPM_MIN,
@@ -70,6 +73,7 @@ import {
   TRADE_FEE_NUMERATOR,
 } from './constants.ts'
 import { recordFill } from './fills.ts'
+import { tierOf } from './lifestyle.ts'
 import { quoteMarket } from './session.ts'
 import type {
   AssetDefinition,
@@ -242,12 +246,19 @@ export function slippageCents(price: number, volatility: number, quantity: numbe
   return roundDivHalfAway(numerator, RATE_PPM_SCALE)
 }
 
-function feeCents(notional: number): number {
-  const numerator = notional * TRADE_FEE_NUMERATOR
+/** 0.1% of the notional, or 0.08% with Equipment tier 2 (a better broker). */
+function feeCents(notional: number, reduced: boolean): number {
+  const rate = reduced ? EQUIPMENT_FEE_NUMERATOR : TRADE_FEE_NUMERATOR
+  const numerator = notional * rate
   if (!Number.isSafeInteger(numerator)) {
     throw new Error(`fee numerator is not a safe integer, received ${describeValue(notional)}`)
   }
-  return roundDivHalfAway(numerator, TRADE_FEE_DENOMINATOR)
+  return roundDivHalfAway(numerator, reduced ? EQUIPMENT_FEE_DENOMINATOR : TRADE_FEE_DENOMINATOR)
+}
+
+/** True when this player's Equipment tier lowers the trading fee. */
+function hasReducedFee(state: GameState): boolean {
+  return tierOf(state.lifestyle, 'equipment') >= EQUIPMENT_FEE_TIER
 }
 
 export function recordRealized(state: GameState, day: number, cents: number): void {
@@ -427,6 +438,7 @@ function quoteFill(
   quantity: number,
   fixedFill?: number,
   slipVolume?: number,
+  reducedFee = false,
 ): FillQuote | 'overflow' {
   const quoted = market.assets[def.id]
   if (quoted === undefined || !Number.isSafeInteger(quoted.priceCents) || quoted.priceCents <= 0) {
@@ -447,7 +459,7 @@ function quoteFill(
   }
   const notional = quantity * fillPrice
   if (!Number.isSafeInteger(notional)) return 'overflow'
-  const fee = feeCents(notional)
+  const fee = feeCents(notional, reducedFee)
   const cashMove = side === 'buy' ? -(notional + fee) : notional - fee
   if (!Number.isSafeInteger(cashMove)) return 'overflow'
   return { price: quoted.priceCents, halfSpread, slippage, fillPrice, fee, cashMove }
@@ -509,7 +521,7 @@ export function closePartOfPosition(
   const def = findAsset(defs, assetId)
   if (def === undefined) throw new Error(`position ${assetId} is not an asset`)
   const slipVolume = fixedFill === undefined ? fillBarVolume(state, assetId) : stopVolume
-  const quote = quoteFill(quoteMarket(state), def, side, quantity, fixedFill, slipVolume)
+  const quote = quoteFill(quoteMarket(state), def, side, quantity, fixedFill, slipVolume, hasReducedFee(state))
   if (quote === 'overflow') throw new Error(`close of ${assetId} overflowed a safe integer`)
   const nextTrading = state.accounts.tradingCents + quote.cashMove
   if (!Number.isSafeInteger(nextTrading)) {
@@ -581,7 +593,7 @@ export function interpretOrder(
 
   const market = quoteMarket(state)
   const slipVolume = fixedFill === undefined ? fillBarVolume(state, def.id) : undefined
-  const quote = quoteFill(market, def, record.side, quantity, fixedFill, slipVolume)
+  const quote = quoteFill(market, def, record.side, quantity, fixedFill, slipVolume, hasReducedFee(state))
   if (quote === 'overflow') return rejected(day, 'notionalNotSafeInteger')
   const nextTrading = state.accounts.tradingCents + quote.cashMove
   if (!Number.isSafeInteger(nextTrading)) {

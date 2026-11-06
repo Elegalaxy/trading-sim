@@ -1,7 +1,7 @@
 # Trading Sim: Consumable Items and Lifestyle Benefits
 
 Date: 2026-11-04  
-Status: all questions answered 2026-11-04 (the recommended answers, see section 7). Not started: the user asked to hold the build. Every number here is a placeholder, provisional in this plan only.  
+Status: built 2026-11-04 (L0 to L6). One balance question is open, section 8. Every number here is a placeholder, provisional in this plan only.  
 Design source of truth: [../GAME_DESIGN.md](../GAME_DESIGN.md), section 6 (Expenses and lifestyle) and section 9 (Stats). It closes the `[OPEN]` item list in section 9 and open question 1 in section 17. It changes no `[CONFIRMED]` rule; where an option would, it says so.  
 Format: like [2026-11-03-market-depth.md](2026-11-03-market-depth.md). Step ids are `L1`, `L2`… Status values: `todo`, `done`, `verified`, `failed`, `blocked`.
 
@@ -112,13 +112,13 @@ Section 6 says lifestyle "sets trading time and usable capital". Today only the 
 
 | Step | Work | Status |
 | --- | --- | --- |
-| L0 | Baseline: a harness report of monthly item spend and warning days per job, with the current four items, when a bot buys just enough to stay out of warning. | todo |
-| L1 | Item list and the "next morning" effects (option B): `ConsumableDefinition` gains optional `next` energy/stress and `requires` (home tier). The end of day applies and logs them. Tests: cost, effect, requirement, the next-morning change, once a day. | todo |
-| L2 | Overnight recovery by Home tier (5.1), skipped on short sleep. Tests and a GAME_DESIGN rule; the Home note in `content/lifestyle.ts` describes it. | todo |
-| L3 | Home extras (kitchen, quiet room, home office) and the information feed extras (5.2). | todo |
-| L4 | New categories the user picks (5.3). `LIFESTYLE_CATEGORIES` grows; save shape and the loan limit follow. Old saves load with the new tiers at 0. | todo |
-| L5 | UI: the Life tab shows each item's effect now and next morning, its requirement, and each lifestyle tier's benefit in words; the day report lists recovery. Guide page "Food, sleep and home". | todo |
-| L6 | Balance: rerun L0. Target: a worker can stay out of warning for about 15% to 30% of their pay, and Home tier 2 pays for itself in item savings for a worker within a month or two. | todo |
+| L0 | Baseline: a harness report of monthly item spend and warning days per job, with the current four items, when a bot buys just enough to stay out of warning. | done. `npm run sim -- --seed abc --days 120 --care 30` (`src/harness/care.ts`): a bot that only looks after energy and stress. Baseline with the four old items: a shop assistant spent $140 a month (23% of pay) and was never in warning; the night-shift warehouse job spent $975 a month (75% of pay) and was in warning 97% of days, because the menu could not make up 28 energy a day. Home did nothing. |
+| L1 | Item list and the "next morning" effects (option B): `ConsumableDefinition` gains optional `next` energy/stress and `requires` (home tier). The end of day applies and logs them. Tests: cost, effect, requirement, the next-morning change, once a day. | done. Eight items in `content/consumables.ts`; `ConsumableDefinition` gains `nextEnergy`, `nextStress`, `requiresHome`, `freeWithHealth`. End day applies the next-morning effects (`consumeNext`), `consume` rejects `needsKitchen`, the gym is free with Health. Tests in `care.test.ts`. |
+| L2 | Overnight recovery by Home tier (5.1), skipped on short sleep. Tests and a GAME_DESIGN rule; the Home note in `content/lifestyle.ts` describes it. | done. Home recovery per night after a full sleep (`homeRecovery`, constants `HOME_RECOVERY_*`). Old tests updated for the new baseline of +4 energy and -3 stress at tier 0. |
+| L3 | Home extras (kitchen, quiet room, home office) and the information feed extras (5.2). | done. Kitchen (tier 1), quiet room (tier 2, short-sleep penalty halved, rounded up), home office (tier 3, drawdown and margin-warning stress halved, rounded up). Feed tier 1: first read free; tier 2: Verify costs no energy. |
+| L4 | New categories the user picks (5.3). `LIFESTYLE_CATEGORIES` grows; save shape and the loan limit follow. Old saves load with the new tiers at 0. | done. `LIFESTYLE_CATEGORIES` is home, infoFeed, health, equipment. Health: gym free, job stress capped at 90. Equipment tier 1 halves the blur and delay (`cosmeticFx`), tier 2 charges 0.08% (`feeCents`). Old saves load with both at 0 (`tierOf`, optional keys in `save.ts`) and get the current item menu on load. |
+| L5 | UI: the Life tab shows each item's effect now and next morning, its requirement, and each lifestyle tier's benefit in words; the day report lists recovery. Guide page "Food, sleep and home". | done. Consumables panel shows now and next-morning effects, price, and the kitchen lock; the Lifestyle panel lists what every tier does; News shows the real read and Verify costs; a Guide page, Food, sleep and home. Checked in the browser (seed `demo`): buying Health made the gym free and the bill $1,080. |
+| L6 | Balance: rerun L0. Target: a worker can stay out of warning for about 15% to 30% of their pay, and Home tier 2 pays for itself in item savings for a worker within a month or two. | done for a first pass; one target missed. Care report with the new items (30 runs of 120 days): shop assistant $0 to $8 a month, office clerk $114 at Home 0 down to $0 at Home 3, trading-floor assistant $297 down to $65 (warning 10% at Home 0, none above), freelance analyst $53 down to $0, night-shift warehouse $387 at Home 0 but in warning 96% of days, and $563 to $659 a month (43% to 51% of pay) with no warning at Home 1 to 3. Home 1 matters most for night work, because the kitchen's meal and its stress relief close the gap. Missed: a Home tier does not repay its monthly cost in item savings (trading floor saves $112 for Home 1 against $150, office clerk $54). Home pays in staying out of warning, not in money. See the open question below. |
 
 ## 7. Questions for the user
 
@@ -130,3 +130,9 @@ Section 6 says lifestyle "sets trading time and usable capital". Today only the 
 6. **New categories:** which of Health, Equipment, Transport, or none? **Answer: Health and Equipment; no Transport.**
 7. **Trading conditions:** may Equipment lower the trading fee (a broker tier)? It changes a rule players already know. **Answer: yes, tier 2 lowers the fee from 0.1% to 0.08%.**
 8. **Upgrade price:** keep "an upgrade costs twice the monthly amount it adds", or change it? **Answer: keep it.**
+
+## 8. Open after the build
+
+1. **Home does not repay itself in item savings.** With the item prices in 4.2, the item money a tier saves is below its monthly cost for every job (trading-floor assistant: $112 saved for Home 1 against $150). Its value is staying out of the warning state without a daily round of purchases. Options: leave it (Home is comfort, not income), raise the recovery (for example +5 energy and -4 stress at tier 1), or raise item prices so care costs more.
+2. **The night-shift job needs Home 1.** At Home 0 the night-shift warehouse job is in warning 96% of days, because with a 6-hour sleep there is no recovery and the cheap items cannot cover 28 energy and 16 stress a day. At Home 1 the home-cooked meal closes it. This may be the intended pressure to upgrade, or too sharp a cliff.
+3. **Old saves keep working** but get the current item menu on load; items bought that day stay marked used.

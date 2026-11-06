@@ -99,7 +99,7 @@ describe('lifestyle upgrades, downgrades, and courses', () => {
     expect(COURSE_COST_CENTS).toBe(50_000)
     const defs = market(false)
     const game = createGame(defs, 'life', { jobs: JOBS, jobId: 'jobless' })
-    expect(game.lifestyle).toEqual({ home: 0, infoFeed: 0 })
+    expect(game.lifestyle).toEqual({ home: 0, infoFeed: 0, health: 0, equipment: 0 })
     expect(game.stats.energy).toBe(80)
     const upfront = HOME_TIER_COST_CENTS * LIFESTYLE_UPFRONT_MULTIPLIER
     applyCommand(game, defs, { type: 'setLifestyle', category: 'home', tier: 1 })

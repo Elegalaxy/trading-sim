@@ -262,10 +262,14 @@ describe('provisional content', () => {
 
   it('lists the provisional consumables once per item', () => {
     expect(CONSUMABLE_DEFINITIONS).toEqual([
-      { id: 'coffee', name: 'Coffee', costCents: 1_000, energy: 15, stress: 0 },
-      { id: 'herbalTea', name: 'Herbal tea', costCents: 1_000, energy: 0, stress: -12 },
-      { id: 'homeCookedMeal', name: 'Home-cooked meal', costCents: 2_000, energy: 8, stress: -6 },
-      { id: 'nightOut', name: 'Night out', costCents: 6_000, energy: 0, stress: -25 },
+      { id: 'coffee', name: 'Coffee', costCents: 400, energy: 12, stress: 2 },
+      { id: 'energyDrink', name: 'Energy drink', costCents: 600, energy: 22, stress: 0, nextEnergy: -10 },
+      { id: 'herbalTea', name: 'Herbal tea', costCents: 300, energy: 0, stress: -8 },
+      { id: 'takeawayMeal', name: 'Takeaway meal', costCents: 1_800, energy: 10, stress: -5 },
+      { id: 'homeCookedMeal', name: 'Home-cooked meal', costCents: 800, energy: 10, stress: -6, requiresHome: 1 },
+      { id: 'gymSession', name: 'Gym session', costCents: 1_200, energy: -6, stress: -15, nextEnergy: 4, freeWithHealth: true },
+      { id: 'nightOut', name: 'Night out', costCents: 6_000, energy: 0, stress: -28, nextEnergy: -12 },
+      { id: 'massage', name: 'Massage', costCents: 8_000, energy: 5, stress: -35 },
     ])
     debugContent(`consumables=${CONSUMABLE_DEFINITIONS.map((item) => item.id).join(',')}`)
   })

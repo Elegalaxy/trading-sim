@@ -10,6 +10,8 @@ import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from
 import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { assertPast } from '../sim/past.ts'
+import { initialLifestyle } from '../sim/lifestyle.ts'
+import { copyConsumables } from '../sim/stats.ts'
 import { assertResting, upgradeResting } from '../sim/resting.ts'
 import { sessionPrice } from '../sim/session.ts'
 import { bentPostCount } from '../sim/social.ts'
@@ -297,6 +299,10 @@ export function continueGame(save: SaveFile): string | null {
     assertResting(game.resting)
     // Saves from before the fill ledger have none. They start it empty.
     if ((game as { fills?: unknown }).fills === undefined) game.fills = []
+    // The item menu is content, so a loaded game gets the current one. Items used today stay used.
+    game.consumables = copyConsumables(CONSUMABLE_DEFINITIONS)
+    // Health and Equipment are absent in older saves.
+    game.lifestyle = { ...initialLifestyle(), ...game.lifestyle }
     // The same for the closed-day record. The chart then has candles again from the next End day.
     if ((game as { past?: unknown }).past === undefined) game.past = []
     assertPast(game.past)

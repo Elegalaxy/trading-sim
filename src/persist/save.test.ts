@@ -232,6 +232,32 @@ describe('local save', () => {
     if (!bar.ok) expect(bar.reason).toBe('shape:state.past[0].bars.NOVA[0]')
   })
 
+  it('keeps Health and Equipment tiers, and loads a lifestyle from before them', () => {
+    const game = createGame(DEFS, 'demo')
+    game.lifestyle = { home: 1, infoFeed: 0, health: 1, equipment: 2 }
+    const storage = memory()
+    writeSave({ mode: 'seeded', seed: 'demo', state: game }, storage)
+    const loaded = assertLoaded(loadSave(storage))
+    expect(loaded.state.lifestyle).toEqual({ home: 1, infoFeed: 0, health: 1, equipment: 2 })
+
+    const raw = storage.raw(SAVE_KEY)
+    if (raw === null) throw new Error('[DEBUG save] missing save')
+    const old = JSON.parse(raw) as { state: { lifestyle: Record<string, unknown> } }
+    delete old.state.lifestyle.health
+    delete old.state.lifestyle.equipment
+    expect(inspectSave(old).ok).toBe(true)
+
+    const bad = JSON.parse(raw) as { state: { lifestyle: Record<string, unknown> } }
+    bad.state.lifestyle.equipment = Number.POSITIVE_INFINITY
+    const result = inspectSave(bad)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toBe('non-finite:state.lifestyle.equipment')
+
+    const extra = JSON.parse(raw) as { state: { lifestyle: Record<string, unknown> } }
+    extra.state.lifestyle.garden = 1
+    expect(inspectSave(extra).ok).toBe(false)
+  })
+
   it('keeps the same state hash at day 120 after a mid-run save', () => {
     const straight = createGame(DEFS, 'demo')
     const paused = createGame(DEFS, 'demo')

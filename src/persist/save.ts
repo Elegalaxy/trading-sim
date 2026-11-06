@@ -60,6 +60,8 @@ const FI_KEYS = ['streak', 'interest', 'status'] as const
 const STAT_KEYS = ['energy', 'stress', 'consumed', 'newsReads'] as const
 const PERCEPTION_KEYS = ['day', 'shown', 'events', 'verified'] as const
 const LIFESTYLE_KEYS = ['home', 'infoFeed'] as const
+/** Saves from before Health and Equipment have only the two above. */
+const LIFESTYLE_OPTIONAL_KEYS = ['health', 'equipment'] as const
 const LOAN_KEYS = ['balanceCents', 'interestDueCents', 'interestDay'] as const
 const STUDY_KEYS = ['points', 'course', 'used'] as const
 const FILL_KEYS = [
@@ -385,11 +387,18 @@ function checkState(value: unknown): string | null {
   if (!Array.isArray(value.perception.events) || typeof value.perception.verified !== 'boolean') {
     return 'shape:state.perception.events'
   }
-  if (!isRecord(value.lifestyle) || !sameKeys(value.lifestyle, LIFESTYLE_KEYS)) return 'shape:state.lifestyle'
+  if (!isRecord(value.lifestyle) || !keysWithin(value.lifestyle, LIFESTYLE_KEYS, LIFESTYLE_OPTIONAL_KEYS)) {
+    return 'shape:state.lifestyle'
+  }
   const home = finiteNumber(value.lifestyle.home, 'state.lifestyle.home')
   if (home !== null) return home
   const info = finiteNumber(value.lifestyle.infoFeed, 'state.lifestyle.infoFeed')
   if (info !== null) return info
+  for (const key of LIFESTYLE_OPTIONAL_KEYS) {
+    if (value.lifestyle[key] === undefined) continue
+    const tier = finiteNumber(value.lifestyle[key], `state.lifestyle.${key}`)
+    if (tier !== null) return tier
+  }
   if (!isRecord(value.loan) || !sameKeys(value.loan, LOAN_KEYS)) return 'shape:state.loan'
   const balance = finiteNumber(value.loan.balanceCents, 'state.loan.balanceCents')
   if (balance !== null) return balance

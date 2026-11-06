@@ -227,8 +227,10 @@ Added 2026-11-03 at the user's request, so being jobless is a playstyle and not 
 - `[PROVISIONAL]` Upgrades change trading tools and conditions, and raise monthly expenses.
 - `[PROVISIONAL]` The lowest lifestyle costs 1E a month.
 - `[PROVISIONAL]` First-playable upgrades:
-  - Home (3 tiers): faster energy and stress recovery. Each tier adds about 0.15E a month.
-  - Information feed (2 tiers): more rumour sources, and a cleaner feed. Each tier adds about 0.1E a month.
+  - Home (3 tiers): each tier adds about 0.15E a month and recovers more energy and stress each night after a full sleep (section 9). Tier 1 has a kitchen (home-cooked meals), tier 2 a quiet room (a short sleep costs half as much), tier 3 a home office (a big losing day and a margin warning stress you half as much).
+  - Information feed (2 tiers): more rumour sources, and a cleaner feed. Each tier adds about 0.1E a month. Tier 1 also makes the first news read each day free, tier 2 makes Verify cost no energy (still one research point).
+  - Health (1 tier, about 0.08E a month, added 2026-11-04): gym sessions are free, and a job alone cannot push stress above 90.
+  - Equipment (2 tiers, about 0.06E a month each, added 2026-11-04): tier 1, a second screen, halves the blur and delay from low energy; tier 2, a pro platform, lowers the trading fee from 0.1% to 0.08%.
   - Courses (Basic, Finance): a one-time cost of about 0.5E each. They unlock job requirements and add no monthly cost. Since 2026-11-03 the cost enrols; free-time study finishes the course (section 6, Free time).
 - `[CONFIRMED]` The player can downgrade lifestyle as ordinary asset management, the same way they manage other assets (2026-10-22).
 - `[CONFIRMED]` A downgrade does not return the money spent on the upgrade. It only lowers later bills.
@@ -241,7 +243,7 @@ Added 2026-11-03 at the user's request, so being jobless is a playstyle and not 
 - `[CONFIRMED]` The player can go long and short.
 - `[CONFIRMED]` Trades cost a percentage fee plus a spread.
 - `[PROVISIONAL]` Orders are market orders that fill at the current price during a trade session. No limit or stop orders in the first playable.
-- `[PROVISIONAL]` The fee is a global percentage per trade. The spread is set per asset and widens on event days.
+- `[PROVISIONAL]` The fee is a global percentage per trade, 0.1% of the order's value (0.08% with Equipment tier 2). The spread is set per asset and widens on event days.
 - `[PROVISIONAL]` Changed 2026-11-03: margin interest and the short borrow fee are replaced by funding (section 7, Funding). A bank loan (section 6) still pays its own interest.
 
 ### Leverage and margin
@@ -306,9 +308,9 @@ This is the largest first-playable system after trading. Options and the reasoni
 - `[PROVISIONAL]` Both run from 0 to 100. Energy starts at 80 and stress at 20.
 - `[CONFIRMED]` Food and drink are consumables. They cost money. Using one does not take a section of the day.
 - `[CONFIRMED]` Some restore energy, some restore stress, and some restore both. Each item has its own restore amounts and its own cost.
-- `[OPEN]` The item list: names, costs, and the energy and stress each one restores.
+- `[PROVISIONAL]` The item list (2026-11-04, plan items and lifestyle): coffee $4 (+12 energy, +2 stress), energy drink $6 (+22 energy, then -10 the next morning), herbal tea $3 (-8 stress), takeaway meal $18 (+10 energy, -5 stress), home-cooked meal $8 (+10 energy, -6 stress, needs Home tier 1), gym session $12 (-6 energy, -15 stress, +4 energy the next morning, free with Health), night out $60 (-28 stress, -12 energy the next morning), massage $80 (+5 energy, -35 stress). Each is bought once a day. The next-morning effect lands at End day.
 - `[CONFIRMED]` Not enough sleep worsens energy and stress (section 4).
-- `[PROVISIONAL]` Daily change: energy falls by the job's energy cost and by a short-sleep penalty. Stress rises by the job's stress cost and by that same penalty. Consumables are the recovery. The Home lifestyle bonus to recovery is on hold until the item list exists.
+- `[PROVISIONAL]` Daily change at End day, in this order: energy falls by the job's energy cost and stress rises by its stress cost (with Health, the job alone cannot push stress above 90); a short sleep costs 8 energy and 4 stress for each missing hour (halved, rounded up, with a quiet room); a large drawdown (10% or more of the trading account in a day) and a margin warning add stress (halved with a home office); after a full night the Home tier recovers energy and stress (tier 0 to 3: +4, +7, +10, +13 energy and -3, -5, -7, -9 stress); then each item used that day applies its next-morning effect. Consumables are the other recovery.
 - `[PROVISIONAL]` Stress also rises on a large daily drawdown (5% or more of the trading account) and on a margin warning day.
 - `[PROVISIONAL]` The warning state starts below energy 40 or above stress 60. Effects scale from the threshold to the extreme.
 
@@ -574,8 +576,7 @@ If distortion shares a random stream with the market, seeds stop being repeatabl
 
 These are provisional defaults that shape other systems. The user should confirm or change them, in this order:
 
-1. The consumable list: names, costs, and how much energy and stress each item restores (section 9).
-2. Loan numbers: size, term, and the margin over the policy rate (section 12).
+1. Loan numbers: size, term, and the margin over the policy rate (section 12).
 3. FI details: realized only, net result, hold of 5 days, and whether the job must be quit (Q 24).
 5. Liquidation order, and whether a wipe-out has any penalty beyond the lost equity (section 7).
 7. Which stat drives which effect, the 25% bias cap and the verify cost (Q 38, 39).
@@ -603,6 +604,8 @@ These are provisional defaults that shape other systems. The user should confirm
 Balance values are testable starting hypotheses. Provisional rules are not decisions.
 
 ## 19. Changelog
+
+- 2026-11-04 (items and lifestyle): Plan items and lifestyle, Steps L0 to L5. Eight items, some with a next-morning effect or a requirement (section 9). Home now recovers energy and stress each night after a full sleep and has a kitchen, a quiet room and a home office (sections 6 and 9). The information feed gains a free first read and a free-energy Verify. Health and Equipment are new lifestyle categories; Equipment tier 2 lowers the trading fee (section 7). Saves from before load with Health and Equipment at 0 and get the current item menu. Closes the `[OPEN]` item list and open question 1.
 
 - 2026-11-04 (fill ledger): The game keeps a ledger of every fill (`GameState.fills`): market orders, limit fills, take profits, stop losses, liquidations and forced sales for missed loan interest. It is saved with the run, so History and P&L survive a reload and now include liquidations and forced sales. It is a record only and changes no price, draw or fixture. Saves from before it load with an empty ledger. The game also keeps a record of each closed day (the session bars, the closes and the closing equity, `GameState.past`), so a reloaded chart still has its candles and the fill marks on them. See [plans/2026-11-04-save-fill-history.md](plans/2026-11-04-save-fill-history.md).
 - 2026-11-04 (clock step): User decision: the 15-minute clock step costs nothing (section 5, intraday session, was `[OPEN]`). This matches the code, so nothing changes in play. A plan to save the trade history is in [plans/2026-11-04-save-fill-history.md](plans/2026-11-04-save-fill-history.md).

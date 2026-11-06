@@ -1,12 +1,26 @@
 // Energy and stress. Both run from 0 to 100.
-// A job's stored costs and a short sleep are applied at the end of the day.
-// Consumables are the recovery. Each item can be used once that day, paid from cash,
-// and it does not take a day section. Home recovery is not applied.
-// Reading the news spends energy. Quiet breaks makes the first read that day free.
+// A job's stored costs and a short sleep are applied at the end of the day. After a full night
+// the Home tier gives a small recovery, and an item's "next morning" effect lands then too.
+// Consumables are the other recovery. Each item can be used once that day, paid from cash,
+// and it does not take a day section. A few need a Home tier (a kitchen) or are free with Health.
+// Reading the news spends energy. Quiet breaks and information feed tier 1 make the first read that
+// day free. Information feed tier 2 makes Verify cost no energy (it still costs a research point).
 // This module does not draw a random stream and does not write on the market.
 
-import { VERIFY_ENERGY_COST, VERIFY_RESEARCH_COST } from './constants.ts'
+import {
+  HEALTH_STRESS_CEILING,
+  HOME_KITCHEN_TIER,
+  HOME_OFFICE_TIER,
+  HOME_QUIET_ROOM_TIER,
+  HOME_RECOVERY_ENERGY,
+  HOME_RECOVERY_STRESS,
+  INFO_FREE_READ_TIER,
+  INFO_FREE_VERIFY_TIER,
+  VERIFY_ENERGY_COST,
+  VERIFY_RESEARCH_COST,
+} from './constants.ts'
 import { activeJob } from './jobs.ts'
+import { tierOf } from './lifestyle.ts'
 import type {
   CommandRejectedEvent,
   ConsumableDefinition,
@@ -123,7 +137,21 @@ function copyItem(item: ConsumableDefinition, index: number): ConsumableDefiniti
   }
   const energy = assertSafeInteger(item.energy, `consumable ${id} energy`)
   const stress = assertSafeInteger(item.stress, `consumable ${id} stress`)
-  return { id, name: item.name, costCents, energy, stress }
+  const copy: ConsumableDefinition = { id, name: item.name, costCents, energy, stress }
+  if (item.nextEnergy !== undefined) copy.nextEnergy = assertSafeInteger(item.nextEnergy, `consumable ${id} next energy`)
+  if (item.nextStress !== undefined) copy.nextStress = assertSafeInteger(item.nextStress, `consumable ${id} next stress`)
+  if (item.requiresHome !== undefined) {
+    const tier = assertSafeInteger(item.requiresHome, `consumable ${id} home tier`)
+    if (tier < 0) throw new Error(`consumable ${id} home tier must be >= 0, received ${describeValue(item.requiresHome)}`)
+    copy.requiresHome = tier
+  }
+  if (item.freeWithHealth !== undefined) {
+    if (typeof item.freeWithHealth !== 'boolean') {
+      throw new Error(`consumable ${id} freeWithHealth must be a boolean, received ${describeValue(item.freeWithHealth)}`)
+    }
+    copy.freeWithHealth = item.freeWithHealth
+  }
+  return copy
 }
 
 /** Copy the menu. Omitted means nothing is for sale. */
@@ -325,6 +353,14 @@ export type ConsumeOutcome =
  * Buy one item from cash. Once per item per day. Does not change the section.
  * Unknown item, a second use, or too little cash is logged and does not throw.
  */
+/** What an item costs this player: nothing for a Health member's gym session. */
+export function consumablePrice(state: GameState, item: ConsumableDefinition): number {
+  return item.freeWithHealth === true && tierOf(state.lifestyle, 'health') >= 1 ? 0 : item.costCents
+}
+
+/** Home tier needed for the kitchen. Exported for the screens. */
+export { HOME_KITCHEN_TIER }
+
 export function interpretConsume(state: GameState, cmd: unknown): ConsumeOutcome {
   const day = state.market.day
   if (typeof cmd !== 'object' || cmd === null || Array.isArray(cmd)) {
@@ -341,10 +377,14 @@ export function interpretConsume(state: GameState, cmd: unknown): ConsumeOutcome
   if (state.stats.consumed.includes(item.id)) {
     return { accepted: false, event: rejected(day, 'consume', 'alreadyConsumed') }
   }
-  if (state.accounts.cashCents < item.costCents) {
+  if (item.requiresHome !== undefined && tierOf(state.lifestyle, 'home') < item.requiresHome) {
+    return { accepted: false, event: rejected(day, 'consume', 'needsKitchen') }
+  }
+  const price = consumablePrice(state, item)
+  if (state.accounts.cashCents < price) {
     return { accepted: false, event: rejected(day, 'consume', 'insufficientFunds') }
   }
-  const nextCash = state.accounts.cashCents - item.costCents
+  const nextCash = state.accounts.cashCents - price
   if (!Number.isSafeInteger(nextCash) || nextCash < 0) {
     throw new Error(`consume left cash at ${describeValue(nextCash)}`)
   }
@@ -359,7 +399,7 @@ export function interpretConsume(state: GameState, cmd: unknown): ConsumeOutcome
     kind: 'consume',
     day,
     item: item.id,
-    cost: item.costCents,
+    cost: price,
     energyDelta: energyEvent?.delta ?? 0,
     stressDelta: stressEvent?.delta ?? 0,
   }
@@ -376,7 +416,9 @@ export function interpretConsume(state: GameState, cmd: unknown): ConsumeOutcome
  */
 export function interpretReadNews(state: GameState): Array<NewsReadEvent | StatChangeEvent> {
   const day = state.market.day
-  const free = activeJob(state.job).perk === 'quietBreaks' && state.stats.newsReads === 0
+  const free =
+    (activeJob(state.job).perk === 'quietBreaks' || tierOf(state.lifestyle, 'infoFeed') >= INFO_FREE_READ_TIER) &&
+    state.stats.newsReads === 0
   const cost = free ? 0 : NEWS_READ_ENERGY_COST
   const nextReads = state.stats.newsReads + 1
   if (!Number.isSafeInteger(nextReads)) throw new Error('news reads overflowed')
@@ -399,7 +441,7 @@ export function interpretVerify(state: GameState): Array<NewsVerifiedEvent | Sta
   const day = state.market.day
   if (state.perception.verified) return [rejected(day, 'verify', 'alreadyVerified')]
   if (state.study.points < VERIFY_RESEARCH_COST) return [rejected(day, 'verify', 'noResearch')]
-  const cost = VERIFY_ENERGY_COST
+  const cost = tierOf(state.lifestyle, 'infoFeed') >= INFO_FREE_VERIFY_TIER ? 0 : VERIFY_ENERGY_COST
   const events: Array<NewsVerifiedEvent | StatChangeEvent | CommandRejectedEvent> = []
   const spent = applyDelta(state, day, 'energy', 'verify', -cost)
   if (spent !== null) events.push(spent)
@@ -414,7 +456,8 @@ export function interpretVerify(state: GameState): Array<NewsVerifiedEvent | Sta
  * Call this after the margin settlement and before the FI check.
  * `marginEvents` is that settlement. A margin warning day and a wipe-out are
  * read from those events. A large drawdown is computed from the two equities.
- * Home recovery is not applied. Used items and news reads then reset.
+ * After a full night the Home tier recovers a little, and each item used today applies its
+ * next-morning effect. Then used items and news reads reset.
  */
 export function applyEndOfDayStats(
   state: GameState,
@@ -441,15 +484,25 @@ export function applyEndOfDayStats(
   const push = (event: StatChangeEvent | null): void => {
     if (event !== null) events.push(event)
   }
+  const home = tierOf(state.lifestyle, 'home')
   push(applyDelta(state, day, 'energy', 'job', -job.energyCost))
-  push(applyDelta(state, day, 'stress', 'job', job.stressCost))
+  // A gym membership keeps the job alone from pushing stress past the ceiling.
+  const jobStress =
+    tierOf(state.lifestyle, 'health') >= 1
+      ? Math.min(job.stressCost, Math.max(0, HEALTH_STRESS_CEILING - state.stats.stress))
+      : job.stressCost
+  push(applyDelta(state, day, 'stress', 'job', jobStress))
   const missingSleep = SLEEP_NEED_HOURS - sleepHours
   if (missingSleep > 0) {
-    push(applyDelta(state, day, 'energy', 'shortSleep', -(missingSleep * SHORT_SLEEP_ENERGY_PER_HOUR)))
-    push(applyDelta(state, day, 'stress', 'shortSleep', missingSleep * SHORT_SLEEP_STRESS_PER_HOUR))
+    // A quiet room halves the penalty, rounded up.
+    const factor = home >= HOME_QUIET_ROOM_TIER ? 0.5 : 1
+    push(applyDelta(state, day, 'energy', 'shortSleep', -Math.ceil(missingSleep * SHORT_SLEEP_ENERGY_PER_HOUR * factor)))
+    push(applyDelta(state, day, 'stress', 'shortSleep', Math.ceil(missingSleep * SHORT_SLEEP_STRESS_PER_HOUR * factor)))
   }
+  // A home office halves the stress from a hard day of trading, rounded up.
+  const trading = home >= HOME_OFFICE_TIER ? 0.5 : 1
   if (isLargeDrawdown(startEquity, endEquity)) {
-    push(applyDelta(state, day, 'stress', 'drawdown', DRAWDOWN_STRESS))
+    push(applyDelta(state, day, 'stress', 'drawdown', Math.ceil(DRAWDOWN_STRESS * trading)))
   }
   let warned = false
   let wiped = false
@@ -457,8 +510,20 @@ export function applyEndOfDayStats(
     if (event.kind === 'marginWarning') warned = true
     if (event.kind === 'wipeOut') wiped = true
   }
-  if (warned) push(applyDelta(state, day, 'stress', 'marginWarning', MARGIN_WARNING_STRESS))
+  if (warned) push(applyDelta(state, day, 'stress', 'marginWarning', Math.ceil(MARGIN_WARNING_STRESS * trading)))
   if (wiped) push(applyDelta(state, day, 'stress', 'wipeOut', WIPE_OUT_STRESS))
+  // Home recovery needs a full night.
+  if (missingSleep <= 0) {
+    push(applyDelta(state, day, 'energy', 'homeRecovery', HOME_RECOVERY_ENERGY[home] ?? 0))
+    push(applyDelta(state, day, 'stress', 'homeRecovery', -(HOME_RECOVERY_STRESS[home] ?? 0)))
+  }
+  // The morning after: what today's items leave behind (a crash, a hangover, a rested body).
+  for (const id of state.stats.consumed) {
+    const item = state.consumables.find((row) => row.id === id)
+    if (item === undefined) continue
+    push(applyDelta(state, day, 'energy', 'consumeNext', item.nextEnergy ?? 0))
+    push(applyDelta(state, day, 'stress', 'consumeNext', item.nextStress ?? 0))
+  }
   state.stats.consumed = []
   state.stats.newsReads = 0
   return events

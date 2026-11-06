@@ -347,19 +347,23 @@ export function Dashboard() {
               <PriceChart asset={asset} points={points} levels={levels} marks={run?.game.fills.filter((fill) => fill.asset === asset)} />
             </div>
             {view === 'life' ? (
-              <div className="main-pane main-scroll desk desk-grid">
-                <Fold id="job" title="Job">
-                  <JobPanel game={run?.game ?? null} />
-                </Fold>
-                <Fold id="lifestyle" title="Lifestyle">
-                  <LifestylePanel game={run?.game ?? null} />
-                </Fold>
-                <Fold id="loan" title="Bank loan">
-                  <LoanPanel game={run?.game ?? null} />
-                </Fold>
-                <Fold id="food" title="Food and drink">
-                  <Consumables game={run?.game ?? null} />
-                </Fold>
+              <div className="main-pane main-scroll desk life-grid">
+                <div className="life-col">
+                  <Fold id="job" title="Job">
+                    <JobPanel game={run?.game ?? null} />
+                  </Fold>
+                  <Fold id="food" title="Food and drink">
+                    <Consumables game={run?.game ?? null} />
+                  </Fold>
+                </div>
+                <div className="life-col">
+                  <Fold id="lifestyle" title="Lifestyle">
+                    <LifestylePanel game={run?.game ?? null} />
+                  </Fold>
+                  <Fold id="loan" title="Bank loan">
+                    <LoanPanel game={run?.game ?? null} />
+                  </Fold>
+                </div>
               </div>
             ) : null}
           </div>

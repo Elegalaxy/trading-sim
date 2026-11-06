@@ -2443,7 +2443,7 @@ dl.estimate dd {
   color: #848e9c;
 }
 
-/* Stat and perk chips. Energy is green, stress teal, harm amber, perks neutral. */
+/* Stat and perk chips. Energy is green, stress teal, perks neutral. */
 .badges {
   display: flex;
   flex-wrap: wrap;
@@ -2473,12 +2473,6 @@ dl.estimate dd {
   color: #3dd6c6;
   background: #3dd6c618;
   border-color: #3dd6c640;
-}
-
-.badge-bad {
-  color: #f0a050;
-  background: #f0a05018;
-  border-color: #f0a05040;
 }
 
 .badge-perk {
@@ -2738,4 +2732,144 @@ dl.estimate dd {
   .bar-divider {
     display: none;
   }
+}
+
+/* ---- Life tab clarity pass (2026-11-07) ---- */
+
+.badge-arrow {
+  font-size: 9px;
+  line-height: 1;
+}
+
+/* Current and selected rows: filled pills in the price slot. The slot keeps its height. */
+.tier-price small {
+  min-height: 16px;
+  line-height: 16px;
+}
+
+.tier-pill {
+  display: inline-block;
+  min-height: 16px;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+}
+
+.tier-pill-current {
+  color: #1e2329;
+  background: #f7a600;
+}
+
+.tier-pill-picked {
+  color: #4c9aff;
+  background: #4c9aff22;
+  border: 1px solid #4c9aff;
+  line-height: 14px;
+}
+
+.exchange .tier-row.tier-picked,
+.exchange .main-scroll .tier-row.tier-picked {
+  background: #18222f;
+  border-color: #4c9aff;
+  box-shadow: inset 3px 0 0 #4c9aff;
+}
+
+.exchange .tier-row:focus-visible,
+.exchange .primary-action:focus-visible {
+  outline: 2px solid #4c9aff;
+  outline-offset: 2px;
+}
+
+.exchange .primary-action:hover:not(:disabled) {
+  background: #ffbb33;
+  border-color: #ffbb33;
+}
+
+.exchange .main-scroll .primary-action:not(:disabled) {
+  color: #1e2329;
+  background: #f7a600;
+  border-color: #f7a600;
+}
+
+.exchange .main-scroll .primary-action:disabled {
+  cursor: not-allowed;
+}
+
+/* Life tab: Job + Food on the left, Lifestyle + Loan on the right. One column on narrow widths. */
+.main-scroll.life-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.life-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .main-scroll.life-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Top bar spacing */
+.schedule {
+  gap: 8px;
+}
+
+.schedule-top {
+  gap: 8px 14px;
+}
+
+.exchange .day-timeline {
+  gap: 8px;
+}
+
+.exchange .day-timeline li {
+  padding: 5px 14px;
+}
+
+.now-clock {
+  font-size: 14px;
+}
+
+.study-actions {
+  gap: 8px;
+}
+
+.exchange .bar-actions .study-actions button,
+.exchange .study-actions button {
+  padding: 5px 11px;
+  font-size: 12px;
+}
+
+/* Inside the Life tab the generic button rules are stronger than the row states; restate them. */
+.exchange .main-scroll button.tier-row.tier-active,
+.exchange .main-scroll button.tier-row.tier-active:disabled {
+  color: #eaecef;
+  background: #262318;
+  border-color: #f7a600;
+  box-shadow: inset 3px 0 0 #f7a600;
+}
+
+.exchange .main-scroll button.tier-row.tier-picked,
+.exchange .main-scroll button.tier-row.tier-picked:hover:not(:disabled) {
+  color: #eaecef;
+  background: #18222f;
+  border-color: #4c9aff;
+  box-shadow: inset 3px 0 0 #4c9aff;
+}
+
+.exchange .main-scroll button.tier-row:hover:not(:disabled):not(.tier-picked):not(.tier-active) {
+  background: #232a32;
+  border-color: #474d57;
 }

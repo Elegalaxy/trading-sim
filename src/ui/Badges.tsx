@@ -1,7 +1,8 @@
 import type { TierBadge } from '../content/lifestyle.ts'
 
 // Small coloured chips for what a choice does. A stat chip is green for energy and teal for stress,
-// and turns amber when the change hurts (energy down, stress up). A perk chip is neutral.
+// on every button. Whether a change helps or hurts is shown by the sign and a ▲/▼ marker, never by
+// a different colour. A perk chip is neutral.
 
 function statText(kind: 'energy' | 'stress', value: number): string {
   const sign = value > 0 ? '+' : value < 0 ? '−' : ''
@@ -13,11 +14,15 @@ function harmful(kind: 'energy' | 'stress', value: number): boolean {
 }
 
 export function StatBadge({ kind, value, label, title }: { kind: 'energy' | 'stress'; value: number; label?: string; title?: string }) {
-  const tone = harmful(kind, value) ? 'badge-bad' : `badge-${kind}`
+  const bad = harmful(kind, value)
   return (
-    <span className={`badge ${tone}`} title={title}>
+    <span className={`badge badge-${kind}`} title={title}>
       {label === undefined ? '' : <span className="badge-label">{label}</span>}
+      <span className="badge-arrow" aria-hidden="true">
+        {bad ? '▼' : '▲'}
+      </span>
       {statText(kind, value)}
+      <span className="sr-only">{bad ? ' (harmful)' : ' (helpful)'}</span>
     </span>
   )
 }

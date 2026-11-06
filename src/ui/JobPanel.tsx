@@ -144,7 +144,13 @@ export function JobPanel({ game }: { game: GameState | null }) {
               </span>
               <span className="tier-price">
                 <strong>{item.payCents === 0 ? 'No pay' : `+${formatUsd(item.payCents, 'pay')}/mo`}</strong>
-                <small>{active ? 'Current' : picked ? 'Selected' : ' '}</small>
+                {active ? (
+                  <span className="tier-pill tier-pill-current">Current</span>
+                ) : picked ? (
+                  <span className="tier-pill tier-pill-picked">Selected</span>
+                ) : (
+                  <small>{' '}</small>
+                )}
               </span>
             </button>
           )

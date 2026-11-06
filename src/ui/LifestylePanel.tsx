@@ -24,6 +24,8 @@ function reasonText(reason: string): string {
 export function LifestylePanel({ game }: { game: GameState | null }) {
   const [message, setMessage] = useState<string | null>(null)
   const [tone, setTone] = useState<'ok' | 'alert'>('alert')
+  const [picked, setPicked] = useState<Record<string, number>>({})
+  const [pickedCourse, setPickedCourse] = useState<string | null>(null)
 
   if (game === null) {
     return (
@@ -52,6 +54,11 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
       }
       const offer = LIFESTYLE_OFFERS.find((item) => item.id === event.category)
       const paid = event.upfront === 0 ? 'No refund.' : `Paid ${formatUsd(event.upfront, 'lifestyle upfront')}.`
+      setPicked((prev) => {
+        const next = { ...prev }
+        delete next[category]
+        return next
+      })
       setTone('ok')
       setMessage(`${offer?.name ?? event.category} is tier ${event.to}. ${paid} Monthly expenses ${formatUsd(event.expensesCents, 'expenses')}.`)
       return
@@ -74,6 +81,7 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
         return
       }
       const offer = COURSE_OFFERS.find((item) => item.id === event.course)
+      setPickedCourse(null)
       setTone('ok')
       setMessage(
         `Enrolled in ${offer?.name ?? event.course} for ${formatUsd(event.cost, 'course')}. Study in your free time to finish it (${COURSE_STUDY_UNITS} units).`,
@@ -109,6 +117,9 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
       <div className="card-list">
         {LIFESTYLE_OFFERS.map((offer) => {
           const tierNow = tierOf(current.lifestyle, offer.id)
+          const pickedTier = picked[offer.id]
+          const pickedInfo = pickedTier === undefined || pickedTier === tierNow ? undefined : offer.tiers[pickedTier]
+          const pickedUpfront = pickedInfo === undefined || pickedTier === undefined ? 0 : upfrontCents(offer.id, tierNow, pickedTier)
           return (
             <article key={offer.id} className="card" aria-label={offer.name}>
               <header className="card-head">
@@ -120,16 +131,17 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
                   const upfront = upfrontCents(offer.id, tierNow, tier)
                   const active = tier === tierNow
                   const unaffordable = upfront > 0 && current.accounts.cashCents < upfront
-                  const action = active ? 'Current' : upfront === 0 ? 'No refund' : `${formatUsd(upfront, 'tier upfront')} to switch`
+                  const isPicked = pickedTier === tier && !active
+                  const action = upfront === 0 ? 'No refund' : `${formatUsd(upfront, 'tier upfront')} to switch`
                   return (
                     <button
                       key={tier}
                       type="button"
-                      className={active ? 'tier-row tier-active' : 'tier-row'}
-                      aria-pressed={active}
+                      className={active ? 'tier-row tier-active' : isPicked ? 'tier-row tier-picked' : 'tier-row'}
+                      aria-pressed={isPicked}
                       disabled={ended || active || unaffordable}
                       title={unaffordable ? 'Not enough cash.' : undefined}
-                      onClick={() => onTier(offer.id, tier)}
+                      onClick={() => setPicked((prev) => ({ ...prev, [offer.id]: tier }))}
                     >
                       <span className="tier-main">
                         <span className="tier-name">
@@ -139,12 +151,30 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
                       </span>
                       <span className="tier-price">
                         <strong>{tier === 0 ? 'Base' : `+${formatUsd(tier * offer.tierCostCents, 'tier monthly')}/mo`}</strong>
-                        <small>{action}</small>
+                        {active ? (
+                          <span className="tier-pill tier-pill-current">Current</span>
+                        ) : isPicked ? (
+                          <span className="tier-pill tier-pill-picked">Selected</span>
+                        ) : (
+                          <small>{action}</small>
+                        )}
                       </span>
                     </button>
                   )
                 })}
               </div>
+              <button
+                type="button"
+                className="primary-action"
+                disabled={ended || pickedInfo === undefined || pickedTier === undefined}
+                onClick={() => {
+                  if (pickedTier !== undefined) onTier(offer.id, pickedTier)
+                }}
+              >
+                {pickedInfo === undefined || pickedTier === undefined
+                  ? 'Pick a tier to switch'
+                  : `Switch to Tier ${pickedTier} · ${pickedInfo.name}${pickedUpfront > 0 ? ` · ${formatUsd(pickedUpfront, 'tier upfront')} now` : ''}`}
+              </button>
             </article>
           )
         })}
@@ -153,6 +183,7 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
           const enrolled = current.study.course
           const studying = enrolled?.id === offer.id
           const blocked = ended || owned || enrolled !== null || current.accounts.cashCents < offer.costCents
+          const isPicked = pickedCourse === offer.id && !blocked
           return (
             <article key={offer.id} className="card" aria-label={`${offer.name} course`}>
               <header className="card-head">
@@ -161,9 +192,10 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
               </header>
               <button
                 type="button"
-                className={studying ? 'tier-row tier-active' : 'tier-row'}
+                className={studying ? 'tier-row tier-active' : isPicked ? 'tier-row tier-picked' : 'tier-row'}
+                aria-pressed={isPicked}
                 disabled={blocked}
-                onClick={() => onCourse(offer.id)}
+                onClick={() => setPickedCourse(offer.id)}
                 title={enrolled !== null && !studying ? 'Finish the course you are on first.' : undefined}
               >
                 <span className="tier-main">
@@ -172,7 +204,7 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
                       ? 'Done'
                       : studying
                         ? `Studying: ${enrolled.units} of ${COURSE_STUDY_UNITS} units`
-                        : `Enrol in ${offer.name}`}
+                        : `${offer.name} course`}
                   </span>
                   <span className="badges">
                     <PerkBadge text={`${COURSE_STUDY_UNITS} units`} title="Units of study needed to finish." />
@@ -182,8 +214,17 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
                 </span>
                 <span className="tier-price">
                   <strong>{formatUsd(offer.costCents, offer.name)}</strong>
-                  <small>one-off</small>
+                  {studying ? (
+                    <span className="tier-pill tier-pill-current">Current</span>
+                  ) : isPicked ? (
+                    <span className="tier-pill tier-pill-picked">Selected</span>
+                  ) : (
+                    <small>{owned ? 'owned' : 'one-off'}</small>
+                  )}
                 </span>
+              </button>
+              <button type="button" className="primary-action" disabled={!isPicked} onClick={() => onCourse(offer.id)}>
+                {isPicked ? `Enrol in ${offer.name} · ${formatUsd(offer.costCents, 'course')}` : 'Pick the course to enrol'}
               </button>
             </article>
           )

@@ -5,6 +5,7 @@ import { NEWS_READ_ENERGY_COST } from '../sim/stats.ts'
 import type { HeadlineItem, JobDefinition, ShownFeed, ShownItem } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { blurFilter, useCosmeticFx, useDelayedValue } from './effects.ts'
+import { jobNameOf, openNotice } from './employer.ts'
 import { dispatch, useTradingStore } from './store.ts'
 
 /** A headline is a fact about today. A report or post is a rumour with a source and a reliability tier. */
@@ -79,6 +80,14 @@ export function NewsFeed({
   }
 
   const top = topHeadline(shownFeed.items)
+  // Pinned and unbent: the employer notice is not part of the market feed, so stress never touches it.
+  const notice = game === null ? null : openNotice(game)
+  const employerText =
+    game === null || notice === null
+      ? null
+      : notice.stage === 'confirmed'
+        ? `${jobNameOf(game, notice.jobId)} confirmed job cuts. Last day: day ${notice.layoffDay}.`
+        : `Rumour of job cuts at ${jobNameOf(game, notice.jobId)}. Decision on day ${notice.decisionDay}.`
   const posts = game === null ? [] : shownPosts(game)
   // The feed is fixed for the day, so one read shows all of it. A read already paid for stays open.
   const readToday = newsReads > 0
@@ -124,6 +133,11 @@ export function NewsFeed({
   return (
     <section className="panel">
       <h2>News</h2>
+      {employerText === null ? null : (
+        <p className={notice?.stage === 'confirmed' ? 'employer-news employer-news-confirmed' : 'employer-news'} role="status">
+          <span className="feed-tag feed-employer">Employer</span> {employerText}
+        </p>
+      )}
       <div style={blurStyle}>
         <p>Day {shownFeed.day} headline</p>
         {/* Stress-bent items carry no mark (user decision 2026-11-03). The screen edge and the

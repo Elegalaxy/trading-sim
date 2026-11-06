@@ -30,6 +30,9 @@ export function BillBanner({ game }: { game: GameState | null }) {
   const withdraw = Math.min(Math.max(shortfall, 0), savings)
   const unused = unusedLoanLimitCents(game)
   const loanOpen = game.loan.balanceCents > 0
+  // The layoff payday: the day's log still holds the cut and its severance.
+  const laidOff = game.log.find((event) => event.kind === 'laidOff')
+  const severance = game.log.find((event) => event.kind === 'severancePaid')
   const loanDraw = !loanOpen && shortfall > 0 ? Math.min(shortfall, unused) : 0
 
   function onWithdraw(): void {
@@ -79,6 +82,12 @@ export function BillBanner({ game }: { game: GameState | null }) {
         The bill is {money(bill.amountCents, 'bill')}. Cash has {money(game.accounts.cashCents, 'cash')}.
         Shortfall {money(Math.max(shortfall, 0), 'shortfall')}. The day cannot end until this is paid.
       </p>
+      {laidOff !== undefined && severance !== undefined ? (
+        <p className="day-note">
+          Your job at {game.job.catalog.find((job) => job.id === laidOff.job)?.name ?? laidOff.job} ended today. Severance{' '}
+          {money(severance.amountCents, 'severance')} paid.
+        </p>
+      ) : null}
       <ul>
         <li>
           {game.section === 'market'

@@ -7,6 +7,7 @@ import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
 import { dispatch } from './store.ts'
 import { playerDay } from './days.ts'
+import { countdownText, daysUntil, jobNameOf, jobRisk, noticeSeverance, openNotice } from './employer.ts'
 
 function courseName(job: JobDefinition): string {
   return job.requirement === 'basic' ? 'Basic' : 'Finance'
@@ -24,6 +25,7 @@ function reasonText(reason: string, job: JobDefinition | undefined): string {
     return 'That job needs a course.'
   }
   if (reason === 'alreadyEmployed') return 'You already have that job.'
+  if (reason === 'rehireBlocked') return 'Laid off from this employer. You cannot rejoin this run.'
   if (reason === 'alreadyRequested') return 'That change is already waiting.'
   if (reason === 'unknownJob') return 'That job is not on the menu.'
   if (reason === 'notStarted') return 'Start a game first.'
@@ -34,6 +36,51 @@ function reasonText(reason: string, job: JobDefinition | undefined): string {
 function jobLocked(job: JobDefinition, game: GameState): boolean {
   if (job.requirement === 'none') return false
   return !game.job.courses.includes(job.requirement)
+}
+
+function NoticeCard({ game }: { game: GameState }) {
+  const notice = openNotice(game)
+  if (notice === null) return null
+  const confirmed = notice.stage === 'confirmed'
+  const holding = game.job.jobId === notice.jobId
+  const severance = noticeSeverance(game, notice)
+  const decisionIn = daysUntil(game, notice.decisionDay)
+  const lastIn = daysUntil(game, notice.layoffDay)
+  return (
+    <div className={confirmed ? 'notice-card notice-confirmed' : 'notice-card notice-rumour'} role="status" aria-label="Employer notice">
+      <h3>Employer notice · {jobNameOf(game, notice.jobId)}</h3>
+      <dl className="kv-row">
+        <div>
+          <dt>Status</dt>
+          <dd>
+            <span aria-hidden="true">{confirmed ? '⛔ ' : '⚠ '}</span>
+            {confirmed ? 'Confirmed: cuts are coming' : 'Rumour of cuts'}
+          </dd>
+        </div>
+        <div>
+          <dt>Decision day</dt>
+          <dd>
+            {confirmed ? 'Decided' : `Day ${notice.decisionDay}`}
+            {confirmed ? null : <small className="notice-count"> {countdownText(decisionIn)}</small>}
+          </dd>
+        </div>
+        <div>
+          <dt>Last day</dt>
+          <dd>
+            Day {notice.layoffDay}
+            <small className="notice-count"> {countdownText(lastIn)}</small>
+          </dd>
+        </div>
+        <div>
+          <dt>Severance</dt>
+          <dd>{holding && severance !== null ? formatUsd(severance, 'severance') : 'Forfeited'}</dd>
+        </div>
+      </dl>
+      <p className="card-note">
+        {holding ? 'Switching before the last day forfeits severance.' : 'You left this job, so no severance is paid.'}
+      </p>
+    </div>
+  )
 }
 
 export function JobPanel({ game }: { game: GameState | null }) {
@@ -118,9 +165,12 @@ export function JobPanel({ game }: { game: GameState | null }) {
           {pendingJob.name} starts on day {playerDay(pending.effectiveDay)}.
         </p>
       ) : null}
+      <NoticeCard game={game} />
       <div className="tier-list" role="group" aria-label="Job menu">
         {game.job.catalog.map((item) => {
           const locked = jobLocked(item, game)
+          const barred = game.employer?.barred.includes(item.id) === true
+          const risk = jobRisk(item.id)
           const active = item.id === currentId
           const picked = item.id === choice
           return (
@@ -129,8 +179,8 @@ export function JobPanel({ game }: { game: GameState | null }) {
               type="button"
               className={active ? 'tier-row tier-active' : picked ? 'tier-row tier-picked' : 'tier-row'}
               aria-pressed={picked}
-              disabled={locked || game.runEnd !== null}
-              title={locked ? `Needs the ${courseName(item)} course.` : undefined}
+              disabled={locked || barred || game.runEnd !== null}
+              title={barred ? reasonText('rehireBlocked', item) : locked ? `Needs the ${courseName(item)} course.` : undefined}
               onClick={() => onChoice(item.id)}
             >
               <span className="tier-main">
@@ -139,6 +189,14 @@ export function JobPanel({ game }: { game: GameState | null }) {
                   <PerkBadge text={slotsText(item)} title={`${item.slots} work slots, sleep ${item.sleepHours}h.`} />
                   {item.energyCost !== 0 ? <StatBadge kind="energy" value={-item.energyCost} label="Daily" /> : null}
                   {item.stressCost !== 0 ? <StatBadge kind="stress" value={item.stressCost} label="Daily" /> : null}
+                  {risk === null ? null : (
+                    <PerkBadge
+                      text={`Layoff risk: ${risk.level}`}
+                      title={`${risk.level === 'low' ? 'Low' : 'Medium'} chance of a restructuring rumour at each growth release. Employer sector ${risk.sector}.`}
+                    />
+                  )}
+                  {risk === null ? null : <PerkBadge text={`Sector ${risk.sector}`} title="Cuts follow this sector and the growth prints." />}
+                  {barred ? <PerkBadge text="Laid off: cannot rejoin" title={reasonText('rehireBlocked', item)} /> : null}
                   {locked ? <PerkBadge text={`Needs ${courseName(item)}`} title="Finish this course in your free time." /> : null}
                 </span>
               </span>

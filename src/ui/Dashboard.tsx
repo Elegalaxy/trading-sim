@@ -316,7 +316,7 @@ export function Dashboard() {
                   />
                 </Fold>
                 <Fold id="calendar" title="Calendar" startFolded>
-                  <CalendarPanel market={market} />
+                  <CalendarPanel market={market} employer={run?.game.employer ?? null} />
                 </Fold>
               </div>
             </>

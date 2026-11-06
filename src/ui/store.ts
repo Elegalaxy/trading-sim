@@ -901,6 +901,28 @@ function buildReport(game: GameState, start: ReportStart): DayReport {
       case 'jobChanged':
         notes.push(`You now work as ${jobName(game, event.to)}.`)
         break
+      case 'layoffWarning':
+        notes.push(
+          `Rumour of job cuts at ${jobName(game, event.job)}. The decision comes on day ${event.decisionDay}; the last day would be day ${event.layoffDay}.`,
+        )
+        break
+      case 'layoffConfirmed':
+        notes.push(
+          `${jobName(game, event.job)} confirmed job cuts. Your last day is day ${event.layoffDay}. Switching before then forfeits severance.`,
+        )
+        break
+      case 'layoffDropped':
+        notes.push(`The rumour of cuts at ${jobName(game, event.job)} was dropped. Your job is safe for now.`)
+        break
+      case 'layoffAvoided':
+        notes.push(`The cuts at ${jobName(game, event.job)} came after you had left. No severance.`)
+        break
+      case 'laidOff':
+        notes.push(`You were laid off from ${jobName(game, event.job)}. You cannot rejoin this run.`)
+        break
+      case 'severancePaid':
+        money.push({ label: `Severance, ${jobName(game, event.job)}`, cents: event.amountCents })
+        break
       default:
         break
     }

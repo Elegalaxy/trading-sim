@@ -3004,3 +3004,60 @@ dl.estimate dd {
   border: 1px solid #e0b341;
   border-radius: 4px;
 }
+
+/* Layoffs: employer notice card, pinned news line. Amber edge = rumour, red edge = confirmed; each also has an icon and text. */
+.notice-card {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  background: #1e2329;
+  border: 1px solid #2b3139;
+  border-left-width: 4px;
+  border-radius: 4px;
+}
+
+.notice-card.notice-rumour {
+  border-left-color: #e0b341;
+}
+
+.notice-card.notice-confirmed {
+  border-left-color: #e15b64;
+}
+
+.notice-card h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.notice-card .kv-row {
+  margin: 0 0 4px;
+}
+
+.notice-count {
+  font-weight: 400;
+  color: #848e9c;
+}
+
+.employer-news {
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border-left: 3px solid #e0b341;
+  background: #2a2618;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.employer-news.employer-news-confirmed {
+  border-left-color: #e15b64;
+  background: #2a1c1f;
+}
+
+.feed-tag.feed-employer {
+  background: #474d57;
+  color: #eaecef;
+}
+
+@media (max-width: 520px) {
+  .notice-card .kv-row {
+    gap: 6px 14px;
+  }
+}

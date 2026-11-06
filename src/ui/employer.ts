@@ -44,3 +44,13 @@ export function noticeSeverance(game: GameState, notice: LayoffNotice): number |
 export function jobNameOf(game: GameState, id: string): string {
   return game.job.catalog.find((job) => job.id === id)?.name ?? id
 }
+
+/** The one-line wording of an open notice (NoticeStrip and the ticker). Reads the stage only, never `real`. */
+export function noticeLine(game: GameState, notice: LayoffNotice): string {
+  const confirmed = notice.stage === 'confirmed'
+  const name = jobNameOf(game, notice.jobId)
+  const when = countdownText(daysUntil(game, confirmed ? notice.layoffDay : notice.decisionDay))
+  return confirmed
+    ? `Confirmed: your last day at ${name} is day ${notice.layoffDay} (${when}).`
+    : `Rumour of cuts at ${name}. Decision on day ${notice.decisionDay} (${when}).`
+}

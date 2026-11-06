@@ -3061,3 +3061,200 @@ dl.estimate dd {
     gap: 6px 14px;
   }
 }
+
+/* Employer notice strip: amber for a rumour, red for confirmed cuts. Icon and text, not colour alone. */
+.exchange .notice-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  width: 100%;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  text-align: left;
+  color: #eaecef;
+  background: #2a2618;
+  border: 0;
+  border-top: 1px solid #e0b341;
+  border-bottom: 1px solid #e0b341;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.exchange .notice-strip.notice-confirmed {
+  background: #2a181c;
+  border-color: #e15b64;
+}
+
+.exchange .notice-strip:hover {
+  filter: brightness(1.15);
+}
+
+.exchange .notice-strip:focus-visible {
+  outline: 2px solid #4c9aff;
+  outline-offset: -2px;
+}
+
+.notice-text {
+  font-weight: 650;
+}
+
+.notice-meta {
+  font-size: 12px;
+  color: #b7bdc6;
+}
+
+.notice-go {
+  margin-left: auto;
+  font-size: 12px;
+  color: #f7a600;
+}
+
+/* Headline ticker: one fixed-height line under the top bar. The source chip names the kind, so colour is never the only cue. */
+.exchange .ticker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  background: #161a1e;
+  border-bottom: 1px solid #2b3139;
+  color: #eaecef;
+  overflow: hidden;
+}
+
+.exchange .ticker.ticker-rumour {
+  border-bottom-color: #f7a600;
+}
+
+.exchange .ticker.ticker-confirmed {
+  border-bottom-color: #e15b64;
+}
+
+.exchange .ticker .ticker-headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.exchange .ticker .ticker-headline:hover .ticker-text {
+  text-decoration: underline;
+}
+
+.exchange .ticker button:focus-visible {
+  outline: 2px solid #4c9aff;
+  outline-offset: -2px;
+}
+
+.ticker-chip {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 650;
+  color: #eaecef;
+  background: #474d57;
+  border-radius: 999px;
+}
+
+.ticker-rumour .ticker-text {
+  color: #f7a600;
+}
+
+.ticker-confirmed .ticker-text {
+  color: #e15b64;
+}
+
+.ticker-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticker-text-in {
+  animation: ticker-in 0.25s ease-out;
+}
+
+@keyframes ticker-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ticker-empty {
+  flex: 1 1 auto;
+  font-size: 13px;
+  color: #848e9c;
+}
+
+.ticker-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ticker-count {
+  min-width: 34px;
+  text-align: right;
+  font-size: 12px;
+  color: #b7bdc6;
+  font-variant-numeric: tabular-nums;
+}
+
+.exchange .ticker-controls button {
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 1;
+  color: #eaecef;
+  background: #1e2329;
+  border: 1px solid #2b3139;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.exchange .ticker-controls button:hover:not(:disabled) {
+  background: #2b3139;
+}
+
+.exchange .ticker-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .exchange .ticker {
+    gap: 6px;
+    padding: 0 8px;
+  }
+  .ticker-count {
+    min-width: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-text-in {
+    animation: none;
+  }
+}

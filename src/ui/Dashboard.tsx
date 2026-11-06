@@ -29,6 +29,9 @@ import { StatMeters } from './StatMeters.tsx'
 import { JobPanel } from './JobPanel.tsx'
 import { LifestylePanel } from './LifestylePanel.tsx'
 import { LoanDueBanner } from './LoanDueBanner.tsx'
+import { NoticeStrip } from './NoticeStrip.tsx'
+import { Ticker } from './Ticker.tsx'
+import type { TickerTarget } from './ticker.ts'
 import { LoanPanel } from './LoanPanel.tsx'
 import { sessionPrice } from '../sim/session.ts'
 import { tradingEquity } from '../sim/trading.ts'
@@ -116,6 +119,16 @@ export function Dashboard() {
     event.preventDefault()
     const grow = (event.key === 'ArrowRight') === (side === 'left') ? 16 : -16
     setSide(side, (side === 'left' ? watchWidth : railWidth) + grow)
+  }
+
+  /** A ticker click: the Job card for an employer item, else the watchlist column (News and Calendar panels). */
+  function onTicker(target: TickerTarget): void {
+    if (target === 'job') {
+      setView('life')
+      return
+    }
+    setWatchOpen(true)
+    window.setTimeout(() => document.querySelector('.side-news')?.scrollIntoView({ block: 'nearest' }), 0)
   }
 
   const market = run?.game.market ?? null
@@ -276,6 +289,8 @@ export function Dashboard() {
       {run !== null ? <RunEnd seed={run.seed} mode={run.mode} game={run.game} /> : null}
       <DayReport report={run?.report ?? null} />
       {guideOpen ? <Guide onClose={() => setGuideOpen(false)} /> : null}
+      <Ticker game={run?.game ?? null} onOpen={onTicker} />
+      <NoticeStrip game={run?.game ?? null} onOpen={() => setView('life')} />
       <BillBanner game={run?.game ?? null} />
       <LoanDueBanner game={run?.game ?? null} />
 

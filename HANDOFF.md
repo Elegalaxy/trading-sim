@@ -32,4 +32,11 @@
   - Positions: row hover, and the TP/SL editor joins each input with its quick buttons into one control (`.exit-control`), aligned in columns.
   - New CSS is at the end of `styles.css`. The Life grid uses `grid-auto-rows: max-content` so cards keep their height.
   - User decision: Home stays comfort, not income (items plan section 8, question 1).
+- **Screen behaviour with no plan or design entry (only here and in commits):**
+  - Chart (`PriceChart.tsx`): wheel zoom (10 to 400 candles), drag to pan through all history and up to half a screen past the newest candle, drag or wheel on the price scale to stretch it, double-click it or press Auto to fit, "Back to now", a dashed last-price line, and fill marks (Buy, Sell, TP, SL, Liquidated, Forced sale) that stay and come back after a reload.
+  - Result window at the end of a run (`RunEnd.tsx`): a breakdown that folds into a banner; its text was not opened in the browser.
+  - TP/SL editor (`Positions.tsx`): both levels at once, quick steps, break-even, live % and P&L, wrong-side warning.
+  - Bill banner (`BillBanner.tsx`): outlined buttons, amber Pay bill once cash covers it.
+  - Top bar shows Trading equity; Equity tab restarts from one point per past day after a reload.
+- **Ideas with no plan yet (from `GAME_DESIGN.md` `[OPEN]` and `[LATER]`):** bank loan numbers (size, term, margin, early repayment, warning before a forced sale); savings accounts with lock periods; layoffs announced in advance; number and candle distortion and order errors from stress; how the player learns news-source hit rates; a currency pair as a new asset; meta-progression; a pre-market hour (more trading time); Transport lifestyle (smaller daily job energy cost); tolerance for repeated items. Writing the screen behaviour above into `GAME_DESIGN.md` section 13 is also open.
 - **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, the market-depth playtest, and a night-shift run for the new care loop) and answers the balance questions: the market-depth two, and the two in the items plan section 8. 

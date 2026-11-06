@@ -633,6 +633,37 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `source=${formatToken(event.source, 'source')}`,
         `amount=${formatNumber(event.amountCents)}`,
       ].join(' ')
+    case 'layoffWarning':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=layoffWarning',
+        `job=${formatToken(event.job, 'job')}`,
+        `chance=${formatNumber(event.chance)}`,
+        `warnRoll=${formatNumber(event.warnRoll)}`,
+        `decisionDay=${formatNumber(event.decisionDay)}`,
+        `layoffDay=${formatNumber(event.layoffDay)}`,
+      ].join(' ')
+    case 'layoffConfirmed':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=layoffConfirmed',
+        `job=${formatToken(event.job, 'job')}`,
+        `layoffDay=${formatNumber(event.layoffDay)}`,
+      ].join(' ')
+    case 'layoffDropped':
+      return [`day=${formatNumber(event.day)}`, 'kind=layoffDropped', `job=${formatToken(event.job, 'job')}`].join(' ')
+    case 'layoffAvoided':
+      return [`day=${formatNumber(event.day)}`, 'kind=layoffAvoided', `job=${formatToken(event.job, 'job')}`].join(' ')
+    case 'laidOff':
+      return [`day=${formatNumber(event.day)}`, 'kind=laidOff', `job=${formatToken(event.job, 'job')}`].join(' ')
+    case 'severancePaid':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=severancePaid',
+        `job=${formatToken(event.job, 'job')}`,
+        `amount=${formatNumber(event.amountCents)}`,
+        `cash=${formatNumber(event.cashCents)}`,
+      ].join(' ')
     default: {
       const unknown: never = event
       throw new Error(`formatEvent cannot format ${describeValue(unknown)}`)

@@ -10,6 +10,7 @@ import { applyCommand, createGame, endDay as simEndDay, endDayBlockReason } from
 import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { assertPast } from '../sim/past.ts'
+import { assertEmployer, createEmployer, fastForwardEmployer } from '../sim/layoffs.ts'
 import { initialLifestyle } from '../sim/lifestyle.ts'
 import { assertLoan, firstPaymentDay, loanPaymentsFor } from '../sim/loan.ts'
 import { loanWarning, pendingSale, saleText } from './loanText.ts'
@@ -314,6 +315,13 @@ export function continueGame(save: SaveFile): string | null {
       game.loan.firstPaymentDay = firstPaymentDay(game.market.day)
     }
     assertLoan(game.loan)
+    // A save from before layoffs has no employer. It gets the stream a run with layoffs would have by now:
+    // two draws for every roll day up to today.
+    if (definitions.layoffs !== undefined && game.employer === undefined) {
+      game.employer = createEmployer(checked.save.seed)
+      fastForwardEmployer(game.employer, game.market.day)
+    }
+    if (game.employer !== undefined) assertEmployer(game.employer)
     // A save must carry the order-flow parties and the social feed the definitions run, or it would play without them.
     if ((definitions.participants !== undefined) !== (game.market.participants !== undefined)) {
       throw new Error('save has no order-flow parties')

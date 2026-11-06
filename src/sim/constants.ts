@@ -77,6 +77,19 @@ export const MONTHLY_SALARY_CENTS = 0
 /** Section 6. Provisional days before a switch or quit takes effect. The starting job has no notice. */
 export const JOB_NOTICE_DAYS = 3
 
+// Layoffs (plan layoffs, loans and deposits, section 4.2). Provisional.
+/** A roll day is the growth-release day of a month: day 10, 40, 70. */
+export const LAYOFF_ROLL_DAY_OF_MONTH = 10
+/** Days from the warning to the decision, and from the warning to the last day. */
+export const LAYOFF_DECISION_DELAY_DAYS = 10
+export const LAYOFF_DAY_DELAY_DAYS = 20
+/** Severance in percent of one month's pay. */
+export const LAYOFF_SEVERANCE_PERCENT = 50
+/** Stress added on the decision day when a notice is confirmed. */
+export const LAYOFF_NOTICE_STRESS = 8
+/** Days of look-back for the sector move. */
+export const LAYOFF_SECTOR_LOOKBACK_DAYS = 20
+
 /**
  * Section 6. Staff discount off the bill that comes due while that perk is active.
  * 5 / 100 of the bill. A bill that is already pending keeps its amount.

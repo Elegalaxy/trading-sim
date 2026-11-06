@@ -4,6 +4,7 @@
 // --asset filters the market log. The closes table still lists every asset.
 // --batch prints one line per run and a [sim] report. It does not print the day log.
 // --care <runs> prints the care report: item spend and warning days by job and Home tier.
+// --layoffs <runs> prints the layoff report: warnings, cuts and layoff day by job.
 
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { createGame, endDay } from '../sim/game.ts'
@@ -13,12 +14,14 @@ import { daySummary, formatSummary } from '../sim/summary.ts'
 import type { GameState, LogEvent } from '../sim/types.ts'
 import { runBatch } from './batch.ts'
 import { careLines, careRows } from './care.ts'
+import { layoffLines, layoffRows } from './layoffs.ts'
 import { STRATEGY_NAMES, isStrategyName, type StrategyName } from './strategies.ts'
 
 const USAGE = [
   'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>] [--events-only] [--feed]',
   `       npm run sim -- --seed <seed> --days <1-1000> --batch <1-5000> --strategy <${STRATEGY_NAMES.join('|')}>`,
   '       npm run sim -- --seed <seed> --days <1-1000> --care <1-5000>',
+  '       npm run sim -- --seed <seed> --days <1-1000> --layoffs <1-5000>',
 ].join('\n')
 const SEED_PATTERN = /^[A-Za-z0-9-]{1,32}$/
 const DAYS_MIN = 1
@@ -51,7 +54,14 @@ type CareOptions = {
   runs: number
 }
 
-type CliOptions = SingleOptions | BatchOptions | CareOptions
+type LayoffOptions = {
+  mode: 'layoffs'
+  seed: string
+  days: number
+  runs: number
+}
+
+type CliOptions = SingleOptions | BatchOptions | CareOptions | LayoffOptions
 
 type CloseRow = {
   day: number
@@ -124,6 +134,7 @@ function parseArgs(argv: readonly string[]): CliOptions {
   let days: number | undefined
   let batch: number | undefined
   let care: number | undefined
+  let layoffs: number | undefined
   let strategy: string | undefined
   let quiet = false
   let eventsOnly = false
@@ -186,6 +197,13 @@ function parseArgs(argv: readonly string[]): CliOptions {
       i += read.consumed
       continue
     }
+    if (name === '--layoffs') {
+      if (layoffs !== undefined) fail('duplicate --layoffs')
+      const read = readOptionValue(argv, i, 'layoffs', inline)
+      layoffs = parseBoundedInt(read.value, 'layoffs', BATCH_MIN, BATCH_MAX)
+      i += read.consumed
+      continue
+    }
     if (name === '--strategy') {
       if (strategy !== undefined) fail('duplicate --strategy')
       const read = readOptionValue(argv, i, 'strategy', inline)
@@ -202,6 +220,13 @@ function parseArgs(argv: readonly string[]): CliOptions {
     if (seed === undefined) missing.push('--seed')
     if (days === undefined) missing.push('--days')
     fail(`missing ${missing.join(' and ')}`, true)
+  }
+
+  if (layoffs !== undefined) {
+    if (care !== undefined || batch !== undefined || strategy !== undefined || quiet || eventsOnly || feed || asset !== undefined) {
+      fail('--layoffs cannot be combined with other options')
+    }
+    return { mode: 'layoffs', seed, days, runs: layoffs }
   }
 
   if (care !== undefined) {
@@ -385,4 +410,7 @@ if (options.mode === 'batch') runBatch(options)
 else if (options.mode === 'care') {
   console.log(`[DEBUG care] seed=${options.seed} runs=${options.runs} days=${options.days}`)
   for (const line of careLines(careRows(options.seed, options.runs, options.days))) console.log(line)
+} else if (options.mode === 'layoffs') {
+  console.log(`[DEBUG layoffs] seed=${options.seed} runs=${options.runs} days=${options.days}`)
+  for (const line of layoffLines(layoffRows(options.seed, options.runs, options.days))) console.log(line)
 } else run(options)

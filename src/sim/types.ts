@@ -261,6 +261,47 @@ export type MarketDefinitions = {
    * Headlines for events that already fired are still generated.
    */
   sources?: readonly SourceDefinition[]
+  /** Telegraphed layoffs (plan layoffs, loans and deposits, Step Y1). Omitted means none and no layoff-stream draws. */
+  layoffs?: LayoffDefinitions
+}
+
+/** One job that can be cut. A job not listed is exempt. */
+export type LayoffJobRisk = { jobId: string; sector: SectorId; baseChance: number }
+
+/**
+ * Layoff odds. The modifiers are signed and added to the job's base chance, then the sum is
+ * clamped to 0 .. `maxChance`. `sectorMovePercent` is the 20-day move of the job's sector, in
+ * percent, that counts as a fall or a rise. `trueChance` is the chance that a warning is real.
+ */
+export type LayoffDefinitions = {
+  jobs: readonly LayoffJobRisk[]
+  growthBelow: number
+  growthAbove: number
+  sectorFall: number
+  sectorRise: number
+  sectorMovePercent: number
+  maxChance: number
+  trueChance: number
+}
+
+/**
+ * An employer notice. `real` is hidden like a rumour's truth: the UI must not read it.
+ * The stage is `rumour` until the decision day, then `confirmed` (a dropped notice is cleared).
+ */
+export type LayoffNotice = {
+  jobId: string
+  warnedDay: number
+  decisionDay: number
+  layoffDay: number
+  real: boolean
+  stage: 'rumour' | 'confirmed'
+}
+
+/** The employer's own stream and notice, apart from the market. `barred` are jobs lost this run. */
+export type EmployerState = {
+  stream: RngStream
+  notice: LayoffNotice | null
+  barred: string[]
 }
 
 /** Price in integer cents. Fair value is cents as a float. */
@@ -1328,6 +1369,55 @@ export type ForcedSaleEvent = {
   amountCents: number
 }
 
+/** An employer notice opened (a rumour of cuts). The hidden `real` flag is not logged here. */
+export type LayoffWarningEvent = {
+  kind: 'layoffWarning'
+  day: number
+  job: string
+  chance: number
+  warnRoll: number
+  decisionDay: number
+  layoffDay: number
+}
+
+/** The decision day: the cuts are confirmed. */
+export type LayoffConfirmedEvent = {
+  kind: 'layoffConfirmed'
+  day: number
+  job: string
+  layoffDay: number
+}
+
+/** The decision day: the rumour was false and the notice is cleared. */
+export type LayoffDroppedEvent = {
+  kind: 'layoffDropped'
+  day: number
+  job: string
+}
+
+/** The layoff day came and the player was no longer in that job. No severance. */
+export type LayoffAvoidedEvent = {
+  kind: 'layoffAvoided'
+  day: number
+  job: string
+}
+
+/** The job ended. A `jobChanged` to jobless follows. */
+export type LaidOffEvent = {
+  kind: 'laidOff'
+  day: number
+  job: string
+}
+
+/** Severance paid to cash. `cashCents` is cash after the payment. */
+export type SeverancePaidEvent = {
+  kind: 'severancePaid'
+  day: number
+  job: string
+  amountCents: number
+  cashCents: number
+}
+
 /** Player commands since the previous end of day, plus a bill payment or cover check from those commands. */
 export type CommandLogEvent =
   | TransferEvent
@@ -1380,6 +1470,12 @@ export type AccountLogEvent =
   | LoanInterestDueEvent
   | LoanInterestPaidEvent
   | ForcedSaleEvent
+  | LayoffWarningEvent
+  | LayoffConfirmedEvent
+  | LayoffDroppedEvent
+  | LayoffAvoidedEvent
+  | LaidOffEvent
+  | SeverancePaidEvent
 
 export type LogEvent =
   | NoiseRollEvent
@@ -1702,6 +1798,8 @@ export type GameState = {
    * when the day ends. Absent means none.
    */
   orderFlow?: Record<string, number>
+  /** Layoff stream, open notice and jobs lost. Absent when the definitions have no layoffs. Never read by the market. */
+  employer?: EmployerState
 }
 
 /**

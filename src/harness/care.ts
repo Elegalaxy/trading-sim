@@ -10,7 +10,7 @@ import { JOB_DEFINITIONS } from '../content/jobs.ts'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { applyCommand, createGame, endDay } from '../sim/game.ts'
 import { ENERGY_WARNING_BELOW, STRESS_WARNING_ABOVE } from '../sim/stats.ts'
-import type { ConsumableDefinition, GameState, JobDefinition } from '../sim/types.ts'
+import type { ConsumableDefinition, GameState, JobDefinition, MarketDefinitions } from '../sim/types.ts'
 import { runSeed } from './batch.ts'
 
 /** The bot buys until energy is at least this and stress at most the other, clear of the warning line. */
@@ -40,7 +40,7 @@ function value(game: GameState, item: ConsumableDefinition): number {
 }
 
 /** Buy the best-value usable item. Returns false when nothing helps or nothing is affordable. */
-function buyOne(game: GameState, defs: typeof MARKET_DEFINITIONS): boolean {
+function buyOne(game: GameState, defs: MarketDefinitions): boolean {
   let best: ConsumableDefinition | null = null
   let bestValue = 0
   for (const item of game.consumables) {
@@ -58,7 +58,7 @@ function buyOne(game: GameState, defs: typeof MARKET_DEFINITIONS): boolean {
   return game.stats.consumed.length > before
 }
 
-function careDay(game: GameState, defs: typeof MARKET_DEFINITIONS): number {
+function careDay(game: GameState, defs: MarketDefinitions): number {
   const cashBefore = game.accounts.cashCents
   for (let guard = 0; guard < 16; guard += 1) {
     if (game.stats.energy >= TARGET_ENERGY && game.stats.stress <= TARGET_STRESS) break
@@ -74,7 +74,8 @@ function inWarning(game: GameState): boolean {
 type Totals = { spend: number; warningDays: number; days: number; survived: number }
 
 function runOne(job: JobDefinition, home: number, seed: string, days: number, totals: Totals): void {
-  const defs = MARKET_DEFINITIONS
+  // Layoffs are left out so this report stays comparable to the item numbers (plan items and lifestyle, Step L6).
+  const defs = { ...MARKET_DEFINITIONS, layoffs: undefined }
   // Every job is tried as if its course were done, so the report covers the whole menu.
   const jobs = JOB_DEFINITIONS.map((row) => ({ ...row, requirement: 'none' as const }))
   const game = createGame(defs, seed, { jobs, jobId: job.id, consumables: CONSUMABLE_DEFINITIONS })

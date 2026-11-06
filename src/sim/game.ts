@@ -41,6 +41,7 @@ import {
   sectionForJob,
 } from './jobs.ts'
 import { applyFiCheck, finishAtDayLimit, initialFi } from './fi.ts'
+import { applyEmployerDay, assertEmployer, createEmployer } from './layoffs.ts'
 import {
   assertLifestyle,
   assertLifestyleCommand,
@@ -410,6 +411,7 @@ function assertGame(state: GameState, defs?: MarketDefinitions): void {
     throw new Error(`game past must be a list of at most ${RUN_LENGTH_DAYS} days, received ${describeValue(state.past)}`)
   }
   if (state.social !== undefined) assertSocial(state.social, state.market.day)
+  if (state.employer !== undefined) assertEmployer(state.employer)
 }
 
 /**
@@ -494,6 +496,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     state.social = createSocial(seed)
     buildSocialDay(state.social, state.market, state.session, defs)
   }
+  if (defs.layoffs !== undefined) state.employer = createEmployer(seed)
   refreshPerception(state)
   return state
 }
@@ -668,7 +671,8 @@ function savingsInterestReceived(events: readonly AccountLogEvent[]): number {
  * interest, and the bill before the player acts. Unpaid loan interest is
  * collected at the end of that day, before the next market step: positions
  * first, then savings. That sale does not pay the expense bill. Energy and
- * stress are updated after the margin settlement and before the FI check. Player
+ * stress are updated after the margin settlement and before the FI check. The employer
+ * day (layoff notices, plan layoffs) follows the stats and comes before a due job change. Player
  * events stay off the market log. A wipe-out does not end the run. A pending
  * bill or an ended run throws before the market steps. On day 120, End day
  * seals the run and does not step prices. The day-120 bill still blocks that
@@ -713,11 +717,13 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const endEquity = tradingEquity(state, defs).equity
   recordPastDay(state, closedBars, endEquity)
   const statEvents = applyEndOfDayStats(state, workedJob, sleptHours, equityAtStart, endEquity, traded)
+  // A layoff day comes first, so a switch that takes effect the same morning still counts as a layoff.
+  const employerEvents = applyEmployerDay(state, defs)
   const jobEvents = applyDueJobChange(state)
   const monthly = isMonthlyCycleDay(state.market.day) ? applyMonthlyCycle(state, defs) : []
   const fi = applyFiCheck(state, defs, savingsInterestReceived(monthly))
   state.pending = []
-  state.log = [...commands, ...resting, ...loanEvents, ...traded, ...pruned, ...savings, ...statEvents, ...jobEvents, ...monthly, ...fi]
+  state.log = [...commands, ...resting, ...loanEvents, ...traded, ...pruned, ...savings, ...statEvents, ...employerEvents, ...jobEvents, ...monthly, ...fi]
   const job = activeJob(state.job)
   state.section = sectionForJob(job)
   state.sleepHours = job.sleepHours

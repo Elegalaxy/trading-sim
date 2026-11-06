@@ -49,6 +49,34 @@ describe('saves from before the market depth work', () => {
     expect(loaded?.game.loan.accruedInterestCents).toBeUndefined()
   })
 
+  it('load without an employer (before layoffs) and give it the stream a run with layoffs has at that day', () => {
+    // Day 45: roll days 10 and 40 are behind, so four draws.
+    const fresh = createGame(defs, 'old')
+    for (let day = 0; day < 45; day += 1) {
+      applyCommand(fresh, defs, { type: 'skip' })
+      endDay(fresh, defs)
+    }
+    const old = save((s) => {
+      delete s.employer
+    }, 45)
+    expect(continueGame(old)).toBeNull()
+    const loaded = useTradingStoreSnapshot()
+    expect(loaded?.game.employer?.stream).toEqual(fresh.employer?.stream)
+    expect(loaded?.game.employer).toMatchObject({ notice: null, barred: [] })
+  })
+
+  it('keep an open notice and a barred job from a current save, and refuse a damaged employer block', () => {
+    const open = save((s) => {
+      s.employer.notice = { jobId: 'shopAssistant', warnedDay: 10, decisionDay: 20, layoffDay: 30, real: true, stage: 'confirmed' }
+      s.employer.barred = ['nightWarehouse']
+    })
+    expect(continueGame(open)).toBeNull()
+    expect(useTradingStoreSnapshot()?.game.employer).toMatchObject({ notice: { stage: 'confirmed' }, barred: ['nightWarehouse'] })
+    expect(continueGame(save((s) => { s.employer.barred = 'x' }))).toBe(DAMAGED_SAVE_MESSAGE)
+    expect(continueGame(save((s) => { delete s.employer.stream.a }))).toBe(DAMAGED_SAVE_MESSAGE)
+    expect(continueGame(save((s) => { s.employer.notice = { jobId: 'x' } }))).toBe(DAMAGED_SAVE_MESSAGE)
+  })
+
   it('say the save is damaged for calendar rolls without a consensus (before it)', () => {
     // The growth release is on day 10 and is rolled at the close of day 7, so a save after day 8 holds a roll.
     const withRoll = save((s) => {

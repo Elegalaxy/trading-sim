@@ -425,6 +425,8 @@ export function interpretSetJob(state: GameState, cmd: unknown): SetJobOutcome {
   const next = state.job.catalog.find((job) => job.id === jobId)
   if (next === undefined) return { accepted: false, event: rejected(day, 'unknownJob') }
   if (jobIsLocked(next, state.job.courses)) return { accepted: false, event: rejected(day, 'jobLocked') }
+  // An employer that let the player go does not take them back this run.
+  if (state.employer?.barred.includes(jobId) === true) return { accepted: false, event: rejected(day, 'rehireBlocked') }
   if (jobId === state.job.jobId) return { accepted: false, event: rejected(day, 'alreadyEmployed') }
   if (state.job.pending !== null && state.job.pending.jobId === jobId) {
     return { accepted: false, event: rejected(day, 'alreadyRequested') }

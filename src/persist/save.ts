@@ -321,7 +321,7 @@ function checkFills(value: unknown): string | null {
 
 function checkState(value: unknown): string | null {
   // Saves from before the fill ledger have no `fills`. They load with an empty one.
-  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'past', 'social', 'orderFlow'])) return 'shape:state'
+  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'past', 'social', 'orderFlow', 'employer'])) return 'shape:state'
   if (value.fills !== undefined) {
     const fills = checkFills(value.fills)
     if (fills !== null) return fills
@@ -337,6 +337,26 @@ function checkState(value: unknown): string | null {
     const found = checkStream(social.stream, 'state.social.stream')
     if (found !== null) return found
     if (!Number.isSafeInteger(social.day) || !Array.isArray(social.posts)) return 'shape:state.social.posts'
+  }
+  // Saves from before layoffs have no `employer`. The store gives them one when the definitions run layoffs.
+  if (value.employer !== undefined) {
+    const employer = value.employer
+    if (!isRecord(employer) || !sameKeys(employer, ['stream', 'notice', 'barred'])) return 'shape:state.employer'
+    const found = checkStream(employer.stream, 'state.employer.stream')
+    if (found !== null) return found
+    if (employer.notice !== null) {
+      const notice = employer.notice
+      if (!isRecord(notice) || !sameKeys(notice, ['jobId', 'warnedDay', 'decisionDay', 'layoffDay', 'real', 'stage'])) {
+        return 'shape:state.employer.notice'
+      }
+      if (typeof notice.jobId !== 'string' || typeof notice.real !== 'boolean') return 'shape:state.employer.notice'
+      if (notice.stage !== 'rumour' && notice.stage !== 'confirmed') return 'shape:state.employer.notice.stage'
+      for (const key of ['warnedDay', 'decisionDay', 'layoffDay'] as const) {
+        const day = finiteNumber(notice[key], `state.employer.notice.${key}`)
+        if (day !== null) return day
+      }
+    }
+    if (!Array.isArray(employer.barred) || employer.barred.some((id) => typeof id !== 'string')) return 'shape:state.employer.barred'
   }
   const market = checkMarket(value.market)
   if (market !== null) return market

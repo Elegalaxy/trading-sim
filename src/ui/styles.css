@@ -2463,16 +2463,33 @@ dl.estimate dd {
   border-radius: 999px;
 }
 
-.badge-energy {
-  color: #0ecb81;
-  background: #0ecb8118;
-  border-color: #0ecb8140;
+.badge-stat {
+  color: #b7bdc6;
+  background: #2b313966;
+  border-color: #2b3139;
 }
 
-.badge-stress {
-  color: #3dd6c6;
-  background: #3dd6c618;
-  border-color: #3dd6c640;
+.badge-effect {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.effect-good {
+  color: #0ecb81;
+}
+
+.effect-bad {
+  color: #f6465d;
+}
+
+.kind-energy {
+  color: #4cc9f0;
+}
+
+.kind-stress {
+  color: #b48cff;
 }
 
 .badge-perk {

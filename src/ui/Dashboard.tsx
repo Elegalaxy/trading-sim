@@ -349,11 +349,11 @@ export function Dashboard() {
             {view === 'life' ? (
               <div className="main-pane main-scroll desk life-grid">
                 <div className="life-col">
-                  <Fold id="job" title="Job">
-                    <JobPanel game={run?.game ?? null} />
-                  </Fold>
                   <Fold id="food" title="Food and drink">
                     <Consumables game={run?.game ?? null} />
+                  </Fold>
+                  <Fold id="job" title="Job">
+                    <JobPanel game={run?.game ?? null} />
                   </Fold>
                 </div>
                 <div className="life-col">

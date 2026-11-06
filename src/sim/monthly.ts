@@ -5,7 +5,8 @@
 // Staff discount cuts the bill that comes due while that job is active.
 // Cash that covers the bill pays it. Otherwise the bill stays pending and the
 // next endDay is blocked. The check never sells a position or moves savings.
-// Loan interest is assessed in this cycle, after salary and before the bill.
+// The loan payment (accrued interest plus an instalment) is assessed in this cycle,
+// after salary and before the bill.
 // The cover total includes unused loan room. The bill itself is never paid
 // by a forced sale.
 // The amount is base expenses plus lifestyle tiers, then the staff discount.
@@ -99,11 +100,7 @@ function closedTradingEquityCents(state: GameState, defs: MarketDefinitions): nu
     socialPosts: state.socialPosts,
     perception: state.perception,
     lifestyle: state.lifestyle,
-    loan: {
-      balanceCents: state.loan.balanceCents,
-      interestDueCents: state.loan.interestDueCents,
-      interestDay: state.loan.interestDay,
-    },
+    loan: { ...state.loan },
     study: state.study,
     // The cover check is a preview: closing here must not touch the real ledger.
     fills: [],

@@ -4,15 +4,14 @@
 // The run ends after the close of day RUN_LENGTH_DAYS.
 //
 // Payday is the monthly cycle in `endDay`: it runs at the close of every 30th day (salary,
-// savings interest, loan interest, then the bill), so the next payday is the next multiple
+// savings interest, the loan payment, then the bill), so the next payday is the next multiple
 // of 30 at or after the day being traded.
 
-import { readPolicyRatePercent } from '../sim/accounts.ts'
 import { upcomingCalendar } from '../sim/calendar.ts'
 import { RUN_LENGTH_DAYS, SAVINGS_PAY_INTERVAL_DAYS } from '../sim/constants.ts'
 import { activeJob } from '../sim/jobs.ts'
 import { projectedBillCents } from '../sim/lifestyle.ts'
-import { loanInterestCents } from '../sim/loan.ts'
+import { nextLoanPayment } from '../sim/loan.ts'
 import type { GameState, MarketDefinitions, MarketState, UpcomingCalendarItem } from '../sim/types.ts'
 
 /** The day the player is trading: the close the session leads to. */
@@ -33,8 +32,8 @@ export type Payday = {
   /** About what salary will pay, prorated by days worked. */
   salaryCents: number
   billCents: number
-  /** Monthly loan interest at today's policy rate, 0 without a loan. */
-  loanInterestCents: number
+  /** The loan payment (interest plus instalment) due on this payday, 0 without a loan. */
+  loanPaymentCents: number
 }
 
 /** The next monthly cycle and what it is expected to move. Null once the run is over. */
@@ -50,13 +49,13 @@ export function nextPayday(game: GameState, defs: MarketDefinitions): Payday | n
   }
   // Today and the days left until payday are worked at the current job.
   salary += (activeJob(game.job).payCents * (inDays + 1)) / SAVINGS_PAY_INTERVAL_DAYS
-  const policy = readPolicyRatePercent(game.market, defs)
+  const loanPayment = nextLoanPayment(game, defs)
   return {
     day,
     inDays,
     salaryCents: Math.round(salary),
     billCents: projectedBillCents(game),
-    loanInterestCents: game.loan.balanceCents > 0 ? loanInterestCents(game.loan.balanceCents, policy) : 0,
+    loanPaymentCents: loanPayment === null ? 0 : loanPayment.totalCents,
   }
 }
 

@@ -6,18 +6,26 @@ import {
   STARTING_CASH_CENTS,
   STARTING_TRADING_CENTS,
 } from './constants.ts'
+import { netWorthCents } from './fi.ts'
 import { applyCommand, createGame, endDay } from './game.ts'
 import { stateHash } from './hash.ts'
 import { activeJob } from './jobs.ts'
 import {
   RUN_LOST_LOAN_REASON,
   loanAnnualRate,
-  loanInterestCents,
+  loanDailyInterestCents,
+  estimatedPaymentCents,
+  firstPaymentDay,
   loanLimitCents,
+  loanPaymentsFor,
+  projectLoanSchedule,
+  nextLoanPayment,
+  previewLoanSale,
   settleMissedLoanInterest,
   unusedLoanLimitCents,
 } from './loan.ts'
 import { formatEvent } from './log.ts'
+import { tradingEquity } from './trading.ts'
 import type { ForcedSaleEvent, GameState, JobDefinition, MarketDefinitions } from './types.ts'
 
 const io = (await import(['node', 'fs'].join(':'))) as {
@@ -65,10 +73,11 @@ function sales(events: readonly { kind: string }[]): ForcedSaleEvent[] {
 describe('bank loan', () => {
   it('rejects a second loan until the first is repaid, and the limit uses the active job', () => {
     expect(LOAN_TIER_CENTS).toBe(25_000)
-    expect(loanInterestCents(75, 4)).toBe(1)
-    expect(loanInterestCents(100_000, 4)).toBe(667)
+    // Daily accrual: balance x 8% / 365, rounded half away from zero.
+    expect(loanDailyInterestCents(75, 4)).toBe(0)
+    expect(loanDailyInterestCents(100_000, 4)).toBe(22)
     expect(loanAnnualRate(4)).toBe(0.08)
-    debugLoan(`interest 75 cents at 4% -> ${loanInterestCents(75, 4)}; 100000 -> ${loanInterestCents(100_000, 4)}`)
+    debugLoan(`daily interest 75 cents at 4% -> ${loanDailyInterestCents(75, 4)}; 100000 -> ${loanDailyInterestCents(100_000, 4)}`)
 
     const defs = market()
     const game = createGame(defs, 'limit', { jobs: JOBS, jobId: 'shopAssistant' })
@@ -123,30 +132,204 @@ describe('bank loan', () => {
     debugLoan(`second draw after payoff balance=${game.loan.balanceCents}`)
   })
 
-  it('pays interest from cash on the 30th day and does not sell', () => {
+  it('accrues interest daily and takes it with an instalment from cash on the 30th day', () => {
     const defs = market()
     const game = createGame(defs, 'auto')
     const hashBefore = stateHash(game.market)
     applyCommand(game, defs, { type: 'takeLoan', amountCents: 100_000 })
     expect(stateHash(game.market)).toBe(hashBefore)
-    advance(game, defs, 30)
+    expect(game.loan.paymentsLeft).toBe(3)
+    expect(game.log.at(-1)).toMatchObject({ kind: 'loanTaken', paymentsLeft: 3 })
+    advance(game, defs, 1)
+    const accrual = game.log.find((event) => event.kind === 'loanAccrual')
+    if (accrual?.kind !== 'loanAccrual') throw new Error('[DEBUG loan] missing loanAccrual')
+    expect(accrual).toMatchObject({ accrualCents: 22, accruedCents: 22, balanceCents: 100_000 })
+    expect(game.loan.accruedInterestCents).toBe(22)
+    advance(game, defs, 28)
+    expect(game.loan.accruedInterestCents).toBe(29 * 22)
+    advance(game, defs, 1)
     expect(game.market.day).toBe(30)
-    expect(game.loan.balanceCents).toBe(100_000)
+    const instalment = Math.ceil(100_000 / 3)
+    expect(game.loan.balanceCents).toBe(100_000 - instalment)
+    expect(game.loan.paymentsLeft).toBe(2)
+    expect(game.loan.accruedInterestCents).toBe(0)
     expect(game.loan.interestDueCents).toBe(0)
+    expect(game.loan.principalDueCents).toBe(0)
     const due = game.log.find((event) => event.kind === 'loanInterestDue')
     const paid = game.log.find((event) => event.kind === 'loanInterestPaid')
     if (due?.kind !== 'loanInterestDue' || paid?.kind !== 'loanInterestPaid') {
-      throw new Error('[DEBUG loan] missing interest events')
+      throw new Error('[DEBUG loan] missing payment events')
     }
-    expect(due.amountCents).toBe(667)
+    expect(due.amountCents).toBe(30 * 22)
+    expect(due.principalCents).toBe(instalment)
     expect(due.policyRate).toBe(4)
     expect(due.annualRate).toBe(loanAnnualRate(4))
-    expect(paid.amountCents).toBe(667)
-    expect(paid.balanceCents).toBe(100_000)
+    expect(paid.amountCents).toBe(30 * 22)
+    expect(paid.principalCents).toBe(instalment)
+    expect(paid.balanceCents).toBe(100_000 - instalment)
     expect(game.log.some((event) => event.kind === 'forcedSale')).toBe(false)
-    expect(game.bill).toBeNull()
     expect(game.runEnd).toBeNull()
     debugLoan(`${formatEvent(due)} ${formatEvent(paid)}`)
+  })
+
+  it('counts the first payday at least 7 days after the draw, at most 3, none after day 113', () => {
+    expect(firstPaymentDay(0)).toBe(30)
+    expect(firstPaymentDay(23)).toBe(30)
+    expect(firstPaymentDay(24)).toBe(60)
+    expect(firstPaymentDay(29)).toBe(60)
+    expect(loanPaymentsFor(0)).toBe(3)
+    expect(loanPaymentsFor(29)).toBe(3)
+    expect(loanPaymentsFor(60)).toBe(2)
+    expect(loanPaymentsFor(90)).toBe(1)
+    expect(loanPaymentsFor(113)).toBe(1)
+    expect(loanPaymentsFor(114)).toBe(0)
+    expect(loanPaymentsFor(115)).toBe(0)
+  })
+
+  it('draws on day 29 pay interest only on day 30 and the first instalment on day 60', () => {
+    const defs = market()
+    const game = createGame(defs, 'schedule')
+    game.accounts.cashCents = 1_000_000
+    advance(game, defs, 29)
+    applyCommand(game, defs, { type: 'takeLoan', amountCents: 90_000 })
+    expect(game.loan.paymentsLeft).toBe(3)
+    expect(game.loan.firstPaymentDay).toBe(60)
+    advance(game, defs, 1)
+    expect(game.market.day).toBe(30)
+    // One day of interest, no principal: the payday is under 7 days away.
+    expect(game.log.find((event) => event.kind === 'loanInterestPaid')).toMatchObject({ amountCents: 20, principalCents: 0 })
+    expect(game.loan.balanceCents).toBe(90_000)
+    expect(game.loan.paymentsLeft).toBe(3)
+    advance(game, defs, 30)
+    expect(game.market.day).toBe(60)
+    expect(game.loan.balanceCents).toBe(60_000)
+    expect(game.loan.paymentsLeft).toBe(2)
+  })
+
+  it('takes 3 instalments that clear the balance, and an early repayment lowers the later ones', () => {
+    const defs = market()
+    const game = createGame(defs, 'three')
+    game.accounts.cashCents = 1_000_000
+    applyCommand(game, defs, { type: 'takeLoan', amountCents: 90_000 })
+    advance(game, defs, 30)
+    expect(game.loan.balanceCents).toBe(60_000)
+    applyCommand(game, defs, { type: 'repayLoan', amountCents: 30_000 })
+    expect(game.loan.paymentsLeft).toBe(2)
+    advance(game, defs, 30)
+    // 30,000 left over 2 payments: 15,000 now.
+    expect(game.loan.balanceCents).toBe(15_000)
+    expect(game.loan.paymentsLeft).toBe(1)
+    advance(game, defs, 30)
+    expect(game.loan.balanceCents).toBe(0)
+    expect(game.loan.paymentsLeft).toBe(0)
+    advance(game, defs, 1)
+    expect(game.log.some((event) => event.kind === 'loanAccrual')).toBe(false)
+    // Paying everything early clears the schedule.
+    const early = createGame(defs, 'early')
+    applyCommand(early, defs, { type: 'takeLoan', amountCents: 10_000 })
+    applyCommand(early, defs, { type: 'repayLoan', amountCents: 10_000 })
+    expect(early.loan.paymentsLeft).toBe(0)
+    expect(early.loan.balanceCents).toBe(0)
+  })
+
+  it('draws after day 113 with no instalment, and the balance counts against net worth', () => {
+    const defs = market()
+    const game = createGame(defs, 'late')
+    game.accounts.cashCents = 1_000_000
+    advance(game, defs, 115)
+    applyCommand(game, defs, { type: 'takeLoan', amountCents: 50_000 })
+    expect(game.loan.paymentsLeft).toBe(0)
+    const before = netWorthCents(game, defs)
+    advance(game, defs, 5)
+    expect(game.market.day).toBe(120)
+    // Interest only on the last payday; the principal stays and is counted at the seal.
+    expect(game.loan.balanceCents).toBe(50_000)
+    const equity = tradingEquity(game, defs).equity
+    expect(netWorthCents(game, defs)).toBe(game.accounts.cashCents + game.accounts.savingsCents + equity - 50_000)
+    expect(netWorthCents(game, defs)).toBeLessThan(before)
+  })
+
+  it('keeps pending principal at or below the balance when the player repays by hand', () => {
+    const defs = market()
+    const game = createGame(defs, 'cap')
+    game.loan.balanceCents = 60_000
+    game.loan.paymentsLeft = 1
+    game.loan.interestDueCents = 100
+    game.loan.principalDueCents = 60_000
+    game.loan.interestDay = 0
+    applyCommand(game, defs, { type: 'repayLoan', amountCents: 20_000 })
+    expect(game.loan.balanceCents).toBe(40_000)
+    expect(game.loan.principalDueCents).toBe(40_000)
+    applyCommand(game, defs, { type: 'repayLoan', amountCents: 40_000 })
+    expect(game.loan.principalDueCents).toBe(0)
+    expect(game.loan.interestDueCents).toBe(100)
+    expect(game.loan.interestDay).toBe(0)
+  })
+
+  it('previews the forced sale exactly and leaves the real state alone', () => {
+    const defs = market()
+    const game = createGame(defs, 'preview')
+    applyCommand(game, defs, { type: 'skip' })
+    applyCommand(game, defs, { type: 'order', asset: 'NOVA', side: 'buy', quantity: 20 })
+    applyCommand(game, defs, { type: 'order', asset: 'BLSW', side: 'buy', quantity: 2 })
+    const novaQuote = game.market.assets.NOVA
+    if (novaQuote === undefined) throw new Error('[DEBUG loan] missing NOVA')
+    novaQuote.priceCents = 1_000
+    game.loan.balanceCents = 90_000
+    game.loan.paymentsLeft = 2
+    game.loan.interestDueCents = 700
+    game.loan.principalDueCents = 45_000
+    game.loan.interestDay = game.market.day
+    game.accounts.cashCents = 0
+    game.accounts.savingsCents = 60_000
+    expect(estimatedPaymentCents(game, defs)).toBe(45_700)
+    const snapshot = JSON.stringify(game)
+    const preview = previewLoanSale(game, defs)
+    expect(JSON.stringify(game)).toBe(snapshot)
+    expect(preview.dueCents).toBe(45_700)
+    expect(preview.endsRun).toBe(false)
+    expect(preview.steps.length).toBeGreaterThan(0)
+    const events = settleMissedLoanInterest(game, defs)
+    const real = sales(events).map((event) => ({ source: event.source, amountCents: event.amountCents }))
+    expect(preview.steps).toEqual(real)
+    expect(game.loan.balanceCents).toBe(45_000)
+    expect(game.loan.interestDueCents).toBe(0)
+    debugLoan(`preview ${JSON.stringify(preview.steps)}`)
+  })
+
+  it('projects the schedule the real paydays then take', () => {
+    const defs = market()
+    const rows = projectLoanSchedule(90_000, 0, 4)
+    expect(rows.map((row) => row.day)).toEqual([30, 60, 90])
+    expect(rows.map((row) => row.principalCents)).toEqual([30_000, 30_000, 30_000])
+    const game = createGame(defs, 'project')
+    game.accounts.cashCents = 1_000_000
+    applyCommand(game, defs, { type: 'takeLoan', amountCents: 90_000 })
+    for (const row of rows) {
+      while (game.market.day < row.day) endDay(game, defs)
+      if (game.bill !== null) applyCommand(game, defs, { type: 'payBill' })
+      const paid = game.log.find((event) => event.kind === 'loanInterestPaid')
+      expect(paid).toMatchObject({ amountCents: row.interestCents, principalCents: row.principalCents })
+    }
+    // Draw on day 29: day 30 is interest only, then three instalments.
+    const late = projectLoanSchedule(90_000, 29, 4)
+    expect(late.map((row) => [row.day, row.principalCents])).toEqual([[30, 0], [60, 30_000], [90, 30_000], [120, 30_000]])
+    expect(projectLoanSchedule(50_000, 115, 4).map((row) => [row.day, row.principalCents])).toEqual([[120, 0]])
+  })
+
+  it('estimates the next payday and nothing when no loan is owed', () => {
+    const defs = market()
+    const game = createGame(defs, 'estimate')
+    expect(nextLoanPayment(game, defs)).toBeNull()
+    expect(estimatedPaymentCents(game, defs)).toBe(0)
+    applyCommand(game, defs, { type: 'takeLoan', amountCents: 90_000 })
+    advance(game, defs, 25)
+    const estimate = nextLoanPayment(game, defs)
+    expect(estimate).toMatchObject({ day: 30, pending: false, daysAway: 5, principalCents: 30_000 })
+    expect(estimate?.interestCents).toBe(20 * 30)
+    advance(game, defs, 5)
+    expect(game.loan.balanceCents).toBe(60_000)
+    expect(nextLoanPayment(game, defs)?.day).toBe(60)
   })
 
   it('sells the worst position, then savings, and never changes lifestyle or prices', () => {
@@ -330,7 +513,7 @@ describe('bank loan', () => {
     expect(game.log.at(-1)).toMatchObject({ kind: 'loanRepaid' })
   })
 
-  it('collects missed interest at the end of the due day without selling for the bill', () => {
+  it('collects a missed payment at the end of the due day without selling for the bill', () => {
     const defs = market()
     const game = createGame(defs, 'day30', { jobs: JOBS, jobId: 'jobless' })
     game.lifestyle = { home: 1, infoFeed: 1 }
@@ -348,7 +531,12 @@ describe('bank loan', () => {
     expect(game.accounts.cashCents).toBe(0)
     advance(game, defs, 30)
     expect(game.market.day).toBe(30)
-    expect(game.loan.interestDueCents).toBe(667)
+    // 30 days of interest at 22 a day plus the first of 3 instalments.
+    const interest = 30 * 22
+    const instalment = Math.ceil(100_000 / 3)
+    expect(game.loan.interestDueCents).toBe(interest)
+    expect(game.loan.principalDueCents).toBe(instalment)
+    expect(game.loan.balanceCents).toBe(100_000)
     expect(game.bill).not.toBeNull()
     expect(game.runEnd).toBeNull()
     expect(game.lifestyle).toEqual(lifestyle)
@@ -369,18 +557,22 @@ describe('bank loan', () => {
     const novaQuote = game.market.assets.NOVA
     if (novaQuote === undefined) throw new Error('[DEBUG loan] missing NOVA price')
     novaQuote.priceCents = 1_000
-    const savings = game.accounts.savingsCents
+    const preview = previewLoanSale(game, defs)
     endDay(game, defs)
     expect(game.market.day).toBe(31)
     expect(game.runEnd).toBeNull()
     expect(game.lifestyle).toEqual(lifestyle)
     expect(game.loan.interestDueCents).toBe(0)
-    expect(game.loan.balanceCents).toBe(100_000)
+    expect(game.loan.principalDueCents).toBe(0)
+    expect(game.loan.balanceCents).toBe(100_000 - instalment)
     const forced = game.log.filter((event) => event.kind === 'forcedSale')
     expect(forced[0]).toMatchObject({ kind: 'forcedSale', source: 'NOVA' })
-    expect(forced.some((event) => event.kind === 'forcedSale' && event.source === 'savings')).toBe(false)
-    expect(game.accounts.savingsCents).toBe(savings)
     expect(game.positions.NOVA).toBeUndefined()
+    // The payment is far above the NOVA proceeds, so savings are taken after the position.
+    expect(forced[1]).toMatchObject({ kind: 'forcedSale', source: 'savings' })
+    expect(preview.steps).toEqual(
+      forced.map((event) => (event.kind === 'forcedSale' ? { source: event.source, amountCents: event.amountCents } : null)),
+    )
     for (const event of forced) {
       if (event.kind === 'forcedSale') debugLoan(formatEvent(event))
     }

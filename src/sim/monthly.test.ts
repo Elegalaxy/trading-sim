@@ -9,6 +9,7 @@ import {
 } from './constants.ts'
 import { applyCommand, createGame, endDay } from './game.ts'
 import { stateHash } from './hash.ts'
+import { loanDailyInterestCents } from './loan.ts'
 import { formatEvent } from './log.ts'
 import { createMarket, stepMarketDay } from './market.ts'
 import { RUN_LOST_BILL_REASON } from './monthly.ts'
@@ -263,7 +264,8 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
       outcome: 'lost',
       day: 30,
       reason: RUN_LOST_BILL_REASON,
-      netWorthCents: 0,
+      // Net worth now subtracts the loan: the balance plus 30 days of accrued interest, pending as the payment.
+      netWorthCents: -(LOAN_BASE_CENTS + 30 * loanDailyInterestCents(LOAN_BASE_CENTS, 4)),
       score: 0,
     })
     expect(eventKind(lost, 'billPaid')).toBeUndefined()

@@ -63,6 +63,7 @@ const LIFESTYLE_KEYS = ['home', 'infoFeed'] as const
 /** Saves from before Health and Equipment have only the two above. */
 const LIFESTYLE_OPTIONAL_KEYS = ['health', 'equipment'] as const
 const LOAN_KEYS = ['balanceCents', 'interestDueCents', 'interestDay'] as const
+const LOAN_OPTIONAL_KEYS = ['accruedInterestCents', 'principalDueCents', 'paymentsLeft', 'firstPaymentDay'] as const
 const STUDY_KEYS = ['points', 'course', 'used'] as const
 const FILL_KEYS = [
   'n',
@@ -399,7 +400,7 @@ function checkState(value: unknown): string | null {
     const tier = finiteNumber(value.lifestyle[key], `state.lifestyle.${key}`)
     if (tier !== null) return tier
   }
-  if (!isRecord(value.loan) || !sameKeys(value.loan, LOAN_KEYS)) return 'shape:state.loan'
+  if (!isRecord(value.loan) || !keysWithin(value.loan, LOAN_KEYS, LOAN_OPTIONAL_KEYS)) return 'shape:state.loan'
   const balance = finiteNumber(value.loan.balanceCents, 'state.loan.balanceCents')
   if (balance !== null) return balance
   const due = finiteNumber(value.loan.interestDueCents, 'state.loan.interestDueCents')
@@ -407,6 +408,11 @@ function checkState(value: unknown): string | null {
   if (value.loan.interestDay !== null) {
     const interestDay = finiteNumber(value.loan.interestDay, 'state.loan.interestDay')
     if (interestDay !== null) return interestDay
+  }
+  for (const key of LOAN_OPTIONAL_KEYS) {
+    if (value.loan[key] === undefined) continue
+    const optional = finiteNumber(value.loan[key], `state.loan.${key}`)
+    if (optional !== null) return optional
   }
   if (!isRecord(value.study) || !sameKeys(value.study, STUDY_KEYS)) return 'shape:state.study'
   const points = finiteNumber(value.study.points, 'state.study.points')

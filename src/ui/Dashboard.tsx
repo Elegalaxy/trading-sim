@@ -28,6 +28,7 @@ import { RunEnd } from './RunEnd.tsx'
 import { StatMeters } from './StatMeters.tsx'
 import { JobPanel } from './JobPanel.tsx'
 import { LifestylePanel } from './LifestylePanel.tsx'
+import { LoanDueBanner } from './LoanDueBanner.tsx'
 import { LoanPanel } from './LoanPanel.tsx'
 import { sessionPrice } from '../sim/session.ts'
 import { tradingEquity } from '../sim/trading.ts'
@@ -256,7 +257,7 @@ export function Dashboard() {
             <span
               className={payday.inDays <= 2 ? 'payday-chip soon' : 'payday-chip'}
               title={`At the close of day ${payday.day}: salary about ${formatUsd(payday.salaryCents, 'salary')}, bill ${formatUsd(payday.billCents, 'bill')}${
-                payday.loanInterestCents > 0 ? `, loan interest about ${formatUsd(payday.loanInterestCents, 'loan interest')}` : ''
+                payday.loanPaymentCents > 0 ? `, loan payment about ${formatUsd(payday.loanPaymentCents, 'loan payment')}` : ''
               }.`}
             >
               {payday.inDays === 0 ? 'Payday and bills at today’s close' : `Payday and bills in ${payday.inDays} day${payday.inDays === 1 ? '' : 's'}`}
@@ -276,6 +277,7 @@ export function Dashboard() {
       <DayReport report={run?.report ?? null} />
       {guideOpen ? <Guide onClose={() => setGuideOpen(false)} /> : null}
       <BillBanner game={run?.game ?? null} />
+      <LoanDueBanner game={run?.game ?? null} />
 
       <div
         ref={bodyRef}

@@ -25,7 +25,7 @@ describe('player day numbers', () => {
     expect(first).toMatchObject({ day: 30, inDays: 29 })
     expect(first?.salaryCents).toBe(60_000)
     expect(first?.billCents).toBeGreaterThan(0)
-    expect(first?.loanInterestCents).toBe(0)
+    expect(first?.loanPaymentCents).toBe(0)
     for (let i = 0; i < 29; i += 1) endDay(state, MARKET_DEFINITIONS)
     expect(nextPayday(state, MARKET_DEFINITIONS)).toMatchObject({ day: 30, inDays: 0, salaryCents: 60_000 })
     endDay(state, MARKET_DEFINITIONS)

@@ -15,7 +15,9 @@ import { activeJob } from '../sim/jobs.ts'
 import { clockTime } from '../sim/session.ts'
 import { freeSlots } from '../sim/study.ts'
 import type { DaySection, GameState, LiquidationEvent, StudiedEvent, StudyActivity, StudySlot } from '../sim/types.ts'
+import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { debugLog } from './debug.ts'
+import { pendingSale, saleText } from './loanText.ts'
 import { formatUsd } from './money.ts'
 import { dispatch, endDay } from './store.ts'
 
@@ -58,12 +60,14 @@ export function DayTimeline({ game }: { game: GameState | null }) {
   const jobless = job === null || job.slots === 0
   const blocks = dayBlocks(sleepHours, jobless, job !== null && job.slots > 0 ? job.slots : undefined)
   const [message, setMessage] = useState<string | null>(null)
+  const [confirmEnd, setConfirmEnd] = useState(false)
   const [trackedGame, setTrackedGame] = useState(game)
   const [trackedDay, setTrackedDay] = useState(day)
   if (trackedGame !== game || trackedDay !== day) {
     setTrackedGame(game)
     setTrackedDay(day)
     setMessage(null)
+    setConfirmEnd(false)
   }
 
   useEffect(() => {
@@ -125,6 +129,19 @@ export function DayTimeline({ game }: { game: GameState | null }) {
           ? `Research done. You have ${game.study.points} points.`
           : `Studied. Course ${game.study.course?.units ?? COURSE_STUDY_UNITS} of ${COURSE_STUDY_UNITS}.`,
     )
+  }
+
+  // A missed loan payment is sold off by End day. The first click shows the sale, the second ends the day.
+  const sale = game === null ? null : pendingSale(game, MARKET_DEFINITIONS)
+  const confirming = confirmEnd && sale !== null
+
+  function onEndDay(): void {
+    if (sale !== null && !confirmEnd) {
+      setConfirmEnd(true)
+      return
+    }
+    setConfirmEnd(false)
+    endDay()
   }
 
   const clock = game?.session.clock ?? 0
@@ -238,20 +255,34 @@ export function DayTimeline({ game }: { game: GameState | null }) {
             </div>
             <button
               type="button"
-              className="act-end"
-              onClick={() => endDay()}
+              className={confirming ? 'act-end act-end-confirm' : 'act-end'}
+              onClick={onEndDay}
               disabled={game === null || game.bill !== null || game.runEnd !== null}
               title={
                 game?.runEnd !== null
                   ? 'The run has ended.'
                   : game?.bill !== null
                     ? 'Pay the bill before the day can end.'
-                    : 'Sleep. The next day starts and prices move.'
+                    : sale !== null
+                      ? 'The loan payment is not covered. The first click shows what is sold.'
+                      : 'Sleep. The next day starts and prices move.'
               }
             >
-              End day
+              {confirming ? 'Confirm End day' : 'End day'}
             </button>
+            {confirming ? (
+              <button type="button" className="act-end-cancel" onClick={() => setConfirmEnd(false)}>
+                Cancel
+              </button>
+            ) : null}
           </div>
+          {confirming && sale !== null ? (
+            <p className="end-confirm" role="alert">
+              <span aria-hidden="true">▲ </span>
+              The loan payment is not covered. End day will: {saleText(sale)}.
+              {sale.endsRun ? ' That is still not enough, so the run ends.' : ''}
+            </p>
+          ) : null}
         </div>
       </div>
       {message !== null ? (

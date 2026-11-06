@@ -1263,6 +1263,8 @@ export type LoanTakenEvent = {
   balanceCents: number
   cashCents: number
   limitCents: number
+  /** Paydays that will take principal. Missing in old logs. */
+  paymentsLeft?: number
 }
 
 /** Principal repaid from cash. Early repayment has no fee. `balanceCents` is the balance after. */
@@ -1275,13 +1277,29 @@ export type LoanRepaidEvent = {
 }
 
 /**
- * Loan interest assessed on a 30th day. `amountCents` is the monthly charge.
+ * One day of loan interest added to the accrued total. It is charged on the next payday.
+ * `balanceCents` is the balance it accrued on.
+ */
+export type LoanAccrualEvent = {
+  kind: 'loanAccrual'
+  day: number
+  balanceCents: number
+  policyRate: number
+  annualRate: number
+  accrualCents: number
+  accruedCents: number
+}
+
+/**
+ * Loan payment assessed on a payday. `amountCents` is the interest accrued since the
+ * last payday and `principalCents` the instalment (0 when missing in old logs).
  * `cashCents` is cash before it is paid. `annualRate` is the decimal rate.
  */
 export type LoanInterestDueEvent = {
   kind: 'loanInterestDue'
   day: number
   amountCents: number
+  principalCents?: number
   balanceCents: number
   cashCents: number
   /** Policy rate in percent after the market step that opened this day. */
@@ -1289,17 +1307,18 @@ export type LoanInterestDueEvent = {
   annualRate: number
 }
 
-/** Loan interest paid from cash. The principal balance is unchanged. */
+/** Loan payment paid from cash. `balanceCents` is the balance after the instalment. */
 export type LoanInterestPaidEvent = {
   kind: 'loanInterestPaid'
   day: number
   amountCents: number
+  principalCents?: number
   cashCents: number
   balanceCents: number
 }
 
 /**
- * Cents moved to cash to pay missed loan interest.
+ * Cents moved to cash to pay a missed loan payment.
  * `source` is an asset id or `savings`. Lifestyle is not a source.
  */
 export type ForcedSaleEvent = {
@@ -1357,6 +1376,7 @@ export type AccountLogEvent =
   | BillDueEvent
   | BillPendingEvent
   | FiCheckEvent
+  | LoanAccrualEvent
   | LoanInterestDueEvent
   | LoanInterestPaidEvent
   | ForcedSaleEvent
@@ -1583,13 +1603,22 @@ export type PlayerJob = {
 
 /**
  * One bank loan. `balanceCents` is unpaid principal.
- * `interestDueCents` is the charge from `interestDay` that cash did not cover.
- * Both interest fields are clear when nothing is pending.
+ * `interestDueCents` and `principalDueCents` are the payment from `interestDay`
+ * that cash did not cover. Both and the day are clear when nothing is pending.
+ * The pending principal is part of the balance until it is paid.
+ * `accruedInterestCents` is daily interest not yet charged (collected on a payday).
+ * `paymentsLeft` is the number of paydays that still take principal, and
+ * `firstPaymentDay` is the first payday that takes any (an earlier payday takes interest only).
+ * The optional fields read as 0 when missing (old saves, hand-built states).
  */
 export type BankLoan = {
   balanceCents: number
   interestDueCents: number
   interestDay: number | null
+  accruedInterestCents?: number
+  principalDueCents?: number
+  paymentsLeft?: number
+  firstPaymentDay?: number
 }
 
 /** Last end-of-day FI check. The meter reads this. It is not a second ledger. */

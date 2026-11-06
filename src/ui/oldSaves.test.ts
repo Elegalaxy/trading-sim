@@ -38,6 +38,17 @@ describe('saves from before the market depth work', () => {
     expect(loaded?.game.consumables.map((item) => item.id)).toContain('gymSession')
   })
 
+  it('load an open loan from before the payment schedule, and give it one as if drawn that day', () => {
+    const old = save((s) => {
+      s.loan = { balanceCents: 90_000, interestDueCents: 0, interestDay: null }
+    }, 40)
+    expect(continueGame(old)).toBeNull()
+    const loaded = useTradingStoreSnapshot()
+    // Day 40: paydays 60, 90 and 120 are all at least 7 days away.
+    expect(loaded?.game.loan).toMatchObject({ balanceCents: 90_000, paymentsLeft: 3, firstPaymentDay: 60 })
+    expect(loaded?.game.loan.accruedInterestCents).toBeUndefined()
+  })
+
   it('say the save is damaged for calendar rolls without a consensus (before it)', () => {
     // The growth release is on day 10 and is rolled at the close of day 7, so a save after day 8 holds a roll.
     const withRoll = save((s) => {

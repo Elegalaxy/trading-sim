@@ -11,6 +11,8 @@ import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { assertPast } from '../sim/past.ts'
 import { initialLifestyle } from '../sim/lifestyle.ts'
+import { assertLoan, firstPaymentDay, loanPaymentsFor } from '../sim/loan.ts'
+import { loanWarning, pendingSale, saleText } from './loanText.ts'
 import { copyConsumables } from '../sim/stats.ts'
 import { assertResting, upgradeResting } from '../sim/resting.ts'
 import { sessionPrice } from '../sim/session.ts'
@@ -306,6 +308,12 @@ export function continueGame(save: SaveFile): string | null {
     // The same for the closed-day record. The chart then has candles again from the next End day.
     if ((game as { past?: unknown }).past === undefined) game.past = []
     assertPast(game.past)
+    // A loan from before the payment schedule gets one as if it were drawn today.
+    if (game.loan.balanceCents > 0 && game.loan.paymentsLeft === undefined) {
+      game.loan.paymentsLeft = loanPaymentsFor(game.market.day)
+      game.loan.firstPaymentDay = firstPaymentDay(game.market.day)
+    }
+    assertLoan(game.loan)
     // A save must carry the order-flow parties and the social feed the definitions run, or it would play without them.
     if ((definitions.participants !== undefined) !== (game.market.participants !== undefined)) {
       throw new Error('save has no order-flow parties')
@@ -502,12 +510,12 @@ function logLoanDay(game: GameState): void {
     if (event.kind === 'loanInterestDue') {
       debugLog(
         '[store]',
-        `loan interestDue day=${event.day} amount=${event.amountCents} cash=${event.cashCents} balance=${event.balanceCents}`,
+        `loan interestDue day=${event.day} amount=${event.amountCents} principal=${event.principalCents ?? 0} cash=${event.cashCents} balance=${event.balanceCents}`,
       )
     } else if (event.kind === 'loanInterestPaid') {
       debugLog(
         '[store]',
-        `loan interestPaid day=${event.day} amount=${event.amountCents} cash=${event.cashCents} balance=${event.balanceCents}`,
+        `loan interestPaid day=${event.day} amount=${event.amountCents} principal=${event.principalCents ?? 0} cash=${event.cashCents} balance=${event.balanceCents}`,
       )
     } else if (event.kind === 'forcedSale') {
       debugLog('[store]', `loan forcedSale source=${event.source} amount=${event.amountCents} day=${event.day}`)
@@ -859,6 +867,7 @@ function buildReport(game: GameState, start: ReportStart): DayReport {
         break
       case 'loanInterestPaid':
         money.push({ label: 'Loan interest', cents: -event.amountCents })
+        if ((event.principalCents ?? 0) > 0) money.push({ label: 'Loan instalment', cents: -(event.principalCents ?? 0) })
         break
       case 'billPaid':
         money.push({ label: 'Monthly bill', cents: -event.amountCents })
@@ -869,7 +878,7 @@ function buildReport(game: GameState, start: ReportStart): DayReport {
         )
         break
       case 'forcedSale':
-        money.push({ label: `Forced sale for loan interest (${event.source})`, cents: event.amountCents })
+        money.push({ label: `Forced sale for the loan payment (${event.source})`, cents: event.amountCents })
         break
       case 'funding':
         funding += event.amount
@@ -886,6 +895,22 @@ function buildReport(game: GameState, start: ReportStart): DayReport {
         break
       default:
         break
+    }
+  }
+  const owedNow = game.loan.interestDueCents + (game.loan.principalDueCents ?? 0)
+  if (owedNow > 0 && game.runEnd === null) {
+    const sale = pendingSale(game, definitions)
+    notes.push(
+      `The loan payment of ${formatUsd(owedNow, 'loan payment')} is due and cash is ${formatUsd(Math.max(0, owedNow - game.accounts.cashCents), 'loan shortfall')} short.${
+        sale === null ? ' Cash covers it at the next End day.' : ` At the next End day: ${saleText(sale)}${sale.endsRun ? ' and it is still not enough, so the run ends' : ''}.`
+      }`,
+    )
+  } else {
+    const warning = loanWarning(game, definitions)
+    if (warning !== null) {
+      notes.push(
+        `A loan payment of about ${formatUsd(warning.totalCents, 'loan payment')} is due at the close of day ${warning.day}. Cash is ${formatUsd(game.accounts.cashCents, 'cash')}.`,
+      )
     }
   }
   if (funding > 0) money.push({ label: 'Funding on open positions', cents: -funding })

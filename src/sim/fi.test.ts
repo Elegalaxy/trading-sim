@@ -14,7 +14,8 @@ import {
   STARTING_CASH_CENTS,
   STARTING_TRADING_CENTS,
 } from './constants.ts'
-import { scoreFor } from './fi.ts'
+import { netWorthCents, scoreFor } from './fi.ts'
+import { loanDailyInterestCents } from './loan.ts'
 import { applyCommand, createGame, endDay } from './game.ts'
 import { stateHash } from './hash.ts'
 import { formatEvent } from './log.ts'
@@ -252,12 +253,28 @@ describe('FI hold, run end, and score', () => {
       outcome: 'lost',
       day: FI_STREAK_FROM_DAY,
       reason: RUN_LOST_BILL_REASON,
-      netWorthCents: 0,
+      // Net worth now subtracts the loan: the balance plus 30 days of accrued interest, pending as the payment.
+      netWorthCents: -(LOAN_BASE_CENTS + 30 * loanDailyInterestCents(LOAN_BASE_CENTS, 4)),
       score: 0,
     })
     const check = fiCheck(game)
     expect(check.streak).toBe(0)
     debugFi(`loss score=0 ${formatEvent(check)}`)
     expect(() => endDay(game, defs)).toThrow('end day blocked: runEnded')
+  })
+
+  it('keeps net worth unchanged when a loan is drawn, and subtracts pending and accrued interest', () => {
+    const defs = market()
+    const game = createGame(defs, 'loan-worth')
+    const before = netWorthCents(game, defs)
+    applyCommand(game, defs, { type: 'skip' })
+    applyCommand(game, defs, { type: 'takeLoan', amountCents: 100_000 })
+    expect(game.loan.balanceCents).toBe(100_000)
+    expect(game.accounts.cashCents).toBeGreaterThanOrEqual(100_000)
+    expect(netWorthCents(game, defs)).toBe(before)
+    game.loan.interestDueCents = 500
+    game.loan.interestDay = game.market.day
+    game.loan.accruedInterestCents = 70
+    expect(netWorthCents(game, defs)).toBe(before - 570)
   })
 })

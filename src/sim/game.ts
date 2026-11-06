@@ -49,7 +49,7 @@ import {
   interpretSetLifestyle,
   playerVisibleFeed,
 } from './lifestyle.ts'
-import { assertLoan, initialLoan, interpretRepayLoan, interpretTakeLoan, settleMissedLoanInterest } from './loan.ts'
+import { accrueLoanInterest, assertLoan, initialLoan, interpretRepayLoan, interpretTakeLoan, settleMissedLoanInterest } from './loan.ts'
 import {
   advanceClock,
   assertResting,
@@ -709,7 +709,7 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const traded = settleTradingAccount(state, defs, equityAtStart)
   const pruned = pruneExits(state)
   const policyRate = readPolicyRatePercent(state.market, defs)
-  const savings = settleSavings(state.accounts, state.market.day, policyRate)
+  const savings = [...settleSavings(state.accounts, state.market.day, policyRate), ...accrueLoanInterest(state, defs)]
   const endEquity = tradingEquity(state, defs).equity
   recordPastDay(state, closedBars, endEquity)
   const statEvents = applyEndOfDayStats(state, workedJob, sleptHours, equityAtStart, endEquity, traded)

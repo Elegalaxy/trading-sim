@@ -2890,3 +2890,117 @@ dl.estimate dd {
   background: #232a32;
   border-color: #474d57;
 }
+
+/* Bank loan: schedule, warning row, due banner, End day confirm. */
+.loan-warning {
+  margin: 4px 0 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #eaecef;
+  background: #2a2618;
+  border: 1px solid #e0b341;
+  border-left-width: 3px;
+  border-radius: 4px;
+}
+
+.loan-schedule {
+  width: 100%;
+  margin: 4px 0 10px;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.loan-schedule th {
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  text-align: left;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #848e9c;
+  border-bottom: 1px solid #2b3139;
+}
+
+.loan-schedule td {
+  padding: 3px 6px;
+  color: #eaecef;
+}
+
+.loan-schedule .num,
+.loan-sale-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.loan-schedule caption {
+  caption-side: bottom;
+  padding: 4px 6px 0;
+  text-align: left;
+  font-size: 11px;
+  color: #848e9c;
+}
+
+.exchange .bill-banner.loan-due {
+  align-items: flex-start;
+}
+
+.exchange .bill-banner .kv-row {
+  margin: 0;
+}
+
+.loan-sale-title {
+  margin: 0 0 2px;
+  font-size: 12px;
+  color: #e0b341;
+}
+
+.loan-sale-table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.loan-sale-table td {
+  padding: 1px 12px 1px 0;
+  color: #eaecef;
+}
+
+.loan-sale-table td:first-child {
+  color: #848e9c;
+}
+
+.exchange .bar-actions .act-end.act-end-confirm {
+  background: #e15b64;
+  border-color: #e15b64;
+  color: #fff;
+}
+
+.exchange .bar-actions .act-end.act-end-confirm:hover:not(:disabled) {
+  background: #ee7078;
+  border-color: #ee7078;
+}
+
+.exchange .bar-actions .act-end-cancel {
+  padding: 5px 12px;
+  background: #1e2329;
+  border: 1px solid #474d57;
+  border-radius: 5px;
+  color: #eaecef;
+  cursor: pointer;
+}
+
+.exchange .bar-actions .act-end-cancel:hover {
+  background: #232a32;
+  border-color: #848e9c;
+}
+
+.end-confirm {
+  flex: 1 0 100%;
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #eaecef;
+  background: #2a2618;
+  border: 1px solid #e0b341;
+  border-radius: 4px;
+}

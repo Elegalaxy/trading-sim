@@ -159,15 +159,21 @@ export const SCORE_PER_DAY_LEFT = 10
  * Limit cents = 2E + the active job's monthly pay + 0.25E × (home tier + information-feed tier).
  * A notice job does not count. Jobless pay is 0.
  * Annual rate = max(0, that day's policy percent + LOAN_RATE_SPREAD_PERCENT) / 100.
- * Interest cents = round half away from zero of balance × annual rate / LOAN_MONTHS_PER_YEAR.
- * It is due at the start of each 30th day and is paid from cash. Missed interest is
- * collected at the end of that day. A transfer into trading cannot leave cash plus
- * savings below the outstanding balance.
+ * Interest accrues daily: round half away from zero of balance × annual rate / LOAN_DAYS_PER_YEAR.
+ * It is collected on each payday (every 30th day) with an instalment of principal:
+ * the loan is repaid over at most LOAN_MAX_PAYMENTS paydays, the first at least
+ * LOAN_FIRST_PAYMENT_MIN_DAYS after the draw. The payment is paid from cash. A missed
+ * payment is collected at the end of that day by a forced sale. LOAN_WARNING_DAYS
+ * before a payday the UI shows the next payment. Early repayment is free. A transfer
+ * into trading cannot leave cash plus savings below the outstanding balance.
  */
 export const LOAN_BASE_CENTS = 2 * CENTS_PER_E
 export const LOAN_TIER_CENTS = CENTS_PER_E / 4
 export const LOAN_RATE_SPREAD_PERCENT = 4
-export const LOAN_MONTHS_PER_YEAR = 12
+export const LOAN_DAYS_PER_YEAR = 365
+export const LOAN_MAX_PAYMENTS = 3
+export const LOAN_FIRST_PAYMENT_MIN_DAYS = 7
+export const LOAN_WARNING_DAYS = 5
 
 /** Section 6. Provisional policy-rate entry when the run has no calendar. */
 export const POLICY_RATE_ENTRY_ID = 'policyRate'

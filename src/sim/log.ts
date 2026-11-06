@@ -586,6 +586,7 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `balance=${formatNumber(event.balanceCents)}`,
         `cash=${formatNumber(event.cashCents)}`,
         `limit=${formatNumber(event.limitCents)}`,
+        ...(event.paymentsLeft === undefined ? [] : [`paymentsLeft=${formatNumber(event.paymentsLeft)}`]),
       ].join(' ')
     case 'loanRepaid':
       return [
@@ -595,11 +596,22 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `balance=${formatNumber(event.balanceCents)}`,
         `cash=${formatNumber(event.cashCents)}`,
       ].join(' ')
+    case 'loanAccrual':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=loanAccrual',
+        `balance=${formatNumber(event.balanceCents)}`,
+        `policyRate=${formatNumber(event.policyRate)}`,
+        `annualRate=${formatNumber(event.annualRate)}`,
+        `accrual=${formatNumber(event.accrualCents)}`,
+        `accrued=${formatNumber(event.accruedCents)}`,
+      ].join(' ')
     case 'loanInterestDue':
       return [
         `day=${formatNumber(event.day)}`,
         'kind=loanInterestDue',
         `amount=${formatNumber(event.amountCents)}`,
+        ...(event.principalCents === undefined ? [] : [`principal=${formatNumber(event.principalCents)}`]),
         `balance=${formatNumber(event.balanceCents)}`,
         `cash=${formatNumber(event.cashCents)}`,
         `policyRate=${formatNumber(event.policyRate)}`,
@@ -610,6 +622,7 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `day=${formatNumber(event.day)}`,
         'kind=loanInterestPaid',
         `amount=${formatNumber(event.amountCents)}`,
+        ...(event.principalCents === undefined ? [] : [`principal=${formatNumber(event.principalCents)}`]),
         `cash=${formatNumber(event.cashCents)}`,
         `balance=${formatNumber(event.balanceCents)}`,
       ].join(' ')

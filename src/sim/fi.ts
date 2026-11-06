@@ -81,10 +81,16 @@ function truncTowardZero(numerator: number, denominator: number): number {
   return negative ? -magnitude : magnitude
 }
 
-/** Cash + savings + trading equity. Equity is trading cash plus signed shares at the quoted price. */
+/**
+ * Cash + savings + trading equity − what the bank is owed. Equity is trading cash
+ * plus signed shares at the quoted price. Pending principal is already inside the
+ * balance, so it is not subtracted twice.
+ */
 export function netWorthCents(state: GameState, defs: MarketDefinitions): number {
   const equity = tradingEquity(state, defs).equity
-  const total = state.accounts.cashCents + state.accounts.savingsCents + equity
+  const loan = state.loan
+  const owed = loan.balanceCents + loan.interestDueCents + (loan.accruedInterestCents ?? 0)
+  const total = state.accounts.cashCents + state.accounts.savingsCents + equity - owed
   return requireSafe(total, 'net worth')
 }
 

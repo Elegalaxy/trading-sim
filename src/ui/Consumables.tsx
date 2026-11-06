@@ -3,24 +3,10 @@ import { activeJob } from '../sim/jobs.ts'
 import { tierOf } from '../sim/lifestyle.ts'
 import { consumablePrice } from '../sim/stats.ts'
 import type { ConsumableDefinition, GameState } from '../sim/types.ts'
+import { PerkBadge, StatBadge } from './Badges.tsx'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
 import { dispatch } from './store.ts'
-
-function amounts(energy: number, stress: number): string {
-  const parts: string[] = []
-  if (energy !== 0) parts.push(`${energy > 0 ? '+' : ''}${energy} energy`)
-  if (stress !== 0) parts.push(`${stress > 0 ? '+' : ''}${stress} stress`)
-  return parts.join(', ')
-}
-
-function effectText(item: ConsumableDefinition): string {
-  const now = amounts(item.energy, item.stress)
-  const next = amounts(item.nextEnergy ?? 0, item.nextStress ?? 0)
-  const parts = [now.length === 0 ? 'No change now' : `Now ${now}`]
-  if (next.length > 0) parts.push(`next morning ${next}`)
-  return parts.join('; ')
-}
 
 function reasonText(reason: string): string {
   if (reason === 'insufficientFunds') return 'Not enough cash.'
@@ -70,37 +56,53 @@ export function Consumables({ game }: { game: GameState | null }) {
   return (
     <section className="panel" aria-label="Food and drink">
       <h2>Food and drink</h2>
-      <p>Once per item per day. Paid from cash. Does not take a section of the day. A night at home also restores you; a better Home restores more.</p>
-      {steady ? <p>Steady routine: stress recovery from food and drink is 10% higher.</p> : null}
+      <p className="card-note">
+        Once per item per day, paid from cash, no part of the day used. A full night at home also restores you.
+      </p>
+      {steady ? <p className="card-note">Steady routine: stress recovery from food and drink is 10% higher.</p> : null}
       {game.consumables.length === 0 ? (
         <p>Nothing is for sale.</p>
       ) : (
-        <ul className="consumable-list">
+        <ul className="item-list">
           {game.consumables.map((item) => {
             const used = game.stats.consumed.includes(item.id)
             const price = consumablePrice(game, item)
             const locked = item.requiresHome !== undefined && tierOf(game.lifestyle, 'home') < item.requiresHome
+            const poor = !locked && game.accounts.cashCents < price
+            const why = locked ? 'Needs a kitchen (Home tier 1).' : poor ? 'Cash is too low.' : used ? 'Already used today.' : undefined
             return (
               <li key={item.id}>
                 <button
                   type="button"
+                  className={used ? 'item-row item-used' : 'item-row'}
                   onClick={() => onBuy(item)}
-                  disabled={used || locked || game.runEnd !== null || game.accounts.cashCents < price}
-                  title={locked ? 'Needs a kitchen (Home tier 1).' : undefined}
+                  disabled={used || locked || game.runEnd !== null || poor}
+                  title={why}
                 >
-                  {used ? `${item.name} (used today)` : item.name}
+                  <span className="item-name">{item.name}</span>
+                  <span className="badges">
+                    {item.energy !== 0 ? <StatBadge kind="energy" value={item.energy} label="Now" /> : null}
+                    {item.stress !== 0 ? <StatBadge kind="stress" value={item.stress} label="Now" /> : null}
+                    {item.nextEnergy !== undefined && item.nextEnergy !== 0 ? (
+                      <StatBadge kind="energy" value={item.nextEnergy} label="Morning" title="Next morning, when you end the day." />
+                    ) : null}
+                    {item.nextStress !== undefined && item.nextStress !== 0 ? (
+                      <StatBadge kind="stress" value={item.nextStress} label="Morning" title="Next morning, when you end the day." />
+                    ) : null}
+                    {locked ? <PerkBadge text="Needs kitchen" title="Home tier 1 or more." /> : null}
+                  </span>
+                  <span className="item-price">{used ? 'Used' : price === 0 ? 'Free' : formatUsd(price, item.name)}</span>
                 </button>
-                <span>
-                  {price === 0 ? 'Free (Health membership)' : formatUsd(price, item.name)}. {effectText(item)}.
-                  {locked ? ' Needs a kitchen (Home tier 1).' : ''}
-                  {!locked && game.accounts.cashCents < price ? ' Cash is too low.' : ''}
-                </span>
               </li>
             )
           })}
         </ul>
       )}
-      {message !== null ? <p role={tone === 'alert' ? 'alert' : undefined}>{message}</p> : null}
+      {message !== null ? (
+        <p className={tone === 'ok' ? 'trade-ok' : 'trade-alert'} role={tone === 'ok' ? 'status' : 'alert'}>
+          {message}
+        </p>
+      ) : null}
     </section>
   )
 }

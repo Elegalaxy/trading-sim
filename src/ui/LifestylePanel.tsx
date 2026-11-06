@@ -3,6 +3,7 @@ import { COURSE_OFFERS, LIFESTYLE_OFFERS } from '../content/lifestyle.ts'
 import { COURSE_STUDY_UNITS, COURSE_UNITS_DAYTIME, COURSE_UNITS_EVENING } from '../sim/constants.ts'
 import { lifestyleExpensesCents, projectedBillCents, tierOf, upfrontCents } from '../sim/lifestyle.ts'
 import type { GameState, LifestyleCategory } from '../sim/types.ts'
+import { PerkBadge, TierBadges } from './Badges.tsx'
 import { debugLog } from './debug.ts'
 import { formatUsd } from './money.ts'
 import { dispatch } from './store.ts'
@@ -88,82 +89,106 @@ export function LifestylePanel({ game }: { game: GameState | null }) {
   return (
     <section className="panel" aria-label="Lifestyle">
       <h2>Lifestyle</h2>
-      <p>Cash {formatUsd(current.accounts.cashCents, 'cash')}.</p>
-      <p>
-        Monthly expenses {formatUsd(expenses, 'monthly expenses')}. Next bill {formatUsd(nextBill, 'next bill')}.
-      </p>
+      <dl className="kv-row">
+        <div>
+          <dt>Cash</dt>
+          <dd>{formatUsd(current.accounts.cashCents, 'cash')}</dd>
+        </div>
+        <div>
+          <dt>Monthly expenses</dt>
+          <dd>{formatUsd(expenses, 'monthly expenses')}</dd>
+        </div>
+        <div>
+          <dt>Next bill</dt>
+          <dd>{formatUsd(nextBill, 'next bill')}</dd>
+        </div>
+      </dl>
       {current.bill !== null ? (
-        <p>
-          Bill due now: {formatUsd(current.bill.amountCents, 'bill due')}. Changing lifestyle does not change it.
-        </p>
+        <p className="card-note">Bill due now: {formatUsd(current.bill.amountCents, 'bill due')}. Changing lifestyle does not change it.</p>
       ) : null}
-      <ul className="lifestyle-list">
+      <div className="card-list">
         {LIFESTYLE_OFFERS.map((offer) => {
           const tierNow = tierOf(current.lifestyle, offer.id)
           return (
-            <li key={offer.id}>
-              <p>
-                {offer.name} tier {tierNow}. {offer.note}
-              </p>
-              <ul className="tier-benefits">
-                {offer.benefits.map((text, tier) => (
-                  <li key={tier} className={tier === tierNow ? 'tier-now' : undefined}>
-                    Tier {tier}
-                    {tier > 0 ? ` (+${formatUsd(tier * offer.tierCostCents, 'tier monthly')} a month)` : ''}: {text}
-                  </li>
-                ))}
-              </ul>
-              {Array.from({ length: offer.maxTier + 1 }, (_, tier) => {
-                const upfront = upfrontCents(offer.id, tierNow, tier)
-                const label =
-                  tier === tierNow
-                    ? `Tier ${tier} (current)`
-                    : upfront === 0
-                      ? `Tier ${tier} (no refund)`
-                      : `Tier ${tier} (${formatUsd(upfront, 'tier upfront')})`
-                const unaffordable = upfront > 0 && current.accounts.cashCents < upfront
-                return (
-                  <button
-                    key={tier}
-                    type="button"
-                    disabled={ended || tier === tierNow || unaffordable}
-                    onClick={() => onTier(offer.id, tier)}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </li>
+            <article key={offer.id} className="card" aria-label={offer.name}>
+              <header className="card-head">
+                <h3>{offer.name}</h3>
+                <span className="card-sub">{offer.note}</span>
+              </header>
+              <div className="tier-list" role="group" aria-label={`${offer.name} tier`}>
+                {offer.tiers.map((tierInfo, tier) => {
+                  const upfront = upfrontCents(offer.id, tierNow, tier)
+                  const active = tier === tierNow
+                  const unaffordable = upfront > 0 && current.accounts.cashCents < upfront
+                  const action = active ? 'Current' : upfront === 0 ? 'No refund' : `${formatUsd(upfront, 'tier upfront')} to switch`
+                  return (
+                    <button
+                      key={tier}
+                      type="button"
+                      className={active ? 'tier-row tier-active' : 'tier-row'}
+                      aria-pressed={active}
+                      disabled={ended || active || unaffordable}
+                      title={unaffordable ? 'Not enough cash.' : undefined}
+                      onClick={() => onTier(offer.id, tier)}
+                    >
+                      <span className="tier-main">
+                        <span className="tier-name">
+                          Tier {tier} · {tierInfo.name}
+                        </span>
+                        <TierBadges badges={tierInfo.badges} />
+                      </span>
+                      <span className="tier-price">
+                        <strong>{tier === 0 ? 'Base' : `+${formatUsd(tier * offer.tierCostCents, 'tier monthly')}/mo`}</strong>
+                        <small>{action}</small>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </article>
           )
         })}
-      </ul>
-      <ul className="lifestyle-list">
         {COURSE_OFFERS.map((offer) => {
           const owned = current.job.courses.includes(offer.id)
           const enrolled = current.study.course
           const studying = enrolled?.id === offer.id
+          const blocked = ended || owned || enrolled !== null || current.accounts.cashCents < offer.costCents
           return (
-            <li key={offer.id}>
+            <article key={offer.id} className="card" aria-label={`${offer.name} course`}>
+              <header className="card-head">
+                <h3>{offer.name} course</h3>
+                <span className="card-sub">Unlocks {offer.unlocks}. No monthly cost.</span>
+              </header>
               <button
                 type="button"
-                disabled={ended || owned || enrolled !== null || current.accounts.cashCents < offer.costCents}
+                className={studying ? 'tier-row tier-active' : 'tier-row'}
+                disabled={blocked}
                 onClick={() => onCourse(offer.id)}
                 title={enrolled !== null && !studying ? 'Finish the course you are on first.' : undefined}
               >
-                {owned
-                  ? `${offer.name} (done)`
-                  : studying
-                    ? `${offer.name} ${enrolled.units} of ${COURSE_STUDY_UNITS}`
-                    : `Enrol in ${offer.name}`}
+                <span className="tier-main">
+                  <span className="tier-name">
+                    {owned
+                      ? 'Done'
+                      : studying
+                        ? `Studying: ${enrolled.units} of ${COURSE_STUDY_UNITS} units`
+                        : `Enrol in ${offer.name}`}
+                  </span>
+                  <span className="badges">
+                    <PerkBadge text={`${COURSE_STUDY_UNITS} units`} title="Units of study needed to finish." />
+                    <PerkBadge text={`Free day +${COURSE_UNITS_DAYTIME}`} title="Units from a free daytime of study." />
+                    <PerkBadge text={`Skipped market +${COURSE_UNITS_EVENING}`} title="Units from an evening of study instead of the market." />
+                  </span>
+                </span>
+                <span className="tier-price">
+                  <strong>{formatUsd(offer.costCents, offer.name)}</strong>
+                  <small>one-off</small>
+                </span>
               </button>
-              <span>
-                {formatUsd(offer.costCents, offer.name)} once, then {COURSE_STUDY_UNITS} units of study (a free day gives{' '}
-                {COURSE_UNITS_DAYTIME}, a skipped market {COURSE_UNITS_EVENING}). Unlocks {offer.unlocks}. No monthly cost.
-              </span>
-            </li>
+            </article>
           )
         })}
-      </ul>
+      </div>
       {message !== null ? (
         <p className={tone === 'ok' ? 'trade-ok' : 'trade-alert'} role={tone === 'ok' ? 'status' : 'alert'}>
           {message}

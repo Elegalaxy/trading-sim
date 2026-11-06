@@ -133,6 +133,6 @@ Section 6 says lifestyle "sets trading time and usable capital". Today only the 
 
 ## 8. Open after the build
 
-1. **Home does not repay itself in item savings.** With the item prices in 4.2, the item money a tier saves is below its monthly cost for every job (trading-floor assistant: $112 saved for Home 1 against $150). Its value is staying out of the warning state without a daily round of purchases. Options: leave it (Home is comfort, not income), raise the recovery (for example +5 energy and -4 stress at tier 1), or raise item prices so care costs more.
+1. **Home does not repay itself in item savings.** **Answer (2026-11-06): leave it; Home is comfort, not income.** With the item prices in 4.2, the item money a tier saves is below its monthly cost for every job (trading-floor assistant: $112 saved for Home 1 against $150). Its value is staying out of the warning state without a daily round of purchases. Options: leave it (Home is comfort, not income), raise the recovery (for example +5 energy and -4 stress at tier 1), or raise item prices so care costs more.
 2. **The night-shift job needs Home 1.** At Home 0 the night-shift warehouse job is in warning 96% of days, because with a 6-hour sleep there is no recovery and the cheap items cannot cover 28 energy and 16 stress a day. At Home 1 the home-cooked meal closes it. This may be the intended pressure to upgrade, or too sharp a cliff.
 3. **Old saves keep working** but get the current item menu on load; items bought that day stay marked used.

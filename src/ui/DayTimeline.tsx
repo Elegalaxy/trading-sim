@@ -139,114 +139,119 @@ export function DayTimeline({ game }: { game: GameState | null }) {
   return (
     <section className="panel" aria-label="Day">
       <h2>Day</h2>
-      <ol className="day-timeline">
-        {blocks.map((block) => {
-          const current = section === block.section
-          // Jobless daytime is free time, not an empty work block.
-          const free = jobless && block.section === 'work'
-          const used = block.section === 'work' ? daytimeUse : block.section === 'market' ? eveningUse : null
-          return (
-            <li key={block.section} className={current ? 'day-current' : undefined} aria-current={current ? 'step' : undefined}>
-              <strong>{free ? 'Free time' : block.title}</strong>
-              <span>{free ? freeRange : block.clock}</span>
-              {used !== null ? <span className="slot-use">{used}</span> : null}
-              {current && !free ? <span>current</span> : null}
-            </li>
-          )
-        })}
-      </ol>
-      {slots.length > 0 ? (
-        <div className="study-actions" role="group" aria-label="Free time">
-          {slots.includes('daytime') ? (
-            <>
-              <button type="button" onClick={() => onStudy('daytime', 'research')} title="Spend the day researching companies. Verify spends these points.">
-                Research day +{RESEARCH_POINTS_DAYTIME} pts
-              </button>
-              <button
-                type="button"
-                onClick={() => onStudy('daytime', 'course')}
-                disabled={enrolled === null}
-                title={enrolled === null ? 'Enrol in a course first (Life tab, Lifestyle).' : `Study ${enrolled.id}: +${COURSE_UNITS_DAYTIME} of ${COURSE_STUDY_UNITS}.`}
-              >
-                Study day
-              </button>
-            </>
+      <div className="day-bar">
+        <div className="schedule" role="group" aria-label="Schedule">
+          <div className="schedule-top">
+          <ol className="day-timeline">
+            {blocks.map((block) => {
+              const current = section === block.section
+              // Jobless daytime is free time, not an empty work block.
+              const free = jobless && block.section === 'work'
+              const used = block.section === 'work' ? daytimeUse : block.section === 'market' ? eveningUse : null
+              return (
+                <li key={block.section} className={current ? 'day-current' : undefined} aria-current={current ? 'step' : undefined}>
+                  <strong>{free ? 'Free time' : block.title}</strong>
+                  <span>{free ? freeRange : block.clock}</span>
+                  {used !== null ? <span className="slot-use">{used}</span> : null}
+                  {current && !free ? <span className="sr-only">current</span> : null}
+                </li>
+              )
+            })}
+          </ol>
+          <p className="now-clock">
+            {section === null
+              ? 'Start a game to play the day.'
+              : inMarket
+                ? `Now ${clockTime(clock)}${clock >= SESSION_STEPS ? ' (closed)' : ''}`
+                : `Now ${sectionClock(section)}`}
+          </p>
+          </div>
+          {slots.length > 0 ? (
+            <div className="study-actions" role="group" aria-label="Free time">
+              {slots.includes('daytime') ? (
+                <>
+                  <button type="button" onClick={() => onStudy('daytime', 'research')} title="Spend the day researching companies. Verify spends these points.">
+                    Research day +{RESEARCH_POINTS_DAYTIME} pts
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onStudy('daytime', 'course')}
+                    disabled={enrolled === null}
+                    title={enrolled === null ? 'Enrol in a course first (Life tab, Lifestyle).' : `Study ${enrolled.id}: +${COURSE_UNITS_DAYTIME} of ${COURSE_STUDY_UNITS}.`}
+                  >
+                    Study day
+                  </button>
+                </>
+              ) : null}
+              {slots.includes('evening') ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onStudy('evening', 'research')}
+                    title="Skip today's market and research instead. The market stays closed today."
+                  >
+                    Skip market: research +{RESEARCH_POINTS_EVENING} pts
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onStudy('evening', 'course')}
+                    disabled={enrolled === null}
+                    title={
+                      enrolled === null
+                        ? 'Enrol in a course first (Life tab, Lifestyle).'
+                        : `Skip today's market and study ${enrolled.id}: +${COURSE_UNITS_EVENING} of ${COURSE_STUDY_UNITS}.`
+                    }
+                  >
+                    Skip market: study
+                  </button>
+                </>
+              ) : null}
+              <span className="study-note">
+                {game?.study.points ?? 0} research pts
+                {enrolled !== null ? ` · ${enrolled.id} course ${enrolled.units} of ${COURSE_STUDY_UNITS}` : ''}
+              </span>
+            </div>
           ) : null}
-          {slots.includes('evening') ? (
-            <>
-              <button
-                type="button"
-                onClick={() => onStudy('evening', 'research')}
-                title="Skip today's market and research instead. The market stays closed today."
-              >
-                Skip market: research +{RESEARCH_POINTS_EVENING} pts
+        </div>
+        <div className="bar-divider" role="separator" aria-orientation="vertical" />
+        <div className="bar-actions">
+          <div className="day-actions">
+            <button
+              type="button"
+              className="act-open"
+              onClick={onSkip}
+              disabled={game === null || game.runEnd !== null || section === 'market' || eveningUse !== null}
+              title={eveningUse !== null ? 'You spent this evening studying.' : 'Same day. The session starts at 17:00.'}
+            >
+              Open market
+            </button>
+            <div className="clock-actions" role="group" aria-label="Market clock">
+              <button type="button" onClick={() => onTick(1)} disabled={!sessionOpen} title="Move the clock forward 15 minutes.">
+                +15 min
               </button>
-              <button
-                type="button"
-                onClick={() => onStudy('evening', 'course')}
-                disabled={enrolled === null}
-                title={
-                  enrolled === null
-                    ? 'Enrol in a course first (Life tab, Lifestyle).'
-                    : `Skip today's market and study ${enrolled.id}: +${COURSE_UNITS_EVENING} of ${COURSE_STUDY_UNITS}.`
-                }
-              >
-                Skip market: study
+              <button type="button" onClick={() => onTick(4)} disabled={!sessionOpen} title="Move the clock forward one hour.">
+                +1 hour
               </button>
-            </>
-          ) : null}
-          <span className="study-note">
-            {game?.study.points ?? 0} research pts
-            {enrolled !== null ? ` · ${enrolled.id} course ${enrolled.units} of ${COURSE_STUDY_UNITS}` : ''}
-          </span>
-        </div>
-      ) : null}
-      {section === null ? (
-        <p>Start a game to play the day.</p>
-      ) : inMarket ? (
-        <p>Now {clockTime(clock)}{clock >= SESSION_STEPS ? ' (closed)' : ''}.</p>
-      ) : (
-        <p>Now {sectionClock(section)}.</p>
-      )}
-      <div className="day-actions">
-        <div>
-          <button
-            type="button"
-            onClick={onSkip}
-            disabled={game === null || game.runEnd !== null || section === 'market' || eveningUse !== null}
-            title={eveningUse !== null ? 'You spent this evening studying.' : 'Same day. The session starts at 17:00.'}
-          >
-            Open market
-          </button>
-          <p className="day-note">Same day. Prices move while the clock runs.</p>
-        </div>
-        <div className="clock-actions" role="group" aria-label="Market clock">
-          <button type="button" onClick={() => onTick(1)} disabled={!sessionOpen} title="Move the clock forward 15 minutes.">
-            +15 min
-          </button>
-          <button type="button" onClick={() => onTick(4)} disabled={!sessionOpen} title="Move the clock forward one hour.">
-            +1 hour
-          </button>
-          <button type="button" onClick={() => onTick(SESSION_STEPS)} disabled={!sessionOpen} title="Run the clock to the 21:00 close.">
-            To close
-          </button>
-        </div>
-        <div>
-          <button
-            type="button"
-            onClick={() => endDay()}
-            disabled={game === null || game.bill !== null || game.runEnd !== null}
-            title={
-              game?.runEnd !== null
-                ? 'The run has ended.'
-                : game?.bill !== null
-                  ? 'Pay the bill before the day can end.'
-                  : undefined
-            }
-          >
-            End day
-          </button>
-          <p className="day-note">Sleep. The next day starts and prices move.</p>
+              <button type="button" onClick={() => onTick(SESSION_STEPS)} disabled={!sessionOpen} title="Run the clock to the 21:00 close.">
+                To close
+              </button>
+            </div>
+            <button
+              type="button"
+              className="act-end"
+              onClick={() => endDay()}
+              disabled={game === null || game.bill !== null || game.runEnd !== null}
+              title={
+                game?.runEnd !== null
+                  ? 'The run has ended.'
+                  : game?.bill !== null
+                    ? 'Pay the bill before the day can end.'
+                    : 'Sleep. The next day starts and prices move.'
+              }
+            >
+              End day
+            </button>
+          </div>
         </div>
       </div>
       {message !== null ? (

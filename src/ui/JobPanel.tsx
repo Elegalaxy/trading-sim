@@ -2,14 +2,19 @@ import { useState } from 'react'
 import { dayBlocks } from '../sim/day.ts'
 import { activeJob } from '../sim/jobs.ts'
 import type { GameState, JobDefinition } from '../sim/types.ts'
+import { PerkBadge, StatBadge } from './Badges.tsx'
 import { debugLog } from './debug.ts'
+import { formatUsd } from './money.ts'
 import { dispatch } from './store.ts'
 import { playerDay } from './days.ts'
 
-function jobOptionLabel(job: JobDefinition, locked: boolean): string {
-  if (!locked) return job.name
-  const course = job.requirement === 'basic' ? 'Basic' : 'Finance'
-  return `${job.name} (locked, needs ${course})`
+function courseName(job: JobDefinition): string {
+  return job.requirement === 'basic' ? 'Basic' : 'Finance'
+}
+
+function slotsText(job: JobDefinition): string {
+  if (job.slots === 0) return 'Free daytime'
+  return job.slots === 1 ? 'Part-time' : 'Full-time'
 }
 
 function reasonText(reason: string, job: JobDefinition | undefined): string {
@@ -89,33 +94,69 @@ export function JobPanel({ game }: { game: GameState | null }) {
     setMessage(reasonText(reason, next))
   }
 
+  const chosen = game.job.catalog.find((item) => item.id === choice)
+
   return (
     <section className="panel" aria-label="Job">
       <h2>Job</h2>
-      <p>
-        {job.name}. Sleep {sleep?.clock ?? `${game.sleepHours}h`}. Work {work?.clock ?? 'unset'}
-        {work?.empty ? ' (empty)' : ''}.
-      </p>
+      <dl className="kv-row">
+        <div>
+          <dt>Now</dt>
+          <dd>{job.name}</dd>
+        </div>
+        <div>
+          <dt>Sleep</dt>
+          <dd>{sleep?.clock ?? `${game.sleepHours}h`}</dd>
+        </div>
+        <div>
+          <dt>Work</dt>
+          <dd>{work?.empty ? `${work.clock} (empty)` : (work?.clock ?? 'unset')}</dd>
+        </div>
+      </dl>
       {pending !== null && pendingJob !== undefined ? (
-        <p>
+        <p className="card-note">
           {pendingJob.name} starts on day {playerDay(pending.effectiveDay)}.
         </p>
       ) : null}
-      <label htmlFor="job-choice">
-        Change job{' '}
-        <select id="job-choice" value={choice} onChange={(event) => onChoice(event.target.value)}>
-          {game.job.catalog.map((item) => {
-            const locked = jobLocked(item, game)
-            return (
-              <option key={item.id} value={item.id} disabled={locked}>
-                {jobOptionLabel(item, locked)}
-              </option>
-            )
-          })}
-        </select>
-      </label>
-      <button type="button" onClick={onRequest} disabled={game.runEnd !== null}>
-        Request change
+      <div className="tier-list" role="group" aria-label="Job menu">
+        {game.job.catalog.map((item) => {
+          const locked = jobLocked(item, game)
+          const active = item.id === currentId
+          const picked = item.id === choice
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={active ? 'tier-row tier-active' : picked ? 'tier-row tier-picked' : 'tier-row'}
+              aria-pressed={picked}
+              disabled={locked || game.runEnd !== null}
+              title={locked ? `Needs the ${courseName(item)} course.` : undefined}
+              onClick={() => onChoice(item.id)}
+            >
+              <span className="tier-main">
+                <span className="tier-name">{item.name}</span>
+                <span className="badges">
+                  <PerkBadge text={slotsText(item)} title={`${item.slots} work slots, sleep ${item.sleepHours}h.`} />
+                  {item.energyCost !== 0 ? <StatBadge kind="energy" value={-item.energyCost} label="Daily" /> : null}
+                  {item.stressCost !== 0 ? <StatBadge kind="stress" value={item.stressCost} label="Daily" /> : null}
+                  {locked ? <PerkBadge text={`Needs ${courseName(item)}`} title="Finish this course in your free time." /> : null}
+                </span>
+              </span>
+              <span className="tier-price">
+                <strong>{item.payCents === 0 ? 'No pay' : `+${formatUsd(item.payCents, 'pay')}/mo`}</strong>
+                <small>{active ? 'Current' : picked ? 'Selected' : ' '}</small>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <button
+        type="button"
+        className="primary-action"
+        onClick={onRequest}
+        disabled={game.runEnd !== null || choice === currentId || chosen === undefined}
+      >
+        {choice === currentId || chosen === undefined ? 'Pick a job to switch' : `Switch to ${chosen.name}`}
       </button>
       {message !== null ? (
         <p className={tone === 'ok' ? 'trade-ok' : 'trade-alert'} role={tone === 'ok' ? 'status' : 'alert'}>

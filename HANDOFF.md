@@ -26,4 +26,10 @@
   - `npm run sim -- --seed abc --days 120 --care 30` prints item spend and warning days by job and Home tier (`harness/care.ts`).
   - UI: `Consumables.tsx`, `LifestylePanel.tsx`, `NewsFeed.tsx`, `effects.ts`, a Guide page "Food, sleep and home". Tests: `care.test.ts`, plus updated stats, lifestyle, content, save and old-save tests (271 pass).
   - Open for the user (plan section 8): Home does not repay its monthly cost in item savings; the night-shift job needs Home 1 (96% warning days at Home 0).
+- **UI hierarchy pass (2026-11-06):**
+  - Life tab: Job, Lifestyle (every category and course) and Food are selection cards. `Badges.tsx` has the chips (energy green, stress teal, harm amber, perks neutral). `content/lifestyle.ts` offers now hold `tiers` with badges instead of `benefits` text. Tier rows show an amber edge on the current tier and a right-aligned `+$/mo` tag; food rows are one button with name, chips, and a price pill. Job rows pick a job, then "Switch to X".
+  - Top bar (`DayTimeline.tsx`): schedule pills and the clock on the left (study buttons under them), a divider, then Open market, the +15 min / +1 hour / To close segmented control and End day on the right.
+  - Positions: row hover, and the TP/SL editor joins each input with its quick buttons into one control (`.exit-control`), aligned in columns.
+  - New CSS is at the end of `styles.css`. The Life grid uses `grid-auto-rows: max-content` so cards keep their height.
+  - User decision: Home stays comfort, not income (items plan section 8, question 1).
 - **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, the market-depth playtest, and a night-shift run for the new care loop) and answers the balance questions: the market-depth two, and the two in the items plan section 8. 

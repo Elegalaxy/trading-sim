@@ -258,64 +258,69 @@ function ExitsEditor({
           ] as const
         ).map(([kind, title, draft, problem, setText]) => (
           <div key={kind} className={`exit-row ${kind === 'takeProfit' ? 'exit-tp' : 'exit-sl'}`}>
-            <label>
-              <span>{title} $</span>
+            <span className="exit-title">{title}</span>
+            <div className="exit-control">
+              <span className="exit-dollar" aria-hidden="true">
+                $
+              </span>
               <input
                 value={draft.text}
                 onChange={(event) => setText(event.target.value)}
                 inputMode="decimal"
                 autoComplete="off"
                 placeholder="none"
+                aria-label={`${title} price`}
                 aria-invalid={problem !== null}
               />
-            </label>
-            <div className="size-modes" role="group" aria-label={`${title} steps`}>
-              {steps[kind].map((percent) => (
-                <button key={percent} type="button" onClick={() => setText(centsText(stepPrice(row, kind, percent)))}>
-                  {kind === 'takeProfit' ? '+' : '−'}
-                  {percent}%
-                </button>
-              ))}
-              {kind === 'stopLoss' ? (
-                <button
-                  type="button"
-                  disabled={!breakEvenOk}
-                  title={breakEvenOk ? 'Stop at the entry price.' : 'The price has not moved past the entry yet.'}
-                  onClick={() => setText(centsText(average))}
-                >
-                  Break-even
-                </button>
-              ) : null}
+              <div className="size-modes" role="group" aria-label={`${title} steps`}>
+                {steps[kind].map((percent) => (
+                  <button key={percent} type="button" onClick={() => setText(centsText(stepPrice(row, kind, percent)))}>
+                    {kind === 'takeProfit' ? '+' : '−'}
+                    {percent}%
+                  </button>
+                ))}
+                {kind === 'stopLoss' ? (
+                  <button
+                    type="button"
+                    disabled={!breakEvenOk}
+                    title={breakEvenOk ? 'Stop at the entry price.' : 'The price has not moved past the entry yet.'}
+                    onClick={() => setText(centsText(average))}
+                  >
+                    Break-even
+                  </button>
+                ) : null}
+              </div>
             </div>
             {preview(draft, problem)}
           </div>
         ))}
         <div className="exit-row">
-          <label>
-            <span>Shares</span>
+          <span className="exit-title">Shares</span>
+          <div className="exit-control">
             <input
               value={sharesInput}
               placeholder={`all ${row.shares}`}
               onChange={(event) => setSharesInput(event.target.value)}
               inputMode="numeric"
               autoComplete="off"
+              aria-label="Shares"
               aria-invalid={sharesProblem !== null}
             />
-          </label>
-          <div className="size-modes" role="group" aria-label="Part of the position">
-            {[25, 50, 75].map((percent) => (
-              <button
-                key={percent}
-                type="button"
-                disabled={row.shares < 2}
-                onClick={() => setSharesInput(String(Math.max(1, Math.floor((row.shares * percent) / 100))))}
-              >
-                {percent}%
+            <div className="size-modes" role="group" aria-label="Part of the position">
+              {[25, 50, 75].map((percent) => (
+                <button
+                  key={percent}
+                  type="button"
+                  disabled={row.shares < 2}
+                  onClick={() => setSharesInput(String(Math.max(1, Math.floor((row.shares * percent) / 100))))}
+                >
+                  {percent}%
+                </button>
+              ))}
+              <button type="button" onClick={() => setSharesInput('')}>
+                All
               </button>
-            ))}
-            <button type="button" onClick={() => setSharesInput('')}>
-              All
-            </button>
+            </div>
           </div>
           {sharesProblem !== null ? <span className="exit-warn">{sharesProblem}</span> : <span className="day-note">Both levels use this size.</span>}
         </div>

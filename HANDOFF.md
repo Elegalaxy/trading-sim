@@ -17,7 +17,7 @@
   - The user wants every commit followed by a push and a merge into `main`.
   - Dev server serves stale modules after edits; restart on a ReferenceError. `.claude/launch.json` is untracked.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Not browser-checked:** deposit break/maturity/banners and reload; red (confirmed) notice strip and ticker states; ticker reduced-motion and focus pause; BillBanner severance line; loan UI visuals.
+- **Browser-checked 2026-11-07 (seed demo):** deposit open, reload, break (2% penalty to savings), break from the bill banner and pay the bill, confirmed notice strip and ticker line. **Still unchecked:** deposit maturity into savings in the UI, loan forced-sale banner with a deposit, ticker reduced-motion and focus pause, BillBanner severance line. Note: banner Break deposit has no confirm step (label shows the amount); the Accounts one does.
 - **Open for the user:** the 50x short bot tail and order flow from stops/limits/liquidations (market depth plan); night-shift job needs Home 1 (left alone); deposit and layoff balance after playtest.
 - **Ideas with no plan yet:** partial deposit breaks, number and candle distortion and order errors from stress, learning news-source hit rates, a currency pair, meta-progression, a pre-market hour, tolerance for repeated items, savings with lock periods beyond deposits.
 - **Exact Next Step:** The user plays a seeded run (warehouse job to a layoff notice, a loan to a forced-sale preview, a deposit opened, matured and broken, reload in between) and reports balance and UI findings. Then browser-check the unverified items above.

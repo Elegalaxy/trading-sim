@@ -263,6 +263,67 @@ export type MarketDefinitions = {
   sources?: readonly SourceDefinition[]
   /** Telegraphed layoffs (plan layoffs, loans and deposits, Step Y1). Omitted means none and no layoff-stream draws. */
   layoffs?: LayoffDefinitions
+  /** Trader types that set the price against depth (price-model plan, Step P1). Omitted means the current model. */
+  traders?: TraderDefinitions
+}
+
+/** The eight trader types, in the fixed order the per-run mix is drawn. */
+export const TRADER_TYPES = ['value', 'noise', 'informed', 'news', 'consensus', 'crowd', 'trend', 'contrarian'] as const
+export type TraderType = (typeof TRADER_TYPES)[number]
+
+/**
+ * Trader numbers (price-model plan section 2). Per type: `base` weight, the range the per-run
+ * `mix` is drawn from, and `rate`, the share of the gap to target traded each day.
+ * The mix is normalised so the sum of base x mix is the same every run.
+ */
+export type TraderDefinitions = {
+  types: Record<TraderType, { base: number; mixMin: number; mixMax: number; rate: number }>
+  /** News traders' per-run efficiency is drawn from this range. */
+  efficiencyMin: number
+  efficiencyMax: number
+  /** Daily fractional addition to the anchor's carry, on top of cancelling the expected drift. */
+  premiumPerDay: number
+  /** Value traders' anchor is an EMA with this half-life in days. */
+  anchorHalfLifeDays: number
+  /** Value traders ignore a gap smaller than this (fraction). */
+  valueDeadBand: number
+  /** Gap (fraction) at which value traders are at full weight, and where the steeper slope starts. */
+  valueFullGap: number
+  valueDeepGap: number
+  valueDeepSlope: number
+  valueMaxMultiple: number
+  /** Noise: AR(1) coefficient and share of `dailyVolatility` per draw. */
+  noiseAr: number
+  noiseShare: number
+  /** Informed: size at which a leaked event trades at full weight (percent), hold and decay days. */
+  informedMagnitudeRefPercent: number
+  informedHoldDays: number
+  informedDecayDays: number
+  /** News: days held, then days decayed. */
+  newsHoldDays: number
+  newsDecayDays: number
+  /** Consensus: ramp days before a release and decay days after. */
+  consensusRampDays: number
+  consensusDecayDays: number
+  /** Crowd: return and drawdown windows, thresholds (fractions) and clamps. */
+  crowdReturnDays: number
+  crowdDrawdownDays: number
+  crowdReturnScale: number
+  crowdCapitulation: number
+  crowdMoodClamp: number
+  /** Trend: look-back and scale. */
+  trendDays: number
+  trendScale: number
+  /** Contrarian: return threshold, scale, mood weight, flow weight and flow scale. */
+  contrarianThreshold: number
+  contrarianScale: number
+  contrarianMoodWeight: number
+  contrarianFlowWeight: number
+  contrarianFlowScale: number
+  /** Market makers: volatility EWMA weight and depth thinning. */
+  volEwma: number
+  volSens: number
+  depthScaleMin: number
 }
 
 /** One job that can be cut. A job not listed is exempt. */
@@ -1590,6 +1651,28 @@ export type ParticipantState = {
   closes: Record<string, number[]>
   /** Scheduled event ids that informed money knows about. */
   leaked: string[]
+  /** Trader positions (price-model plan, Step P1). Absent until the traders model is on. */
+  book?: TraderBook
+}
+
+/** Per-run trader state. Plain JSON, cloned with the market. Positions are dimensionless, in depth units. */
+export type TraderBook = {
+  activeFromDay: number
+  /** Per-run weights, drawn once. */
+  mix: Record<TraderType, number>
+  /** News traders' efficiency, per run. */
+  efficiency: number
+  /** Anchor multiplier per stock, starts at 1. */
+  carry: Record<string, number>
+  /** Value traders' lagged anchor per stock. */
+  seenAnchor: Record<string, number>
+  pos: Record<string, Record<TraderType, number>>
+  /** Keyed `${eventId}|${asset}|${type}`. */
+  eventPos: Record<string, number>
+  /** EWMA of the absolute daily return per stock. */
+  vol: Record<string, number>
+  /** Yesterday's net non-noise flow per stock. */
+  lastFlow: Record<string, number>
 }
 
 export type MarketState = {

@@ -1,6 +1,7 @@
 // Versioned run save. `savedAt` is the wall clock and is not part of the simulation.
 // `state` is the game JSON. It must not contain a Date.
 
+import { TRADER_TYPES } from '../sim/types.ts'
 import type { GameState, RunOutcome } from '../sim/types.ts'
 
 export const SAVE_KEY = 'trading-sim.save.v1'
@@ -191,8 +192,45 @@ function checkStream(value: unknown, path: string): string | null {
   return null
 }
 
+function numberRecord(value: unknown, path: string): string | null {
+  if (!isRecord(value)) return `shape:${path}`
+  for (const [key, item] of Object.entries(value)) {
+    const found = finiteNumber(item, `${path}.${key}`)
+    if (found !== null) return found
+  }
+  return null
+}
+
+function typeRecord(value: unknown, path: string): string | null {
+  if (!isRecord(value) || !sameKeys(value, TRADER_TYPES)) return `shape:${path}`
+  return numberRecord(value, path)
+}
+
+function checkBook(value: unknown): string | null {
+  const path = 'state.market.participants.book'
+  if (!isRecord(value) || !sameKeys(value, ['activeFromDay', 'mix', 'efficiency', 'carry', 'seenAnchor', 'pos', 'eventPos', 'vol', 'lastFlow'])) {
+    return `shape:${path}`
+  }
+  const day = finiteNumber(value.activeFromDay, `${path}.activeFromDay`)
+  if (day !== null) return day
+  const efficiency = finiteNumber(value.efficiency, `${path}.efficiency`)
+  if (efficiency !== null) return efficiency
+  const mix = typeRecord(value.mix, `${path}.mix`)
+  if (mix !== null) return mix
+  for (const key of ['carry', 'seenAnchor', 'eventPos', 'vol', 'lastFlow'] as const) {
+    const found = numberRecord(value[key], `${path}.${key}`)
+    if (found !== null) return found
+  }
+  if (!isRecord(value.pos)) return `shape:${path}.pos`
+  for (const [id, row] of Object.entries(value.pos)) {
+    const found = typeRecord(row, `${path}.pos.${id}`)
+    if (found !== null) return found
+  }
+  return null
+}
+
 function checkParticipants(value: unknown): string | null {
-  if (!isRecord(value) || !sameKeys(value, ['stream', 'informed', 'news', 'heat', 'shares', 'chase', 'mood', 'closes', 'leaked'])) return 'shape:state.market.participants'
+  if (!isRecord(value) || !keysWithin(value, ['stream', 'informed', 'news', 'heat', 'shares', 'chase', 'mood', 'closes', 'leaked'], ['book'])) return 'shape:state.market.participants'
   const found = checkStream(value.stream, 'state.market.participants.stream')
   if (found !== null) return found
   const informed = finiteNumber(value.informed, 'state.market.participants.informed')
@@ -207,6 +245,7 @@ function checkParticipants(value: unknown): string | null {
   if (!Array.isArray(value.leaked) || value.leaked.some((id) => typeof id !== 'string')) {
     return 'shape:state.market.participants.leaked'
   }
+  if (value.book !== undefined) return checkBook(value.book)
   return null
 }
 

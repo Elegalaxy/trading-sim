@@ -289,6 +289,66 @@ describe('local save', () => {
   })
 })
 
+describe('trader book in a save', () => {
+  function withParticipants(book?: unknown): unknown {
+    const game = createGame(DEFS, 'demo')
+    const storage = memory()
+    writeSave({ mode: 'seeded', seed: 'demo', state: game }, storage)
+    const raw = storage.raw(SAVE_KEY)
+    if (raw === null) throw new Error('[DEBUG save] missing save')
+    const parsed = JSON.parse(raw) as { state: { market: { participants?: unknown } } }
+    const stream = parsed.state.market.participants === undefined ? { a: 1, b: 2, c: 3, d: 4 } : undefined
+    parsed.state.market.participants = {
+      stream,
+      informed: 1,
+      news: 1,
+      heat: 1,
+      shares: {},
+      chase: {},
+      mood: {},
+      closes: {},
+      leaked: [],
+      ...(book === undefined ? {} : { book }),
+    }
+    return parsed
+  }
+
+  const types = { value: 0, noise: 0, informed: 0, news: 0, consensus: 0, crowd: 0, trend: 0, contrarian: 0 }
+  const book = () => ({
+    activeFromDay: 1,
+    mix: { ...types, value: 1 },
+    efficiency: 0.9,
+    carry: { NOVA: 1 },
+    seenAnchor: { NOVA: 4800 },
+    pos: { NOVA: { ...types } },
+    eventPos: { 'e|NOVA|crowd': 0.2 },
+    vol: { NOVA: 0 },
+    lastFlow: { NOVA: 0 },
+  })
+
+  it('accepts participants with and without a book', () => {
+    expect(inspectSave(withParticipants()).ok).toBe(true)
+    expect(inspectSave(withParticipants(book())).ok).toBe(true)
+  })
+
+  it('rejects a bad book', () => {
+    const missing = book() as Record<string, unknown>
+    delete missing.vol
+    const extra = { ...book(), note: 1 }
+    const badType = { ...book(), mix: { ...types } } as Record<string, unknown>
+    delete (badType.mix as Record<string, unknown>).trend
+    const nonFinite = { ...book(), carry: { NOVA: Number.POSITIVE_INFINITY } }
+    const badPos = { ...book(), pos: { NOVA: { ...types, value: 'x' } } }
+    for (const bad of [missing, extra, badType, nonFinite, badPos, 'text', null]) {
+      const result = inspectSave(withParticipants(bad))
+      // null is dropped by the helper's spread check only when undefined, so null reaches the check.
+      expect(result.ok).toBe(false)
+    }
+    const found = inspectSave(withParticipants(nonFinite))
+    if (!found.ok) expect(found.reason).toBe('non-finite:state.market.participants.book.carry.NOVA')
+  })
+})
+
 describe('separate scores', () => {
   it('keeps seeded best-per-seed and normal top 10 from mixing', () => {
     const storage = memory()

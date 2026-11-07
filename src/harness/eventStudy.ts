@@ -11,7 +11,13 @@
 //   after<k> close N+k against close N, the part left after the headline is readable
 // Rumours are measured from the close of the day they were generated (they are
 // read in the next session) to the close of the day they claim, and two days on.
+//
+// Drift (price-model plan, Step P0): per asset the mean daily percent change, the mean
+// daily log change, the mean and median change over the whole run with the standard
+// error of the mean, and for stocks the mean daily fair-value change next to the
+// analytic expectedDrift (sim/drift.ts) averaged over the same days.
 
+import { expectedDrift } from '../sim/drift.ts'
 import type { DayFeed, LogEvent, MarketDefinitions, MarketState, SourceTier } from '../sim/types.ts'
 
 const PRE_OFFSETS = [-3, -2] as const
@@ -42,7 +48,20 @@ type Series = {
   squares: Map<string, number>
 }
 
+type DriftTotals = {
+  /** Daily steps counted. */
+  days: number
+  sumPct: number
+  sumLog: number
+  /** Change over each run, last close against day 0, in percent. */
+  runChanges: number[]
+  fairSumPct: number
+  expectedSum: number
+  expectedDays: number
+}
+
 export type EventStudy = {
+  defs: MarketDefinitions
   stockIds: Set<string>
   scopeByType: Map<string, string>
   series: Map<string, Series>
@@ -57,12 +76,17 @@ export type EventStudy = {
   /** Largest move that order-flow parties added to one stock in one step, in percent of its price. */
   maxFlowPercent: number
   stockDays: number
+  drift: Map<string, DriftTotals>
+  // Per run. Cleared by startStudyRun. Index 0 is the day-0 market.
+  runPrices: Map<string, number[]>
+  runFair: Map<string, number[]>
 }
 
 export function createEventStudy(defs: MarketDefinitions): EventStudy {
   const stockIds = new Set(defs.assets.filter((asset) => asset.kind === 'stock').map((asset) => asset.id))
   const scopeByType = new Map(defs.events.map((eventType) => [eventType.id, eventType.scope]))
   return {
+    defs,
     stockIds,
     scopeByType,
     series: new Map(),
@@ -74,7 +98,65 @@ export function createEventStudy(defs: MarketDefinitions): EventStudy {
     maxGapPercent: 0,
     maxFlowPercent: 0,
     stockDays: 0,
+    drift: new Map(),
+    runPrices: new Map(),
+    runFair: new Map(),
   }
+}
+
+function driftTotals(study: EventStudy, asset: string): DriftTotals {
+  let totals = study.drift.get(asset)
+  if (totals === undefined) {
+    totals = { days: 0, sumPct: 0, sumLog: 0, runChanges: [], fairSumPct: 0, expectedSum: 0, expectedDays: 0 }
+    study.drift.set(asset, totals)
+  }
+  return totals
+}
+
+function pushSeries(map: Map<string, number[]>, asset: string, value: number): void {
+  const series = map.get(asset)
+  if (series === undefined) map.set(asset, [value])
+  else series.push(value)
+}
+
+/** Remember every asset's price, each stock's fair value, and the analytic drift for this day's environment. */
+function recordDrift(study: EventStudy, market: MarketState): void {
+  for (const asset of study.defs.assets) {
+    const state = market.assets[asset.id]
+    if (state === undefined || !Number.isFinite(state.priceCents) || state.priceCents <= 0) {
+      throw new Error(`[DEBUG study] drift price for ${asset.id} on day ${market.day} is ${String(state?.priceCents)}`)
+    }
+    pushSeries(study.runPrices, asset.id, state.priceCents)
+    if (asset.kind !== 'stock') continue
+    pushSeries(study.runFair, asset.id, state.fairValue)
+    const totals = driftTotals(study, asset.id)
+    totals.expectedSum += expectedDrift(study.defs, asset, market.environment)
+    totals.expectedDays += 1
+  }
+}
+
+function foldDriftRun(study: EventStudy): void {
+  for (const [asset, prices] of study.runPrices) {
+    const totals = driftTotals(study, asset)
+    for (let i = 1; i < prices.length; i += 1) {
+      const from = prices[i - 1] as number
+      const to = prices[i] as number
+      totals.days += 1
+      totals.sumPct += ((to - from) * 100) / from
+      totals.sumLog += Math.log(to / from) * 100
+    }
+    if (prices.length >= 2) {
+      totals.runChanges.push((((prices[prices.length - 1] as number) - (prices[0] as number)) * 100) / (prices[0] as number))
+    }
+  }
+  for (const [asset, fair] of study.runFair) {
+    const totals = driftTotals(study, asset)
+    for (let i = 1; i < fair.length; i += 1) {
+      totals.fairSumPct += (((fair[i] as number) - (fair[i - 1] as number)) * 100) / (fair[i - 1] as number)
+    }
+  }
+  study.runPrices.clear()
+  study.runFair.clear()
 }
 
 function recordCloses(study: EventStudy, market: MarketState): void {
@@ -144,13 +226,17 @@ export function startStudyRun(study: EventStudy, market: MarketState): void {
   study.effects = []
   study.rumours = []
   study.trueRumoured.clear()
+  study.runPrices.clear()
+  study.runFair.clear()
   recordCloses(study, market)
+  recordDrift(study, market)
   readRumours(study, market.feed, market.day)
 }
 
 /** Call after every End day with the stepped market. */
 export function recordStudyDay(study: EventStudy, market: MarketState): void {
   recordCloses(study, market)
+  recordDrift(study, market)
   readEffects(study, market.log)
   readRumours(study, market.feed, market.day)
 }
@@ -174,6 +260,7 @@ function signedPercent(sign: 1 | -1, to: number, from: number): number {
 
 /** Fold this run's samples into the totals. Samples too close to the run's edges are skipped. */
 export function finishStudyRun(study: EventStudy): void {
+  foldDriftRun(study)
   const close = (day: number, asset: string): number | undefined => study.closes.get(day)?.[asset]
   for (const sample of study.effects) {
     const base = close(sample.day - 1, sample.asset)
@@ -228,6 +315,33 @@ function groupOrder(left: string, right: string): number {
   return 0
 }
 
+function median(values: readonly number[]): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((left, right) => left - right)
+  const middle = sorted.length >> 1
+  return sorted.length % 2 === 1 ? (sorted[middle] as number) : ((sorted[middle - 1] as number) + (sorted[middle] as number)) / 2
+}
+
+function driftLines(study: EventStudy): string[] {
+  const lines: string[] = []
+  for (const asset of study.defs.assets) {
+    const totals = study.drift.get(asset.id)
+    if (totals === undefined || totals.days === 0) continue
+    const runs = totals.runChanges.length
+    const meanChange = runs === 0 ? 0 : totals.runChanges.reduce((sum, value) => sum + value, 0) / runs
+    const variance =
+      runs < 2 ? 0 : totals.runChanges.reduce((sum, value) => sum + (value - meanChange) ** 2, 0) / (runs - 1)
+    const se = Math.sqrt(variance / Math.max(1, runs))
+    const stock = asset.kind === 'stock'
+    const fair = stock ? (totals.fairSumPct / totals.days).toFixed(4) : 'n/a'
+    const expected = stock && totals.expectedDays > 0 ? ((totals.expectedSum / totals.expectedDays) * 100).toFixed(4) : 'n/a'
+    lines.push(
+      `[sim] study drift asset=${asset.id} runs=${runs} days=${totals.days} meanDailyPct=${(totals.sumPct / totals.days).toFixed(4)} meanLogPct=${(totals.sumLog / totals.days).toFixed(4)} meanChangePct=${meanChange.toFixed(2)} se=${se.toFixed(2)} medianChangePct=${median(totals.runChanges).toFixed(2)} fairDailyPct=${fair} expectedFairDailyPct=${expected}`,
+    )
+  }
+  return lines
+}
+
 export function studyLines(study: EventStudy): string[] {
   const lines: string[] = []
   const share = study.stockDays === 0 ? 0 : study.cappedStockDays / study.stockDays
@@ -243,5 +357,6 @@ export function studyLines(study: EventStudy): string[] {
     const spread = series.sums.has('d3') ? ` se.d3=${standardError(series, 'd3').toFixed(3)}` : ''
     lines.push(`[sim] study group=${group} n=${series.count} ${fields.join(' ')}${spread}`)
   }
+  lines.push(...driftLines(study))
   return lines
 }

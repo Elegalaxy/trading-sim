@@ -71,6 +71,42 @@ describe('high-leverage strategies', () => {
   })
 })
 
+describe('1x index bots', () => {
+  it('are listed', () => {
+    expect(STRATEGY_NAMES).toEqual(expect.arrayContaining(['longIndex1x', 'shortIndex1x']))
+  })
+
+  it('open the index once at 1x, hold, and leave the market equal to an idle run', () => {
+    for (const [name, sign] of [
+      ['longIndex1x', 1],
+      ['shortIndex1x', -1],
+    ] as const) {
+      const game = createGame(defs, 'index1x')
+      const idle = createGame(defs, 'index1x')
+      let orders = 0
+      let shares = 0
+      for (let day = 0; day < 20 && game.runEnd === null && game.bill === null; day += 1) {
+        orders += actDay(name, game, defs, null).orders
+        actDay('hold', idle, defs, null)
+        if (day === 0) {
+          const position = game.positions.M4X
+          expect(position?.leverage).toBe(1)
+          expect(Math.sign(position?.signedShares ?? 0)).toBe(sign)
+          shares = position?.signedShares ?? 0
+          const book = tradingEquity(game, defs)
+          // Whole index shares only (,000 each), so at least two thirds of a $3,000 account.
+          expect(book.required).toBeGreaterThan(book.equity * 0.6)
+        }
+        endDay(game, defs)
+        endDay(idle, defs)
+        expect(stateHash(game.market)).toBe(stateHash(idle.market))
+        expect(game.positions.M4X?.signedShares).toBe(shares)
+      }
+      expect(orders).toBe(1)
+    }
+  })
+})
+
 describe('news bots and the event study', () => {
   it('trade the news, close on time, and see the same market as an idle run', () => {
     for (const name of ['followHeadlines', 'fadeHeadlines', 'buyRumour'] as const) {
@@ -111,5 +147,11 @@ describe('news bots and the event study', () => {
     const stock = lines.find((line) => line.startsWith('[sim] study group=stock '))
     expect(stock).toMatch(/ d-3=-?\d+\.\d{3} .* d0=-?\d+\.\d{3} .* after3=-?\d+\.\d{3} /)
     expect(lines.some((line) => line.startsWith('[sim] study group=rumour:false:'))).toBe(true)
+    const drift = lines.filter((line) => line.startsWith('[sim] study drift '))
+    expect(drift.map((line) => line.split(' ')[3])).toEqual(['asset=NOVA', 'asset=BLSW', 'asset=HRBU', 'asset=KSR', 'asset=M4X'])
+    expect(drift[0]).toMatch(
+      /^\[sim\] study drift asset=NOVA runs=2 days=\d+ meanDailyPct=-?\d+\.\d{4} meanLogPct=-?\d+\.\d{4} meanChangePct=-?\d+\.\d{2} se=\d+\.\d{2} medianChangePct=-?\d+\.\d{2} fairDailyPct=-?\d+\.\d{4} expectedFairDailyPct=-?\d+\.\d{4}$/,
+    )
+    expect(drift[4]).toMatch(/ fairDailyPct=n\/a expectedFairDailyPct=n\/a$/)
   })
 })

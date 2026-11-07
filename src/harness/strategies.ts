@@ -15,6 +15,8 @@
 // it NEWS_HOLD_DAYS later. buyRumour trades a stock rumour the way it claims and
 // closes it in the session after the claimed day, when the headline would be out.
 // They measure whether reading the news pays after spread and fees (plan Step M0).
+// longIndex1x and shortIndex1x open the index once at 1x with all trading equity the
+// first day and hold. They measure the drift of the market itself (price-model plan, Step P0).
 
 import {
   MARGIN_MIN_RATIO_DENOMINATOR,
@@ -31,6 +33,8 @@ export const STRATEGY_NAMES = [
   'hold',
   'maxLongIndex',
   'maxShortIndex',
+  'longIndex1x',
+  'shortIndex1x',
   'random',
   'longNova10',
   'longNova20',
@@ -290,6 +294,25 @@ function assertIndex(defs: MarketDefinitions): void {
   if (found !== 1) throw new Error(`[DEBUG batch] expected one ${INDEX_ID} asset, received ${found}`)
 }
 
+/** Open the index at 1x with as much as free equity allows, once. Does nothing when a position is open. */
+function placeIndex1x(game: GameState, defs: MarketDefinitions, side: OrderSide): DayAction {
+  const action = emptyAction()
+  if ((game.positions[INDEX_ID]?.signedShares ?? 0) !== 0) return action
+  const price = requireAssetPrice(game, INDEX_ID)
+  const book = tradingEquity(game, defs)
+  let quantity = Math.floor((book.equity - book.required) / price)
+  for (let tries = 0; quantity > 0 && tries < MAX_SHRINKS; tries += 1) {
+    if (submit(game, defs, INDEX_ID, side, quantity, 1)) {
+      action.orders += 1
+      action.lastQuantity = quantity
+      return action
+    }
+    action.rejections += 1
+    quantity = Math.floor(quantity * SHRINK)
+  }
+  return action
+}
+
 function placeRandom(game: GameState, defs: MarketDefinitions, stream: RngStream): DayAction {
   const action = emptyAction()
   if (defs.assets.length === 0) throw new Error('[DEBUG batch] random strategy has no assets')
@@ -420,6 +443,10 @@ export function actDay(
   if (strategy === 'maxShortIndex') {
     assertIndex(defs)
     return placeTowardCap(game, defs, 'sell')
+  }
+  if (strategy === 'longIndex1x' || strategy === 'shortIndex1x') {
+    assertIndex(defs)
+    return placeIndex1x(game, defs, strategy === 'longIndex1x' ? 'buy' : 'sell')
   }
   const leveraged = LEVERAGED[strategy]
   if (leveraged !== undefined) return placeLeveraged(game, defs, leveraged.side, leveraged.leverage)

@@ -283,6 +283,14 @@ export type TraderDefinitions = {
   efficiencyMax: number
   /** Daily fractional addition to the anchor's carry, on top of cancelling the expected drift. */
   premiumPerDay: number
+  /**
+   * Daily fractional addition to the carry that makes the anchor's mean LOG change equal the premium.
+   * Two second-order effects make fair value fall faster than `expectedDrift` says: (1) event effects are
+   * fixed cents (set on the event day), so after fair value moves with them the later shares are a larger
+   * share of it when it fell and a smaller one when it rose, and (2) a mean of log changes sits half a
+   * variance below the mean of simple changes. Measured, not derived (see the plan, P2b). Default 0.
+   */
+  carryCorrectionPerDay?: number
   /** Value traders' anchor is an EMA with this half-life in days. */
   anchorHalfLifeDays: number
   /** Value traders ignore a gap smaller than this (fraction). */

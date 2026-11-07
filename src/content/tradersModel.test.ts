@@ -5,6 +5,8 @@ import { TRADER_DEFINITIONS } from './traders.ts'
 import { applyCommand, createGame, endDay } from '../sim/game.ts'
 import { stateHash } from '../sim/hash.ts'
 import { createMarket, stepMarketDay } from '../sim/market.ts'
+import { createRng, nextNormal } from '../sim/rng.ts'
+import { valueTarget } from '../sim/traders.ts'
 import type { MarketDefinitions } from '../sim/types.ts'
 
 // Traders model with the real events, calendar and placeholder trader numbers (price-model plan, Step P2).
@@ -47,14 +49,10 @@ describe('traders model on the real market', () => {
     expect(hash('det')).not.toBe(hash('det2'))
   })
 
-  // The plan asks for the mean daily log change of anchor and price to be within 0.01% of the
-  // premium. Measured with the placeholder numbers (50 seeds x 1,000 days x 4 stocks) the anchor
-  // sits about 0.05 points below the premium, for two known reasons: the analytic `expectedDrift`
-  // understates the realised fall of fair value by about 0.03 points a day (event effects are
-  // fixed cents, see the P2 note in the plan), and a mean of log changes sits half a variance
-  // (about 0.016 points) below the mean of simple changes. So this test pins what the engine
-  // guarantees: the anchor stays within 0.07 points below and 0.01 above the premium, and the
-  // price follows the anchor's mean log change to within 0.01 points.
+  // The plan asks for the mean daily log change of anchor and price to be within 0.01% of the premium.
+  // `carryCorrectionPerDay` removes the two second-order effects that `expectedDrift` leaves out (see
+  // `types.ts`). With 50 seeds x 1,000 days x 4 stocks the standard error is about 0.01, so the test
+  // allows 0.02 around the premium and requires the price to follow the anchor to within 0.01.
   it('keeps the mean daily log change of the anchor near the premium and the price near the anchor', () => {
     const seeds = 50
     const days = 1000
@@ -77,8 +75,61 @@ describe('traders model on the real market', () => {
     const anchorPct = (anchorSum / count) * 100
     const pricePct = (priceSum / count) * 100
     const premiumPct = TRADER_DEFINITIONS.premiumPerDay * 100
-    expect(anchorPct - premiumPct).toBeGreaterThan(-0.07)
-    expect(anchorPct - premiumPct).toBeLessThan(0.01)
+    expect(Math.abs(anchorPct - premiumPct)).toBeLessThan(0.02)
     expect(Math.abs(pricePct - anchorPct)).toBeLessThan(0.01)
   }, 120_000)
+
+  // The value loop trades the gap (price-model plan, P2b). Check it is stable over the whole mix range:
+  // alone it converges without crossing the anchor by more than the dead band, and with the AR(1) noise
+  // traders the gap stays bounded and its spread does not grow between the first and second half.
+  describe('value loop stability', () => {
+    const t = TRADER_DEFINITIONS
+    const cap = 0.08
+    const weights = [0.5, 0.75, 1, 1.25, 1.5].map((mix) => t.types.value.base * mix)
+    const step = (price: number, anchor: number, weight: number, extra: number): number => {
+      const demand = t.types.value.rate * valueTarget(t, weight, price, anchor) + extra
+      return price * (1 + Math.max(-cap, Math.min(cap, demand)))
+    }
+
+    it('converges to the anchor without oscillating, from small and deep gaps', () => {
+      for (const weight of weights) {
+        for (const start of [0.9, 0.7, 0.5, 1.1, 1.3, 2, 4]) {
+          let price = 100 * start
+          let crossings = 0
+          let last = Math.sign(100 / price - 1)
+          for (let day = 0; day < 200; day += 1) {
+            price = step(price, 100, weight, 0)
+            expect(Number.isFinite(price)).toBe(true)
+            const sign = Math.sign(100 / price - 1)
+            if (sign !== 0 && last !== 0 && sign !== last) crossings += 1
+            if (sign !== 0) last = sign
+          }
+          expect(crossings).toBeLessThanOrEqual(1)
+          expect(Math.abs(100 / price - 1)).toBeLessThanOrEqual(t.valueDeadBand + 1e-9)
+        }
+      }
+    })
+
+    it('stays bounded with noise traders across the mix range', () => {
+      const stream = createRng('value-noise-stability').market
+      for (const weight of weights) {
+        for (const noiseMix of [0.5, 1, 1.5]) {
+          const sigma = 0.02 * t.noiseShare * noiseMix
+          let price = 100
+          let noisePos = 0
+          const gaps: number[] = []
+          for (let day = 0; day < 6000; day += 1) {
+            const dq = t.types.noise.rate * (t.noiseAr * noisePos + sigma * nextNormal(stream) - noisePos)
+            noisePos += dq
+            price = step(price, 100, weight, dq)
+            expect(Number.isFinite(price) && price > 0).toBe(true)
+            gaps.push(Math.abs(100 / price - 1))
+          }
+          const sd = (from: number, to: number): number => Math.sqrt(gaps.slice(from, to).reduce((sum, g) => sum + g * g, 0) / (to - from))
+          expect(Math.max(...gaps)).toBeLessThan(0.25)
+          expect(sd(3000, 6000)).toBeLessThan(sd(0, 3000) * 1.25)
+        }
+      }
+    })
+  })
 })

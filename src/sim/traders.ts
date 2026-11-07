@@ -146,7 +146,7 @@ function clampNumber(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value))
 }
 
-/** Value traders' target position: dead band, linear to full weight, steeper beyond the deep gap, capped. */
+/** Value traders' full-rate demand for a gap (in depth units per day): dead band, linear to full weight, steeper beyond the deep gap, capped. */
 export function valueTarget(t: TraderDefinitions, weight: number, price: number, seenAnchor: number): number {
   const gap = seenAnchor / price - 1
   const size = Math.abs(gap)
@@ -182,7 +182,7 @@ export function planTraderStock(
   if (t === undefined || p === undefined || book === undefined) fail('traders model is not on')
   const asset = state.assets[def.id]
   const previous = asset.priceCents
-  const carry = (book.carry[def.id] ?? 1) * (1 - expectedDrift(defs, def, state.environment) + t.premiumPerDay)
+  const carry = (book.carry[def.id] ?? 1) * (1 - expectedDrift(defs, def, state.environment) + t.premiumPerDay + (t.carryCorrectionPerDay ?? 0))
   book.carry[def.id] = carry
   const anchor = asset.fairValue * carry
   const lag = 1 - 0.5 ** (1 / t.anchorHalfLifeDays)
@@ -193,7 +193,10 @@ export function planTraderStock(
 
   const dq = zeroPositions()
   const weight = (type: TraderType): number => t.types[type].base * book.mix[type]
-  dq.value = t.types.value.rate * (valueTarget(t, weight('value'), previous, seen) - pos.value)
+  // Value traders trade the gap, not a target position: demand each day is rate x the gap response, so a
+  // move by another type is corrected over the following days instead of only partly offset. `pos.value`
+  // only books the running total (what the value traders have bought less sold).
+  dq.value = t.types.value.rate * valueTarget(t, weight('value'), previous, seen)
   // The noise size is the stock's volatility share times the run's noise mix, not a weight in depth units.
   const sigma = def.dailyVolatility * t.noiseShare * book.mix.noise
   dq.noise = t.types.noise.rate * (t.noiseAr * pos.noise + sigma * z - pos.noise)

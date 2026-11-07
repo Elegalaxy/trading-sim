@@ -21,6 +21,10 @@ export const TRADER_DEFINITIONS: TraderDefinitions = {
   efficiencyMin: 0.5,
   efficiencyMax: 1.3,
   premiumPerDay: 0.0002,
+  // Measured (P2b, 100 seeds x 1,000 days x 4 stocks): fair value falls 0.0245 points a day faster than
+  // `expectedDrift` and a mean log change sits 0.016 below the simple mean; 0.0005 (0.05 points) puts the
+  // anchor's mean log change at the premium.
+  carryCorrectionPerDay: 0.0005,
   anchorHalfLifeDays: 3,
   valueDeadBand: 0.01,
   valueFullGap: 0.1,

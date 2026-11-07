@@ -578,4 +578,61 @@ describe('bank loan', () => {
     }
     debugLoan(`end of due day savings=${game.accounts.savingsCents} lifestyle home=${game.lifestyle.home} info=${game.lifestyle.infoFeed}`)
   })
+  it('sells fixed deposits last, after positions and savings, breaking the latest maturity first', () => {
+    const defs = market()
+    const game = createGame(defs, 'deposits', { jobs: JOBS, jobId: 'jobless' })
+    applyCommand(game, defs, { type: 'takeLoan', amountCents: 100_000 })
+    // Cash is 4,000 now: 100 to savings, 3,000 and 900 locked.
+    applyCommand(game, defs, { type: 'transfer', from: 'cash', to: 'savings', amountCents: 10_000 })
+    applyCommand(game, defs, { type: 'openDeposit', amountCents: 300_000, termDays: 90, from: 'cash' })
+    applyCommand(game, defs, { type: 'openDeposit', amountCents: 90_000, termDays: 60, from: 'cash' })
+    expect(game.accounts.cashCents).toBe(0)
+    advance(game, defs, 30)
+    expect(game.market.day).toBe(30)
+    const instalment = Math.ceil(100_000 / 3)
+    const interest = 30 * 22
+    expect(game.loan.interestDueCents).toBe(interest)
+    expect(game.loan.principalDueCents).toBe(instalment)
+    // The bill is paid by hand from trading cash. The loan payment stays for the end of the day.
+    applyCommand(game, defs, { type: 'transfer', from: 'trading', to: 'cash', amountCents: game.bill?.amountCents ?? 0 })
+    applyCommand(game, defs, { type: 'payBill' })
+    expect(game.bill).toBeNull()
+    expect(game.accounts.cashCents).toBe(0)
+    const savings = game.accounts.savingsCents
+    const preview = previewLoanSale(game, defs)
+    const before = JSON.stringify(game.deposits)
+    endDay(game, defs)
+    expect(JSON.stringify(game.deposits)).not.toBe(before)
+    expect(game.runEnd).toBeNull()
+    const forced = sales(game.log)
+    // Savings first, then the 90-day deposit (latest maturity). The 60-day deposit stays.
+    expect(forced.map((event) => event.source)).toEqual(['savings', 'deposit'])
+    expect(forced[0]?.amountCents).toBe(savings)
+    expect(forced[1]?.amountCents).toBe(294_000)
+    const broken = game.log.filter((event) => event.kind === 'depositBroken')
+    expect(broken).toEqual([
+      { kind: 'depositBroken', day: 30, id: 1, principalCents: 300_000, paidCents: 294_000, penaltyCents: 6_000, forced: true, to: 'cash' },
+    ])
+    expect(game.deposits?.open.map((item) => item.id)).toEqual([2])
+    expect(game.loan.balanceCents).toBe(100_000 - instalment)
+    expect(game.loan.interestDueCents).toBe(0)
+    expect(game.accounts.cashCents).toBe(savings + 294_000 - interest - instalment)
+    expect(preview.steps).toEqual(forced.map((event) => ({ source: event.source, amountCents: event.amountCents })))
+    expect(preview.endsRun).toBe(false)
+    debugLoan(`deposit sale ${forced.map((event) => formatEvent(event)).join(' | ')}`)
+  })
+
+  it('previews a deposit sale without changing the deposits', () => {
+    const defs = market()
+    const game = createGame(defs, 'deposit preview', { jobs: JOBS, jobId: 'jobless' })
+    applyCommand(game, defs, { type: 'takeLoan', amountCents: 100_000 })
+    applyCommand(game, defs, { type: 'openDeposit', amountCents: 400_000, termDays: 90, from: 'cash' })
+    advance(game, defs, 30)
+    applyCommand(game, defs, { type: 'transfer', from: 'trading', to: 'cash', amountCents: game.bill?.amountCents ?? 0 })
+    applyCommand(game, defs, { type: 'payBill' })
+    const deposits = JSON.stringify(game.deposits)
+    const preview = previewLoanSale(game, defs)
+    expect(preview.steps.map((step) => step.source)).toEqual(['deposit'])
+    expect(JSON.stringify(game.deposits)).toBe(deposits)
+  })
 })

@@ -1141,6 +1141,8 @@ export type CoverableCheckEvent = {
   savingsCents: number
   tradingEquityCents: number
   loanLimitCents: number
+  /** Break value of the open fixed deposits. Absent (read as 0) when there are none. */
+  depositsCents?: number
   totalCents: number
   billCents: number
 }
@@ -1360,7 +1362,7 @@ export type LoanInterestPaidEvent = {
 
 /**
  * Cents moved to cash to pay a missed loan payment.
- * `source` is an asset id or `savings`. Lifestyle is not a source.
+ * `source` is an asset id, `savings` or `deposit`. Lifestyle is not a source.
  */
 export type ForcedSaleEvent = {
   kind: 'forcedSale'
@@ -1418,6 +1420,46 @@ export type SeverancePaidEvent = {
   cashCents: number
 }
 
+/** Where a deposit's money came from. */
+export type DepositSource = 'cash' | 'savings'
+
+/** A fixed deposit was opened. The rate is fixed from this day's policy rate. */
+export type DepositOpenedEvent = {
+  kind: 'depositOpened'
+  day: number
+  id: number
+  principalCents: number
+  termDays: number
+  annualRate: number
+  maturityDay: number
+  from: DepositSource
+}
+
+/**
+ * A deposit was broken: `paidCents` (principal less the penalty) went to `to`. `forced` is true when
+ * a missed loan payment sold it (proceeds to cash), false when the player broke it (proceeds to savings).
+ */
+export type DepositBrokenEvent = {
+  kind: 'depositBroken'
+  day: number
+  id: number
+  principalCents: number
+  paidCents: number
+  penaltyCents: number
+  forced: boolean
+  to: 'cash' | 'savings'
+}
+
+/** A deposit matured: principal plus interest went to savings. The interest counts as passive income. */
+export type DepositMaturedEvent = {
+  kind: 'depositMatured'
+  day: number
+  id: number
+  principalCents: number
+  interestCents: number
+  savingsCents: number
+}
+
 /** Player commands since the previous end of day, plus a bill payment or cover check from those commands. */
 export type CommandLogEvent =
   | TransferEvent
@@ -1444,6 +1486,8 @@ export type CommandLogEvent =
   | LoanRepaidEvent
   | LiquidationEvent
   | BackstopWriteOffEvent
+  | DepositOpenedEvent
+  | DepositBrokenEvent
 
 export type MarginLogEvent =
   | MarginInterestEvent
@@ -1476,6 +1520,7 @@ export type AccountLogEvent =
   | LayoffAvoidedEvent
   | LaidOffEvent
   | SeverancePaidEvent
+  | DepositMaturedEvent
 
 export type LogEvent =
   | NoiseRollEvent
@@ -1717,6 +1762,19 @@ export type BankLoan = {
   firstPaymentDay?: number
 }
 
+/** One fixed deposit. `annualRate` is the decimal rate fixed at opening. */
+export type Deposit = {
+  id: number
+  principalCents: number
+  openedDay: number
+  termDays: 30 | 60 | 90
+  annualRate: number
+  maturityDay: number
+}
+
+/** The open fixed deposits. Absent in saves from before deposits (read as none). */
+export type DepositsState = { nextId: number; open: Deposit[] }
+
 /** Last end-of-day FI check. The meter reads this. It is not a second ledger. */
 export type FiStatus = {
   day: number
@@ -1800,6 +1858,8 @@ export type GameState = {
   orderFlow?: Record<string, number>
   /** Layoff stream, open notice and jobs lost. Absent when the definitions have no layoffs. Never read by the market. */
   employer?: EmployerState
+  /** Fixed deposits. Absent in older saves. No randomness. */
+  deposits?: DepositsState
 }
 
 /**

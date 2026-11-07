@@ -77,6 +77,32 @@ describe('saves from before the market depth work', () => {
     expect(continueGame(save((s) => { s.employer.notice = { jobId: 'x' } }))).toBe(DAMAGED_SAVE_MESSAGE)
   })
 
+  it('load without deposits (before them) as an empty block, and keep open deposits from a current save', () => {
+    const old = save((s) => {
+      delete s.deposits
+    })
+    expect(continueGame(old)).toBeNull()
+    expect(useTradingStoreSnapshot()?.game.deposits).toEqual({ nextId: 1, open: [] })
+
+    const held = save((s) => {
+      s.deposits = {
+        nextId: 2,
+        open: [{ id: 1, principalCents: 50_000, openedDay: 0, termDays: 60, annualRate: 0.045, maturityDay: 60 }],
+      }
+    })
+    expect(continueGame(held)).toBeNull()
+    expect(useTradingStoreSnapshot()?.game.deposits?.open).toHaveLength(1)
+    expect(continueGame(save((s) => { s.deposits = { nextId: 1, open: 'x' } }))).toBe(DAMAGED_SAVE_MESSAGE)
+    expect(continueGame(save((s) => { s.deposits = { nextId: 1, open: [{ id: 1 }] } }))).toBe(DAMAGED_SAVE_MESSAGE)
+    expect(
+      continueGame(
+        save((s) => {
+          s.deposits = { nextId: 2, open: [{ id: 1, principalCents: 50_000, openedDay: 0, termDays: 45, annualRate: 0.045, maturityDay: 45 }] }
+        }),
+      ),
+    ).toBe(DAMAGED_SAVE_MESSAGE)
+  })
+
   it('say the save is damaged for calendar rolls without a consensus (before it)', () => {
     // The growth release is on day 10 and is rolled at the close of day 7, so a save after day 8 holds a roll.
     const withRoll = save((s) => {

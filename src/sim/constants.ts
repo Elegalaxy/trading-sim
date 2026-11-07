@@ -188,6 +188,20 @@ export const LOAN_MAX_PAYMENTS = 3
 export const LOAN_FIRST_PAYMENT_MIN_DAYS = 7
 export const LOAN_WARNING_DAYS = 5
 
+/**
+ * Section 12. Fixed deposits (provisional). Cash or savings locked for 30, 60 or 90 days.
+ * Annual rate = max(0, policy percent at opening - SAVINGS_SPREAD_PERCENT + term bonus) / 100,
+ * fixed at opening. Simple interest, round(principal x rate x term / 365), paid with the
+ * principal into savings at maturity. A break returns the principal less
+ * DEPOSIT_BREAK_PENALTY_PPM and loses the interest. Minimum amount and number open are limits.
+ */
+export const DEPOSIT_TERMS_DAYS = [30, 60, 90] as const
+export const DEPOSIT_TERM_BONUS_PERCENT: Readonly<Record<30 | 60 | 90, number>> = { 30: 1, 60: 2, 90: 3 }
+export const DEPOSIT_BREAK_PENALTY_PPM = 20_000
+export const DEPOSIT_MIN_CENTS = 10_000
+export const DEPOSIT_MAX_OPEN = 3
+export const DEPOSIT_DAYS_PER_YEAR = 365
+
 /** Section 6. Provisional policy-rate entry when the run has no calendar. */
 export const POLICY_RATE_ENTRY_ID = 'policyRate'
 

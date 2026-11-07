@@ -3258,3 +3258,79 @@ dl.estimate dd {
     animation: none;
   }
 }
+
+/* Fixed deposits (Accounts panel): a term picker with the rate and the interest at maturity, and a table of open deposits. */
+.deposits {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #2b3139;
+}
+
+.deposits h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.deposit-table .deposit-action {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.deposit-confirm {
+  font-size: 11px;
+  color: #e0b341;
+}
+
+.deposit-terms {
+  display: inline-flex;
+  border: 1px solid #474d57;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.deposit-term {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 84px;
+  padding: 4px 10px;
+  color: #eaecef;
+  background: #1e2329;
+  border: 0;
+  border-left: 1px solid #2b3139;
+  border-radius: 0;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.deposit-term:first-child {
+  border-left: 0;
+}
+
+.deposit-term:hover {
+  background: #232a32;
+}
+
+.deposit-term:focus-visible {
+  outline: 2px solid #f7a600;
+  outline-offset: -2px;
+}
+
+.deposit-term-on {
+  background: #2d2917;
+  box-shadow: inset 0 -2px 0 #f7a600;
+}
+
+.deposit-term-days {
+  font-weight: 650;
+}
+
+.deposit-term-rate,
+.deposit-term-gain {
+  font-size: 11px;
+  color: #848e9c;
+}
+
+.deposit-term-on .deposit-term-gain {
+  color: #eaecef;
+}

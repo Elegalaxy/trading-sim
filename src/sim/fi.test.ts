@@ -277,4 +277,16 @@ describe('FI hold, run end, and score', () => {
     game.loan.accruedInterestCents = 70
     expect(netWorthCents(game, defs)).toBe(before - 570)
   })
+  it('counts a deposit in net worth and its maturity interest as passive income', () => {
+    const defs = market()
+    const game = createGame(defs, 'deposit fi')
+    const before = netWorthCents(game, defs)
+    applyCommand(game, defs, { type: 'openDeposit', amountCents: 300_000, termDays: 30, from: 'cash' })
+    expect(netWorthCents(game, defs)).toBe(before)
+    for (let day = 1; day <= 30; day += 1) endDay(game, defs)
+    // $3,000 for 30 days at 3.5% is $8.63; savings were empty, so the day-30 row is only that.
+    expect(game.fi.interest).toEqual([{ day: 30, cents: 863 }])
+    expect(game.accounts.savingsCents).toBeGreaterThanOrEqual(300_863)
+    expect(game.deposits?.open).toEqual([])
+  })
 })

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { unusedLoanLimitCents } from '../sim/loan.ts'
 import type { GameState } from '../sim/types.ts'
+import { BreakDepositButtons } from './Deposits.tsx'
 import { dispatch } from './store.ts'
 import { formatUsd } from './money.ts'
 
@@ -104,6 +105,12 @@ export function BillBanner({ game }: { game: GameState | null }) {
             Withdraw from savings
           </button>
         </li>
+        {(game.deposits?.open.length ?? 0) > 0 ? (
+          <li>
+            <BreakDepositButtons game={game} />
+            <span className="day-note">The money lands in savings. Withdraw it to pay.</span>
+          </li>
+        ) : null}
         <li>
           <button type="button" onClick={onLoan} disabled={loanDraw <= 0}>
             Take a loan

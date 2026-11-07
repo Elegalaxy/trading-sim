@@ -12,6 +12,7 @@
 // still has to be paid, or the existing cover check ends the run, before that.
 // The bar is the lifestyle monthly cost. The staff discount is not subtracted.
 
+import { totalDepositValueCents } from './deposits.ts'
 import { lifestyleExpensesCents } from './lifestyle.ts'
 import { tradingEquity } from './trading.ts'
 import {
@@ -82,15 +83,17 @@ function truncTowardZero(numerator: number, denominator: number): number {
 }
 
 /**
- * Cash + savings + trading equity − what the bank is owed. Equity is trading cash
- * plus signed shares at the quoted price. Pending principal is already inside the
- * balance, so it is not subtracted twice.
+ * Cash + savings + fixed deposits + trading equity − what the bank is owed. Equity is
+ * trading cash plus signed shares at the quoted price. A deposit counts at principal plus
+ * the interest earned so far. Pending principal is already inside the balance, so it is not
+ * subtracted twice.
  */
 export function netWorthCents(state: GameState, defs: MarketDefinitions): number {
   const equity = tradingEquity(state, defs).equity
   const loan = state.loan
   const owed = loan.balanceCents + loan.interestDueCents + (loan.accruedInterestCents ?? 0)
-  const total = state.accounts.cashCents + state.accounts.savingsCents + equity - owed
+  const deposits = totalDepositValueCents(state, state.market.day)
+  const total = state.accounts.cashCents + state.accounts.savingsCents + deposits + equity - owed
   return requireSafe(total, 'net worth')
 }
 

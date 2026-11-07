@@ -11,6 +11,7 @@ import { stateHash } from '../sim/hash.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { assertPast } from '../sim/past.ts'
 import { assertEmployer, createEmployer, fastForwardEmployer } from '../sim/layoffs.ts'
+import { assertDeposits, initialDeposits } from '../sim/deposits.ts'
 import { initialLifestyle } from '../sim/lifestyle.ts'
 import { assertLoan, firstPaymentDay, loanPaymentsFor } from '../sim/loan.ts'
 import { loanWarning, pendingSale, saleText } from './loanText.ts'
@@ -322,6 +323,9 @@ export function continueGame(save: SaveFile): string | null {
       fastForwardEmployer(game.employer, game.market.day)
     }
     if (game.employer !== undefined) assertEmployer(game.employer)
+    // Saves from before fixed deposits have none.
+    if (game.deposits === undefined) game.deposits = initialDeposits()
+    assertDeposits(game.deposits)
     // A save must carry the order-flow parties and the social feed the definitions run, or it would play without them.
     if ((definitions.participants !== undefined) !== (game.market.participants !== undefined)) {
       throw new Error('save has no order-flow parties')
@@ -884,6 +888,16 @@ function buildReport(game: GameState, start: ReportStart): DayReport {
         notes.push(
           `The monthly bill of ${formatUsd(event.amountCents, 'bill')} is due and cash is ${formatUsd(event.shortfallCents, 'shortfall')} short. Pay it before the next End day.`,
         )
+        break
+      case 'depositMatured':
+        notes.push(
+          `Fixed deposit matured: ${formatUsd(event.principalCents, 'deposit')} plus ${formatUsd(event.interestCents, 'deposit interest')} interest went to savings.`,
+        )
+        break
+      case 'depositBroken':
+        if (event.forced) {
+          notes.push(`A fixed deposit of ${formatUsd(event.principalCents, 'deposit')} was broken for the loan payment (${formatUsd(event.penaltyCents, 'penalty')} penalty).`)
+        }
         break
       case 'forcedSale':
         money.push({ label: `Forced sale for the loan payment (${event.source})`, cents: event.amountCents })

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ACCOUNT_NAMES, type AccountName, type GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
+import { Deposits } from './Deposits.tsx'
 import { formatUsd, parseUsdToCents } from './money.ts'
 import { dispatch } from './store.ts'
 
@@ -189,6 +190,7 @@ export function Accounts({ game }: { game: GameState | null }) {
           </p>
         ) : null}
       </form>
+      <Deposits game={game} />
     </section>
   )
 }

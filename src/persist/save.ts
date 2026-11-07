@@ -321,7 +321,7 @@ function checkFills(value: unknown): string | null {
 
 function checkState(value: unknown): string | null {
   // Saves from before the fill ledger have no `fills`. They load with an empty one.
-  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'past', 'social', 'orderFlow', 'employer'])) return 'shape:state'
+  if (!isRecord(value) || !keysWithin(value, STATE_KEYS, ['fills', 'past', 'social', 'orderFlow', 'employer', 'deposits'])) return 'shape:state'
   if (value.fills !== undefined) {
     const fills = checkFills(value.fills)
     if (fills !== null) return fills
@@ -357,6 +357,23 @@ function checkState(value: unknown): string | null {
       }
     }
     if (!Array.isArray(employer.barred) || employer.barred.some((id) => typeof id !== 'string')) return 'shape:state.employer.barred'
+  }
+  // Saves from before deposits have none. The store gives them an empty block.
+  if (value.deposits !== undefined) {
+    const deposits = value.deposits
+    if (!isRecord(deposits) || !sameKeys(deposits, ['nextId', 'open']) || !Array.isArray(deposits.open)) return 'shape:state.deposits'
+    const nextId = finiteNumber(deposits.nextId, 'state.deposits.nextId')
+    if (nextId !== null) return nextId
+    for (let index = 0; index < deposits.open.length; index += 1) {
+      const row: unknown = deposits.open[index]
+      if (!isRecord(row) || !sameKeys(row, ['id', 'principalCents', 'openedDay', 'termDays', 'annualRate', 'maturityDay'])) {
+        return `shape:state.deposits.open[${index}]`
+      }
+      for (const key of ['id', 'principalCents', 'openedDay', 'termDays', 'annualRate', 'maturityDay'] as const) {
+        const found = finiteNumber(row[key], `state.deposits.open[${index}].${key}`)
+        if (found !== null) return found
+      }
+    }
   }
   const market = checkMarket(value.market)
   if (market !== null) return market

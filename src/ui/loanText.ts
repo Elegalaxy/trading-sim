@@ -17,10 +17,17 @@ export function loanWarning(game: GameState, defs: MarketDefinitions): LoanPayme
 /** "Sell NOVA, KSR, then $120.00 of savings" for a sale preview. Empty when nothing sells. */
 export function saleText(preview: LoanSalePreview): string {
   if (preview.steps.length === 0) return ''
-  const positions = preview.steps.filter((step) => step.source !== 'savings').map((step) => step.source)
+  const positions = preview.steps.filter((step) => step.source !== 'savings' && step.source !== 'deposit').map((step) => step.source)
   const savings = preview.steps.find((step) => step.source === 'savings')
+  const deposits = preview.steps.filter((step) => step.source === 'deposit')
   const head = positions.length > 0 ? `Sell ${positions.join(', ')}` : ''
-  const tail = savings === undefined ? '' : `${formatUsd(savings.amountCents, 'savings')} of savings`
+  const takes: string[] = []
+  if (savings !== undefined) takes.push(`${formatUsd(savings.amountCents, 'savings')} of savings`)
+  if (deposits.length > 0) {
+    const total = deposits.reduce((sum, step) => sum + step.amountCents, 0)
+    takes.push(`break ${deposits.length === 1 ? 'a fixed deposit' : `${deposits.length} fixed deposits`} for ${formatUsd(total, 'deposits')}`)
+  }
+  const tail = takes.join(' and ')
   if (head !== '' && tail !== '') return `${head} and take ${tail}`
   return head !== '' ? head : `Take ${tail}`
 }

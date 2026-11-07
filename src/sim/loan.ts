@@ -6,7 +6,7 @@
 // the draw. Early repayment is free and lowers later instalments. Cash pays the
 // payment when cash covers it. Otherwise it stays pending until the end of that
 // day. The end-of-day sale closes whole positions from the worst unrealized money
-// loss, then savings. It never changes lifestyle and it never pays the expense bill.
+// loss, then savings, then fixed deposits (broken whole, latest maturity first). It never changes lifestyle and it never pays the expense bill.
 // `previewLoanSale` runs the same sale on a copy so the UI can show it first.
 
 import { readPolicyRatePercent } from './accounts.ts'
@@ -20,6 +20,7 @@ import {
   RUN_LENGTH_DAYS,
   SAVINGS_PAY_INTERVAL_DAYS,
 } from './constants.ts'
+import { breakDepositForLoan, depositsForForcedSale } from './deposits.ts'
 import { netWorthCents } from './fi.ts'
 import { previewCopy } from './past.ts'
 import { activeJob } from './jobs.ts'
@@ -567,6 +568,14 @@ export function settleMissedLoanInterest(state: GameState, defs: MarketDefinitio
       events.push(sale)
     }
   }
+  // Fixed deposits are the last resort: broken whole (penalty, interest lost), latest maturity first.
+  for (const deposit of depositsForForcedSale(state)) {
+    if (state.accounts.cashCents >= pendingPaymentCents(state.loan)) break
+    const broken = breakDepositForLoan(state, deposit.id)
+    events.push(broken)
+    const sale: ForcedSaleEvent = { kind: 'forcedSale', day, source: 'deposit', amountCents: broken.paidCents }
+    events.push(sale)
+  }
   if (state.lifestyle.home !== home || state.lifestyle.infoFeed !== infoFeed) {
     throw new Error('loan forced sale changed lifestyle')
   }
@@ -625,12 +634,12 @@ export function estimatedPaymentCents(state: GameState, defs: MarketDefinitions)
   return nextLoanPayment(state, defs)?.totalCents ?? 0
 }
 
-/** What End day sells for a pending loan payment. `source` is an asset id or `savings`. */
+/** What End day sells for a pending loan payment. `source` is an asset id, `savings` or `deposit`. */
 export type LoanSalePreview = {
   /** The pending payment. 0 means nothing is pending and nothing sells. */
   dueCents: number
   cashCents: number
-  /** Positions in sale order, then savings. `amountCents` is what each step moves to cash. */
+  /** Positions in sale order, then savings, then deposits. `amountCents` is what each step moves to cash. */
   steps: Array<{ source: string; amountCents: number }>
   /** True when the sale still cannot pay the payment, so the run is lost. */
   endsRun: boolean

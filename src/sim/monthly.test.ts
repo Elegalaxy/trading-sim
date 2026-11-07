@@ -315,4 +315,38 @@ describe('monthly cycle, bills, and the shortfall choice', () => {
     expect(stuck.loan.balanceCents).toBe(1_000)
     debugMonthly(`partial-loan loss ${formatEvent(check)} balance=${stuck.loan.balanceCents}`)
   })
+  it('counts the break value of a deposit toward the bill, so locked money does not end the run', () => {
+    const defs = market()
+    const game = createGame(defs, 'locked')
+    // $1,500 locked for 90 days. Everything else is gone and the loan room is used up.
+    applyCommand(game, defs, { type: 'openDeposit', amountCents: 150_000, termDays: 90, from: 'cash' })
+    game.accounts.cashCents = 0
+    game.accounts.tradingCents = 0
+    game.loan.balanceCents = LOAN_BASE_CENTS
+    advance(game, defs, 30)
+    const check = coverable(game)
+    // Break value: principal less 2 percent.
+    expect(check.depositsCents).toBe(147_000)
+    expect(check.totalCents).toBe(147_000)
+    expect(check.totalCents).toBeGreaterThanOrEqual(check.billCents)
+    expect(game.runEnd).toBeNull()
+    expect(game.bill).not.toBeNull()
+    expect(formatEvent(check)).toContain('deposits=147000')
+    // The same position without the deposit is lost (see the loss test above).
+    applyCommand(game, defs, { type: 'breakDeposit', id: 1 })
+    expect(game.accounts.savingsCents).toBe(147_000)
+    expect(game.runEnd).toBeNull()
+    applyCommand(game, defs, { type: 'transfer', from: 'savings', to: 'cash', amountCents: BASE_MONTHLY_EXPENSES_CENTS })
+    applyCommand(game, defs, { type: 'payBill' })
+    expect(game.bill).toBeNull()
+    expect(game.runEnd).toBeNull()
+    debugMonthly(`deposit cover ${formatEvent(check)}`)
+  })
+
+  it('omits the deposits part of the cover check when none are open', () => {
+    const defs = market()
+    const game = createGame(defs, 'nodep')
+    advance(game, defs, 30)
+    expect(coverable(game).depositsCents).toBeUndefined()
+  })
 })

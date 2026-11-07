@@ -7,13 +7,14 @@
 // next endDay is blocked. The check never sells a position or moves savings.
 // The loan payment (accrued interest plus an instalment) is assessed in this cycle,
 // after salary and before the bill.
-// The cover total includes unused loan room. The bill itself is never paid
-// by a forced sale.
+// The cover total includes unused loan room and the break value of fixed deposits. The bill
+// itself is never paid by a forced sale.
 // The amount is base expenses plus lifestyle tiers, then the staff discount.
 // A later downgrade does not change a bill that is already pending.
 
 import { assertPlayerAccounts, payAccruedSavings } from './accounts.ts'
 import { SAVINGS_PAY_INTERVAL_DAYS } from './constants.ts'
+import { totalBreakValueCents } from './deposits.ts'
 import { initialFi, netWorthCents } from './fi.ts'
 import { billDueForJob, paySalary } from './jobs.ts'
 import { assessLoanInterest, unusedLoanLimitCents } from './loan.ts'
@@ -50,6 +51,7 @@ type CoverableParts = {
   savingsCents: number
   tradingEquityCents: number
   loanLimitCents: number
+  depositsCents: number
   totalCents: number
   billCents: number
 }
@@ -158,11 +160,13 @@ function measureCoverable(state: GameState, defs: MarketDefinitions, billCents: 
   if (!Number.isSafeInteger(tradingEquityCents)) {
     throw new Error(`coverable trading equity is not a safe integer, received ${describeValue(tradingEquityCents)}`)
   }
-  const totalCents = cashCents + savingsCents + tradingEquityCents + loanLimitCents
+  // Locked money can still be broken for the bill, so its break value counts.
+  const depositsCents = requireNonNegative(totalBreakValueCents(state), 'coverable deposits')
+  const totalCents = cashCents + savingsCents + tradingEquityCents + loanLimitCents + depositsCents
   if (!Number.isSafeInteger(totalCents)) {
     throw new Error(`coverable total is not a safe integer, received ${describeValue(totalCents)}`)
   }
-  return { cashCents, savingsCents, tradingEquityCents, loanLimitCents, totalCents, billCents: bill }
+  return { cashCents, savingsCents, tradingEquityCents, loanLimitCents, depositsCents, totalCents, billCents: bill }
 }
 
 function coverableEvent(day: number, parts: CoverableParts): CoverableCheckEvent {
@@ -173,6 +177,7 @@ function coverableEvent(day: number, parts: CoverableParts): CoverableCheckEvent
     savingsCents: parts.savingsCents,
     tradingEquityCents: parts.tradingEquityCents,
     loanLimitCents: parts.loanLimitCents,
+    ...(parts.depositsCents > 0 ? { depositsCents: parts.depositsCents } : {}),
     totalCents: parts.totalCents,
     billCents: parts.billCents,
   }

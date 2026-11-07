@@ -40,6 +40,13 @@ import {
   recordJobDay,
   sectionForJob,
 } from './jobs.ts'
+import {
+  assertDeposits,
+  initialDeposits,
+  interpretBreakDeposit,
+  interpretOpenDeposit,
+  settleDeposits,
+} from './deposits.ts'
 import { applyFiCheck, finishAtDayLimit, initialFi } from './fi.ts'
 import { applyEmployerDay, assertEmployer, createEmployer } from './layoffs.ts'
 import {
@@ -149,6 +156,8 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       kind !== 'coursePurchased' &&
       kind !== 'loanTaken' &&
       kind !== 'loanRepaid' &&
+      kind !== 'depositOpened' &&
+      kind !== 'depositBroken' &&
       kind !== 'liquidation' &&
       kind !== 'backstopWriteOff'
     ) {
@@ -205,7 +214,8 @@ function assertPending(pending: readonly CommandLogEvent[]): void {
       if (event.billCents <= 0) {
         throw new Error(`pending cover check bill must be > 0, received ${describeValue(event.billCents)}`)
       }
-      const sum = event.cashCents + event.savingsCents + event.tradingEquityCents + event.loanLimitCents
+      assertSafeInteger(event.depositsCents ?? 0, 'pending cover check deposits', false)
+      const sum = event.cashCents + event.savingsCents + event.tradingEquityCents + event.loanLimitCents + (event.depositsCents ?? 0)
       if (sum !== event.totalCents) {
         throw new Error(`pending cover check total ${event.totalCents} is not the sum of its parts ${sum}`)
       }
@@ -412,6 +422,7 @@ function assertGame(state: GameState, defs?: MarketDefinitions): void {
   }
   if (state.social !== undefined) assertSocial(state.social, state.market.day)
   if (state.employer !== undefined) assertEmployer(state.employer)
+  if (state.deposits !== undefined) assertDeposits(state.deposits)
 }
 
 /**
@@ -497,6 +508,7 @@ export function createGame(defs: MarketDefinitions, seed: string, start?: GameSt
     buildSocialDay(state.social, state.market, state.session, defs)
   }
   if (defs.layoffs !== undefined) state.employer = createEmployer(seed)
+  state.deposits = initialDeposits()
   refreshPerception(state)
   return state
 }
@@ -616,6 +628,12 @@ export function applyCommand(state: GameState, defs: MarketDefinitions, cmd: unk
   } else if (type === 'repayLoan') {
     const outcome = interpretRepayLoan(state, cmd)
     state.pending.push(outcome.event)
+  } else if (type === 'openDeposit') {
+    const outcome = interpretOpenDeposit(state, defs, cmd)
+    state.pending.push(outcome.event)
+  } else if (type === 'breakDeposit') {
+    const outcome = interpretBreakDeposit(state, cmd)
+    state.pending.push(outcome.event)
   } else {
     const outcome = interpretCommand(state.accounts, state.market.day, cmd, state.loan.balanceCents)
     state.pending.push(outcome.event)
@@ -651,11 +669,15 @@ export function settleTradingAccount(
 function savingsInterestReceived(events: readonly AccountLogEvent[]): number {
   let total = 0
   for (const event of events) {
-    if (event.kind !== 'savingsInterestPaid') continue
-    if (!Number.isSafeInteger(event.amountCents) || event.amountCents < 0) {
-      throw new Error(`savings interest paid must be a safe integer >= 0, received ${describeValue(event.amountCents)}`)
+    // Deposit interest is passive income like savings interest.
+    let cents: number
+    if (event.kind === 'savingsInterestPaid') cents = event.amountCents
+    else if (event.kind === 'depositMatured') cents = event.interestCents
+    else continue
+    if (!Number.isSafeInteger(cents) || cents < 0) {
+      throw new Error(`interest received must be a safe integer >= 0, received ${describeValue(cents)}`)
     }
-    total += event.amountCents
+    total += cents
     if (!Number.isSafeInteger(total)) {
       throw new Error(`savings interest total is not a safe integer, received ${describeValue(total)}`)
     }
@@ -714,6 +736,8 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const pruned = pruneExits(state)
   const policyRate = readPolicyRatePercent(state.market, defs)
   const savings = [...settleSavings(state.accounts, state.market.day, policyRate), ...accrueLoanInterest(state, defs)]
+  // Deposits mature after savings accrual: principal plus interest go into savings before any bill is checked.
+  const matured = settleDeposits(state)
   const endEquity = tradingEquity(state, defs).equity
   recordPastDay(state, closedBars, endEquity)
   const statEvents = applyEndOfDayStats(state, workedJob, sleptHours, equityAtStart, endEquity, traded)
@@ -721,9 +745,9 @@ export function endDay(state: GameState, defs: MarketDefinitions): GameState {
   const employerEvents = applyEmployerDay(state, defs)
   const jobEvents = applyDueJobChange(state)
   const monthly = isMonthlyCycleDay(state.market.day) ? applyMonthlyCycle(state, defs) : []
-  const fi = applyFiCheck(state, defs, savingsInterestReceived(monthly))
+  const fi = applyFiCheck(state, defs, savingsInterestReceived([...matured, ...monthly]))
   state.pending = []
-  state.log = [...commands, ...resting, ...loanEvents, ...traded, ...pruned, ...savings, ...statEvents, ...employerEvents, ...jobEvents, ...monthly, ...fi]
+  state.log = [...commands, ...resting, ...loanEvents, ...traded, ...pruned, ...savings, ...matured, ...statEvents, ...employerEvents, ...jobEvents, ...monthly, ...fi]
   const job = activeJob(state.job)
   state.section = sectionForJob(job)
   state.sleepHours = job.sleepHours

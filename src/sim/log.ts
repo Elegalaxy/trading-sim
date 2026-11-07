@@ -484,6 +484,7 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `savings=${formatNumber(event.savingsCents)}`,
         `tradingEquity=${formatNumber(event.tradingEquityCents)}`,
         `loanLimit=${formatNumber(event.loanLimitCents)}`,
+        ...(event.depositsCents === undefined ? [] : [`deposits=${formatNumber(event.depositsCents)}`]),
         `total=${formatNumber(event.totalCents)}`,
         `bill=${formatNumber(event.billCents)}`,
       ].join(' ')
@@ -663,6 +664,37 @@ export function formatEvent(event: LogEvent | AccountLogEvent | DistortionEvent)
         `job=${formatToken(event.job, 'job')}`,
         `amount=${formatNumber(event.amountCents)}`,
         `cash=${formatNumber(event.cashCents)}`,
+      ].join(' ')
+    case 'depositOpened':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=depositOpened',
+        `id=${formatNumber(event.id)}`,
+        `principal=${formatNumber(event.principalCents)}`,
+        `term=${formatNumber(event.termDays)}`,
+        `annualRate=${formatNumber(event.annualRate)}`,
+        `maturityDay=${formatNumber(event.maturityDay)}`,
+        `from=${formatToken(event.from, 'from')}`,
+      ].join(' ')
+    case 'depositBroken':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=depositBroken',
+        `id=${formatNumber(event.id)}`,
+        `principal=${formatNumber(event.principalCents)}`,
+        `paid=${formatNumber(event.paidCents)}`,
+        `penalty=${formatNumber(event.penaltyCents)}`,
+        `forced=${event.forced ? 'true' : 'false'}`,
+        `to=${formatToken(event.to, 'to')}`,
+      ].join(' ')
+    case 'depositMatured':
+      return [
+        `day=${formatNumber(event.day)}`,
+        'kind=depositMatured',
+        `id=${formatNumber(event.id)}`,
+        `principal=${formatNumber(event.principalCents)}`,
+        `interest=${formatNumber(event.interestCents)}`,
+        `savings=${formatNumber(event.savingsCents)}`,
       ].join(' ')
     default: {
       const unknown: never = event

@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { pendingPaymentCents, previewLoanSale } from '../sim/loan.ts'
 import type { GameState } from '../sim/types.ts'
+import { BreakDepositButtons } from './Deposits.tsx'
 import { formatUsd } from './money.ts'
 import { dispatch } from './store.ts'
 
@@ -77,7 +78,13 @@ export function LoanDueBanner({ game }: { game: GameState | null }) {
                 {preview.steps.map((step, index) => (
                   <tr key={`${step.source}-${index}`}>
                     <td>{index + 1}.</td>
-                    <td>{step.source === 'savings' ? 'Savings' : `Position ${step.source}`}</td>
+                    <td>
+                      {step.source === 'savings'
+                        ? 'Savings'
+                        : step.source === 'deposit'
+                          ? 'Fixed deposit (2% penalty, interest lost)'
+                          : `Position ${step.source}`}
+                    </td>
                     <td className="num">{formatUsd(step.amountCents, 'sale')}</td>
                   </tr>
                 ))}
@@ -106,6 +113,7 @@ export function LoanDueBanner({ game }: { game: GameState | null }) {
         >
           Withdraw savings
         </button>
+        <BreakDepositButtons game={game} />
         <span className="day-note">
           {game.section === 'market'
             ? 'Or sell positions yourself and move the proceeds to cash.'

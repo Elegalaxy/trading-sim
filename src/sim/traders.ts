@@ -5,9 +5,21 @@
 // the sum of base x mix equals the sum of base (the same every run), found by bisection.
 
 import { expectedDrift } from './drift.ts'
+import { affectedAssets } from './events.ts'
 import { depthCents } from './participants.ts'
 import { createRng, nextFloat } from './rng.ts'
-import { TRADER_TYPES, type AssetDefinition, type MarketDefinitions, type MarketState, type TraderBook, type TraderDefinitions, type TraderType } from './types.ts'
+import {
+  TRADER_TYPES,
+  type AssetDefinition,
+  type CalendarItemEvent,
+  type EventTypeDefinition,
+  type MarketDefinitions,
+  type MarketState,
+  type ScheduledEvent,
+  type TraderBook,
+  type TraderDefinitions,
+  type TraderType,
+} from './types.ts'
 
 function fail(message: string): never {
   throw new Error(`[DEBUG traders] ${message}`)
@@ -117,8 +129,8 @@ export function createTraderBook(defs: MarketDefinitions, seed: string, market: 
 }
 
 // ---------------------------------------------------------------------------------------------
-// Core engine (price-model plan, Step P2). Only the value and noise types trade here; informed,
-// news, consensus, crowd and trend stay at zero until P3 and P4. `planTraderStock` works out one
+// Core engine (price-model plan, Step P2) and information traders (Step P3). Value, noise, informed,
+// news and consensus trade here; crowd, trend and contrarian stay at zero until P4. `planTraderStock` works out one
 // stock's wanted trades and the raw move, `market.ts` applies the cap, and `commitTraderStock`
 // books what filled. Positions are dimensionless, in depth units: a trade of dq moves the price by
 // about dq x price. Nothing here draws: the one normal per stock comes from the market stream.
@@ -139,6 +151,8 @@ export type TraderPlan = {
   dq: Record<TraderType, number>
   /** The player's order flow in depth units (not a position). */
   playerDq: number
+  /** Today's per-event trades of the information types (already included in `dq`). Booked by `commitTraderStock`. */
+  trades: readonly TraderEventTrade[]
   rawMove: number
 }
 
@@ -175,6 +189,7 @@ export function planTraderStock(
   def: AssetDefinition,
   z: number,
   playerCents: number,
+  traderDay?: TraderDay,
 ): TraderPlan {
   const t = defs.traders
   const p = defs.participants
@@ -201,12 +216,17 @@ export function planTraderStock(
   const sigma = def.dailyVolatility * t.noiseShare * book.mix.noise
   dq.noise = t.types.noise.rate * (t.noiseAr * pos.noise + sigma * z - pos.noise)
 
+  const trades = traderDay?.trades[def.id] ?? []
+  // A position that is only being wound back (after its hold) is handed to the market without a price
+  // impact: the anchor, not the unwinding, decides where the price settles. See `TraderEventTrade.absorbed`.
+  for (const trade of trades) if (!trade.absorbed) dq[trade.type] += trade.dq
+
   const depth = depthCents(def, p)
   const playerDq = playerCents / depth
   let demand = playerDq
   for (const type of TRADER_TYPES) demand += dq[type]
   const depthScale = depthScaleFor(t, book.vol[def.id] ?? 0, def.dailyVolatility)
-  return { anchor, depthScale, depthCents: depth, previous, dq, playerDq, rawMove: (previous * demand) / depthScale }
+  return { anchor, depthScale, depthCents: depth, previous, dq, playerDq, trades, rawMove: (previous * demand) / depthScale }
 }
 
 /**
@@ -226,6 +246,12 @@ export function commitTraderStock(
   const book = state.participants?.book
   if (t === undefined || book === undefined) fail('traders model is not on')
   const pos = book.pos[def.id]
+  for (const trade of plan.trades) {
+    if (trade.dq === 0) continue
+    const share = trade.absorbed ? 1 : fillScale
+    book.eventPos[trade.key] = (book.eventPos[trade.key] ?? 0) + share * trade.dq
+    if (trade.absorbed) pos[trade.type] += trade.dq
+  }
   let others = 0
   for (const type of TRADER_TYPES) {
     pos[type] += fillScale * plan.dq[type]
@@ -235,4 +261,187 @@ export function commitTraderStock(
   const move = Math.abs(newPrice / plan.previous - 1)
   const vol = book.vol[def.id] ?? 0
   book.vol[def.id] = vol + t.volEwma * (move - vol)
+}
+
+// ---------------------------------------------------------------------------------------------
+// Information traders (price-model plan, Step P3). Each (event, stock, type) has a fixed full-size
+// target, written once to `book.eventPos` under `${eventId}|${asset}|${type}|target`, and a position
+// under `${eventId}|${asset}|${type}`. Sizes are fractions of the price (a position of 0.02 holds the
+// price 2% above where it would be). A day's target is the full size times a schedule factor of the
+// event's age (days since its event day, negative before it); the trade is rate x (target - position).
+//   informed   leaked events only: sign x W x min(1, magnitude / ref); ramps 1/3, 2/3, 1 over the
+//              three days before, holds through the event day and `informedHoldDays` more, then decays.
+//   consensus  every calendar release: the expected outcome's effect; ramps over `consensusRampDays`,
+//              holds through the release day, then decays over `consensusDecayDays`.
+//   news       on the event day only: efficiency x (public impact - priced in), where the public impact
+//              is the event type's average size (the true size is hidden) or the release's actual
+//              effect, and priced in is what informed, crowd and consensus traders already hold on it.
+//              Holds `newsHoldDays` days from the event day, then decays over `newsDecayDays`.
+// Fair value still moves exactly as the events say, so the anchor value traders aim at carries the
+// true size: a true size above the public impact keeps drifting up, one below it is pulled back.
+// Nothing draws. Keys are walked sorted so the order never depends on insertion.
+
+/**
+ * One information trader's wanted trade in one (event, stock), in depth units. `key` is the position key.
+ * `absorbed` marks a position being wound back to zero after its hold: it books in full and adds no
+ * demand, so the price is not pushed back by the unwinding (value traders and the anchor decide where
+ * it settles). Without it every event would give its whole move back as its news traders left.
+ */
+export type TraderEventTrade = { key: string; type: 'informed' | 'news' | 'consensus'; dq: number; absorbed: boolean }
+
+/** What the information traders do today, per stock. Built once per step by `startTraderDay`. */
+export type TraderDay = { trades: Record<string, TraderEventTrade[]> }
+
+const EVENT_TYPE_CACHE = new WeakMap<MarketDefinitions, ReadonlyMap<string, EventTypeDefinition>>()
+
+/** Event types by id, built once per definitions. */
+export function eventTypeMap(defs: MarketDefinitions): ReadonlyMap<string, EventTypeDefinition> {
+  let map = EVENT_TYPE_CACHE.get(defs)
+  if (map === undefined) {
+    map = new Map(defs.events.map((type) => [type.id, type]))
+    EVENT_TYPE_CACHE.set(defs, map)
+  }
+  return map
+}
+
+const TARGET_SUFFIX = '|target'
+// Informed money hears of an event at most this many days before it (the market rolls three days ahead).
+const INFORMED_RAMP_DAYS = 3
+
+function isInformationType(type: string): type is 'informed' | 'news' | 'consensus' {
+  return type === 'informed' || type === 'news' || type === 'consensus'
+}
+
+function positionKey(eventId: string, asset: string, type: TraderType): string {
+  return `${eventId}|${asset}|${type}`
+}
+
+/** Last age (days after the event day) at which a type still holds its full target. */
+function holdEnd(t: TraderDefinitions, type: 'informed' | 'news' | 'consensus'): number {
+  if (type === 'informed') return t.informedHoldDays
+  if (type === 'news') return t.newsHoldDays - 1
+  return 0
+}
+
+/** Full up to `holdEnd` days after the event day, then falls linearly to 0 over `decay` days. */
+function holdThenDecay(age: number, holdEnd: number, decay: number): number {
+  if (age <= holdEnd) return 1
+  return Math.max(0, 1 - (age - holdEnd) / decay)
+}
+
+/** The last age (days after the event day) with a non-zero target; after that a type only unwinds. */
+function lastTargetAge(t: TraderDefinitions, type: 'informed' | 'news' | 'consensus'): number {
+  return holdEnd(t, type) + (type === 'informed' ? t.informedDecayDays : type === 'news' ? t.newsDecayDays : t.consensusDecayDays)
+}
+
+/** Share of the full target wanted at this age. Before the event only informed and consensus build up. */
+function scheduleFactor(t: TraderDefinitions, type: 'informed' | 'news' | 'consensus', age: number): number {
+  if (type === 'informed') {
+    if (age < 0) return Math.max(0, Math.min(1, (INFORMED_RAMP_DAYS + 1 + age) / INFORMED_RAMP_DAYS))
+    return holdThenDecay(age, holdEnd(t, type), t.informedDecayDays)
+  }
+  if (type === 'consensus') {
+    if (age < 0) return Math.max(0, Math.min(1, (t.consensusRampDays + 1 + age) / t.consensusRampDays))
+    return holdThenDecay(age, holdEnd(t, type), t.consensusDecayDays)
+  }
+  return age < 0 ? 0 : holdThenDecay(age, holdEnd(t, type), t.newsDecayDays)
+}
+
+function eventAge(eventId: string, day: number): number {
+  return day - Number(eventId.split(':')[2])
+}
+
+function setTarget(book: TraderBook, eventId: string, asset: string, type: TraderType, size: number): void {
+  const key = positionKey(eventId, asset, type) + TARGET_SUFFIX
+  if (!Object.hasOwn(book.eventPos, key)) book.eventPos[key] = size
+}
+
+/**
+ * Register today's new targets and work out every information trader's wanted trade. `dueToday` is
+ * the ordinary events that fire today (read before they leave `state.scheduled`) and `calendarToday`
+ * today's calendar items. Mutates `book.eventPos` (new targets, finished keys removed). Call once per
+ * step before the stocks are priced, inside `traderModelOn`.
+ */
+export function startTraderDay(
+  state: MarketState,
+  defs: MarketDefinitions,
+  dueToday: readonly ScheduledEvent[],
+  calendarToday: readonly CalendarItemEvent[],
+): TraderDay {
+  const t = defs.traders
+  const participants = state.participants
+  const book = participants?.book
+  if (t === undefined || participants === undefined || book === undefined) fail('traders model is not on')
+  const types = eventTypeMap(defs)
+  const day = state.day
+  const stocks = defs.assets.filter((asset) => asset.kind === 'stock')
+  const effects = defs.calendar?.effects ?? []
+  const weight = (type: TraderType): number => t.types[type].base * book.mix[type]
+  const sectorEffect = (kind: string, outcome: string, sector: string | null): number | undefined =>
+    effects.find((row) => row.kind === kind && row.outcome === outcome && row.sector === sector)?.percent
+
+  // Informed money: events it has heard of, still waiting or firing today. The id list is filtered at the
+  // end of each step, so an event that fires today is still in it.
+  const leaked = new Set(participants.leaked)
+  for (const event of [...state.scheduled, ...dueToday]) {
+    if (!leaked.has(event.id)) continue
+    const type = types.get(event.typeId)
+    if (type === undefined) fail(`scheduled event ${event.id} has unknown type ${event.typeId}`)
+    const size = (event.direction === 'down' ? -1 : 1) * weight('informed') * Math.min(1, event.magnitudePercent / t.informedMagnitudeRefPercent)
+    for (const asset of affectedAssets(type.scope, event.target, defs.assets)) setTarget(book, event.id, asset, 'informed', size)
+  }
+
+  // Consensus: the expected outcome of every release already rolled, from the day it is first seen.
+  for (const roll of state.calendarRolls) {
+    if (roll.day < day) continue
+    const id = `calendar:${roll.kind}:${roll.day}`
+    for (const stock of stocks) {
+      const percent = sectorEffect(roll.kind, roll.expected, stock.sector)
+      if (percent !== undefined) setTarget(book, id, stock.id, 'consensus', percent / 100)
+    }
+  }
+
+  // News: on the event day, the surprise against what informed, crowd and consensus already hold.
+  const surprise = (eventId: string, asset: string, publicImpact: number): void => {
+    let pricedIn = 0
+    for (const type of ['informed', 'crowd', 'consensus'] as const) pricedIn += book.eventPos[positionKey(eventId, asset, type)] ?? 0
+    setTarget(book, eventId, asset, 'news', book.efficiency * (publicImpact - pricedIn))
+  }
+  for (const event of dueToday) {
+    const type = types.get(event.typeId)
+    if (type === undefined) fail(`scheduled event ${event.id} has unknown type ${event.typeId}`)
+    const impact = ((event.direction === 'down' ? -1 : 1) * (type.magnitudeMin + type.magnitudeMax)) / 2 / 100
+    for (const asset of affectedAssets(type.scope, event.target, defs.assets)) surprise(event.id, asset, impact)
+  }
+  for (const item of calendarToday) {
+    const id = `calendar:${item.item}:${item.day}`
+    for (const stock of stocks) {
+      const percent = sectorEffect(item.item, item.outcome, stock.sector)
+      if (percent !== undefined) surprise(id, stock.id, percent / 100)
+    }
+  }
+
+  const trades: Record<string, TraderEventTrade[]> = {}
+  for (const stock of stocks) trades[stock.id] = []
+  const keys = Object.keys(book.eventPos)
+    .filter((key) => key.endsWith(TARGET_SUFFIX))
+    .sort()
+  for (const targetKey of keys) {
+    const posKey = targetKey.slice(0, -TARGET_SUFFIX.length)
+    const [eventId, asset, type] = posKey.split('|')
+    if (eventId === undefined || asset === undefined || type === undefined || !isInformationType(type)) fail(`bad event key ${targetKey}`)
+    const age = eventAge(eventId, day)
+    const position = book.eventPos[posKey] ?? 0
+    if (age > lastTargetAge(t, type) && Math.abs(position) < 1e-9) {
+      delete book.eventPos[targetKey]
+      delete book.eventPos[posKey]
+      continue
+    }
+    const list = trades[asset]
+    if (list === undefined) continue
+    const target = book.eventPos[targetKey] * scheduleFactor(t, type, age)
+    const dq = t.types[type].rate * (target - position)
+    list.push({ key: posKey, type, dq, absorbed: age > holdEnd(t, type) && dq * position < 0 })
+  }
+  return { trades }
 }

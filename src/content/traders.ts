@@ -25,7 +25,9 @@ export const TRADER_DEFINITIONS: TraderDefinitions = {
   // `expectedDrift` and a mean log change sits 0.016 below the simple mean; 0.0005 (0.05 points) puts the
   // anchor's mean log change at the premium.
   carryCorrectionPerDay: 0.0005,
-  anchorHalfLifeDays: 3,
+  // P3: 3 days (the plan's first guess) made value traders sell every fresh news move against a stale
+  // anchor, so an average event gave back about a third of its day-0 move before recovering; 1.5 halves that.
+  anchorHalfLifeDays: 1.5,
   valueDeadBand: 0.01,
   valueFullGap: 0.1,
   valueDeepGap: 0.2,
@@ -53,6 +55,7 @@ export const TRADER_DEFINITIONS: TraderDefinitions = {
   contrarianFlowWeight: 0.5,
   contrarianFlowScale: 0.02,
   volEwma: 0.1,
-  volSens: 1,
+  // P3: at 1 the thinning fed on the news days' own volatility (13% of stock-days capped); 0.25 gives under 3%.
+  volSens: 0.25,
   depthScaleMin: 0.4,
 }

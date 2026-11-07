@@ -37,7 +37,15 @@ import {
 } from './participants.ts'
 import { assertFeedDefinitions, assertFeedState, publishFeed, type FiredHeadline } from './feed.ts'
 import { createRng, nextNormal } from './rng.ts'
-import { assertTraderDefinitions, commitTraderStock, createTraderBook, planTraderStock, traderModelOn } from './traders.ts'
+import {
+  assertTraderDefinitions,
+  commitTraderStock,
+  createTraderBook,
+  planTraderStock,
+  startTraderDay,
+  traderModelOn,
+  type TraderDay,
+} from './traders.ts'
 import {
   RNG_STREAM_NAMES,
   type AssetDefinition,
@@ -384,17 +392,19 @@ function priceWithTraders(
   def: AssetDefinition,
   z: number,
   playerCents: number,
+  traderDay: TraderDay,
 ): void {
   const day = state.day
   const asset = state.assets[def.id]
-  const plan = planTraderStock(state, defs, def, z, playerCents)
+  const plan = planTraderStock(state, defs, def, z, playerCents, traderDay)
   const { previous, rawMove } = plan
   const applied = applyCappedMove(previous, rawMove)
   const fillScale = applied.capped && rawMove !== 0 ? applied.delta / rawMove : 1
   const parts: ParticipantFlowEvent[] = []
-  for (const party of ['value', 'noise'] as const) {
+  for (const party of ['value', 'noise', 'informed', 'news', 'consensus'] as const) {
     const dq = plan.dq[party]
     if (dq === 0) continue
+    const events = [...new Set(plan.trades.filter((trade) => trade.type === party).map((trade) => trade.key.split('|')[0]))]
     parts.push({
       kind: 'participantFlow',
       day,
@@ -403,7 +413,7 @@ function priceWithTraders(
       demandCents: dq * plan.depthCents,
       depthCents: plan.depthCents,
       moveCents: dq * previous,
-      events: [],
+      events,
     })
   }
   const playerMove = plan.playerDq * previous
@@ -472,6 +482,8 @@ export function stepMarketDay(
   state.day += 1
   state.log = []
   const day = state.day
+  // Read before the due events leave `scheduled`: the information traders need them (traders model only).
+  const dueToday = state.scheduled.filter((event) => event.eventDay === day)
   const calendarEvents = beginCalendarDay(state, defs)
   for (const event of calendarEvents) state.log.push(event)
   const fired = firedHeadlines(state, defs, calendarEvents)
@@ -482,13 +494,14 @@ export function stepMarketDay(
   for (const event of effects) if (event.kind === 'effectApplied') inPlay.add(event.asset)
   const partyDay = startPartyDay(state, defs)
   const tradersOn = traderModelOn(state, defs)
+  const traderDay = tradersOn ? startTraderDay(state, defs, dueToday, calendarEvents) : undefined
 
   for (const def of defs.assets) {
     if (def.kind !== 'stock') continue
     const asset = state.assets[def.id]
     const z = nextNormal(state.streams.market)
-    if (tradersOn) {
-      priceWithTraders(state, defs, def, z, orderFlow?.[def.id] ?? 0)
+    if (traderDay !== undefined) {
+      priceWithTraders(state, defs, def, z, orderFlow?.[def.id] ?? 0, traderDay)
       continue
     }
     const previous = asset.priceCents

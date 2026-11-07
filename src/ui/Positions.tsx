@@ -8,6 +8,7 @@ import { formatSignedUsd, formatUsd, parseUsdToCents } from './money.ts'
 import { unrealizedCents } from './account.ts'
 import { reasonText } from './reasons.ts'
 import { dispatch, parsePositiveInteger } from './store.ts'
+import { moneyText, wholeNumberText } from './numberInput.ts'
 
 type PositionRow = {
   asset: string
@@ -265,7 +266,7 @@ function ExitsEditor({
               </span>
               <input
                 value={draft.text}
-                onChange={(event) => setText(event.target.value)}
+                onChange={(event) => setText(moneyText(event.target.value))}
                 inputMode="decimal"
                 autoComplete="off"
                 placeholder="none"
@@ -300,7 +301,7 @@ function ExitsEditor({
             <input
               value={sharesInput}
               placeholder={`all ${row.shares}`}
-              onChange={(event) => setSharesInput(event.target.value)}
+              onChange={(event) => setSharesInput(wholeNumberText(event.target.value))}
               inputMode="numeric"
               autoComplete="off"
               aria-label="Shares"

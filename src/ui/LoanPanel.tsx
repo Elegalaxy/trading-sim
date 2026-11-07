@@ -15,6 +15,7 @@ import { debugLog } from './debug.ts'
 import { loanWarning } from './loanText.ts'
 import { formatUsd, parseUsdToCents } from './money.ts'
 import { dispatch } from './store.ts'
+import { moneyText } from './numberInput.ts'
 
 function money(value: number, label: string): string {
   return formatUsd(value, label)
@@ -207,7 +208,7 @@ export function LoanPanel({ game }: { game: GameState | null }) {
                 value={takeText}
                 inputMode="decimal"
                 autoComplete="off"
-                onChange={(event) => setTakeText(event.target.value)}
+                onChange={(event) => setTakeText(moneyText(event.target.value))}
               />
             </label>
             <button
@@ -265,7 +266,7 @@ export function LoanPanel({ game }: { game: GameState | null }) {
                 value={repayText}
                 inputMode="decimal"
                 autoComplete="off"
-                onChange={(event) => setRepayText(event.target.value)}
+                onChange={(event) => setRepayText(moneyText(event.target.value))}
               />
             </label>
             <button

@@ -11,6 +11,7 @@ import { liquidationPrice, sharesForAmount, SIZE_MODES, SIZING_LEVERAGE, type Si
 import { accountSummary } from './account.ts'
 import { reasonText } from './reasons.ts'
 import { dispatch, parsePositiveInteger } from './store.ts'
+import { moneyText, wholeNumberText } from './numberInput.ts'
 
 type OrderQuote =
   | {
@@ -485,7 +486,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
               autoComplete="off"
               spellCheck={false}
               onChange={(event) => {
-                setLimitText(event.target.value)
+                setLimitText(moneyText(event.target.value))
                 setResultMessage(null)
               }}
             />
@@ -521,7 +522,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
             autoComplete="off"
             spellCheck={false}
             onChange={(event) => {
-              setAmountText(event.target.value)
+              setAmountText(mode === 'quantity' ? wholeNumberText(event.target.value) : moneyText(event.target.value))
               setResultMessage(null)
             }}
           />
@@ -536,7 +537,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
               inputMode="decimal"
               autoComplete="off"
               spellCheck={false}
-              onChange={(event) => setTpText(event.target.value)}
+              onChange={(event) => setTpText(moneyText(event.target.value))}
             />
           </label>
           <ExitSizeSelect id="order-tp-size" label="TP closes" value={tpSize} onChange={setTpSize} />
@@ -549,7 +550,7 @@ export function OrderPanel({ game, asset }: { game: GameState | null; asset: str
               inputMode="decimal"
               autoComplete="off"
               spellCheck={false}
-              onChange={(event) => setSlText(event.target.value)}
+              onChange={(event) => setSlText(moneyText(event.target.value))}
             />
           </label>
           <ExitSizeSelect id="order-sl-size" label="SL closes" value={slSize} onChange={setSlSize} />

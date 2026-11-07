@@ -4,6 +4,7 @@ import { debugLog } from './debug.ts'
 import { Deposits } from './Deposits.tsx'
 import { formatUsd, parseUsdToCents } from './money.ts'
 import { dispatch } from './store.ts'
+import { moneyText } from './numberInput.ts'
 
 function isAccountName(value: string): value is AccountName {
   return (ACCOUNT_NAMES as readonly string[]).includes(value)
@@ -155,7 +156,7 @@ export function Accounts({ game }: { game: GameState | null }) {
             autoComplete="off"
             spellCheck={false}
             onChange={(event) => {
-              setAmountText(event.target.value)
+              setAmountText(moneyText(event.target.value))
               setResultMessage(null)
             }}
           />

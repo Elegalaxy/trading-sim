@@ -16,6 +16,7 @@ import type { Deposit, DepositSource, GameState } from '../sim/types.ts'
 import { debugLog } from './debug.ts'
 import { formatUsd, parseUsdToCents } from './money.ts'
 import { dispatch } from './store.ts'
+import { moneyText } from './numberInput.ts'
 
 function money(value: number, label: string): string {
   return formatUsd(value, label)
@@ -213,7 +214,7 @@ export function Deposits({ game }: { game: GameState | null }) {
             autoComplete="off"
             spellCheck={false}
             onChange={(event) => {
-              setAmountText(event.target.value)
+              setAmountText(moneyText(event.target.value))
               setMessage(null)
             }}
           />

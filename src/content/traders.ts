@@ -1,19 +1,22 @@
 // Placeholder trader numbers (price-model plan, Step P1). Not wired into MARKET_DEFINITIONS
-// until Step P6; tuned in Step P5. Base weights are in depth units: a base of 1 is a party that
-// holds one depth's worth of the stock at a full signal.
+// until Step P6; tuned in Step P5. Base weights are in depth units: a position of 1 would be one
+// whole depth, which moves the price by 100%. Value at 0.1 is a party that holds 10% of a depth
+// at a full signal (a 10% gap). Scaled down from the first draft (value 3) in Step P2: at 3 a
+// single day's wanted trade is 150% of the price and the 8% cap binds every day. Noise ignores
+// its base except through the normalisation: its size is dailyVolatility x noiseShare x mix.
 
 import type { TraderDefinitions } from '../sim/types.ts'
 
 export const TRADER_DEFINITIONS: TraderDefinitions = {
   types: {
-    value: { base: 3, mixMin: 0.5, mixMax: 1.5, rate: 0.5 },
-    noise: { base: 1, mixMin: 0.5, mixMax: 1.5, rate: 1 },
-    informed: { base: 1, mixMin: 0.3, mixMax: 2, rate: 0.7 },
-    news: { base: 1, mixMin: 0.5, mixMax: 1.5, rate: 1 },
-    consensus: { base: 1, mixMin: 0.5, mixMax: 1.5, rate: 0.7 },
-    crowd: { base: 1, mixMin: 0.3, mixMax: 2.5, rate: 0.6 },
-    trend: { base: 0.5, mixMin: 0.3, mixMax: 2, rate: 0.5 },
-    contrarian: { base: 0.5, mixMin: 0.3, mixMax: 2, rate: 0.5 },
+    value: { base: 0.1, mixMin: 0.5, mixMax: 1.5, rate: 0.5 },
+    noise: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 1 },
+    informed: { base: 0.03, mixMin: 0.3, mixMax: 2, rate: 0.7 },
+    news: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 1 },
+    consensus: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 0.7 },
+    crowd: { base: 0.03, mixMin: 0.3, mixMax: 2.5, rate: 0.6 },
+    trend: { base: 0.015, mixMin: 0.3, mixMax: 2, rate: 0.5 },
+    contrarian: { base: 0.015, mixMin: 0.3, mixMax: 2, rate: 0.5 },
   },
   efficiencyMin: 0.5,
   efficiencyMax: 1.3,

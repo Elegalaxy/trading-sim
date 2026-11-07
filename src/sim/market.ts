@@ -2,6 +2,8 @@
 // Price noise draws the market stream. Drift, event rolls, and the calendar draw the events stream.
 // The day-ahead feed draws the info stream, and only for rumours. Distortion is not drawn.
 // Mutates `state` and returns it: the streams inside the state advance in place.
+// With `defs.traders` and a trader book (price-model plan, Step P2) stocks are priced by
+// `priceWithTraders` instead of the pull-plus-noise formula; otherwise the code below is unchanged.
 
 import {
   assertCalendarDefinitions,
@@ -35,8 +37,10 @@ import {
 } from './participants.ts'
 import { assertFeedDefinitions, assertFeedState, publishFeed, type FiredHeadline } from './feed.ts'
 import { createRng, nextNormal } from './rng.ts'
+import { assertTraderDefinitions, commitTraderStock, createTraderBook, planTraderStock, traderModelOn } from './traders.ts'
 import {
   RNG_STREAM_NAMES,
+  type AssetDefinition,
   type AssetState,
   type CalendarItemEvent,
   type EffectAppliedEvent,
@@ -63,6 +67,7 @@ function assertDefinitions(defs: MarketDefinitions): void {
     throw new Error(`market definitions must be an object, received ${describeValue(defs)}`)
   }
   if (defs.participants !== undefined) assertParticipantDefinitions(defs.participants)
+  if (defs.traders !== undefined) assertTraderDefinitions(defs.traders)
   if (!Array.isArray(defs.assets) || defs.assets.length === 0) {
     throw new Error(`market definitions assets must be a non-empty array, received ${describeValue(defs.assets)}`)
   }
@@ -326,6 +331,8 @@ export function createMarket(defs: MarketDefinitions, seed: string): MarketState
   }
   const participants = createParticipants(defs, seed)
   if (participants !== undefined) state.participants = participants
+  // The traders model needs the participants' depth and feed state; without them there is no book.
+  if (participants !== undefined && defs.traders !== undefined) participants.book = createTraderBook(defs, seed, state)
   // Days 1–3 are rolled now, at the starting environment, before any drift.
   // The standard calendar starts on day 10, so this loop draws no calendar float.
   for (let eventDay = 1; eventDay <= EVENT_LOOKAHEAD_DAYS; eventDay += 1) {
@@ -365,6 +372,80 @@ function tagCalendarEffects(events: Array<EffectAppliedEvent | FairValueChangeEv
 }
 
 /**
+ * One stock's price step under the traders model (price-model plan, Step P2). Value traders pull
+ * toward the lagged anchor, noise traders add an AR(1) wobble from the stock's one normal, the
+ * player's order flow adds its demand, and market makers thin the depth when the stock has been
+ * volatile. The raw move goes through the same cent rounding and 8% cap as the current model; the
+ * share that filled scales the positions, so an unfilled part is still wanted tomorrow.
+ */
+function priceWithTraders(
+  state: MarketState,
+  defs: MarketDefinitions,
+  def: AssetDefinition,
+  z: number,
+  playerCents: number,
+): void {
+  const day = state.day
+  const asset = state.assets[def.id]
+  const plan = planTraderStock(state, defs, def, z, playerCents)
+  const { previous, rawMove } = plan
+  const applied = applyCappedMove(previous, rawMove)
+  const fillScale = applied.capped && rawMove !== 0 ? applied.delta / rawMove : 1
+  const parts: ParticipantFlowEvent[] = []
+  for (const party of ['value', 'noise'] as const) {
+    const dq = plan.dq[party]
+    if (dq === 0) continue
+    parts.push({
+      kind: 'participantFlow',
+      day,
+      asset: def.id,
+      party,
+      demandCents: dq * plan.depthCents,
+      depthCents: plan.depthCents,
+      moveCents: dq * previous,
+      events: [],
+    })
+  }
+  const playerMove = plan.playerDq * previous
+  if (plan.playerDq !== 0) {
+    parts.push({
+      kind: 'participantFlow',
+      day,
+      asset: def.id,
+      party: 'player',
+      demandCents: playerCents,
+      depthCents: plan.depthCents,
+      moveCents: playerMove,
+      events: [],
+    })
+  }
+  const noiseEvent: NoiseRollEvent = { kind: 'noiseRoll', day, asset: def.id, z }
+  const priceEvent: PriceStepEvent = {
+    kind: 'priceStep',
+    day,
+    asset: def.id,
+    previous,
+    fair: asset.fairValue,
+    anchor: plan.anchor,
+    pull: plan.dq.value * previous,
+    noise: plan.dq.noise * previous,
+    ...(plan.playerDq === 0 ? {} : { flow: playerMove }),
+    ...(plan.depthScale < 1 ? { depthScale: plan.depthScale } : {}),
+    ...(applied.capped ? { fillScale } : {}),
+    rawMove,
+    cappedMove: applied.delta,
+    capped: applied.capped,
+    newPrice: applied.newPrice,
+    gapAfter: plan.anchor - applied.newPrice,
+  }
+  state.log.push(noiseEvent)
+  for (const item of parts) state.log.push(item)
+  state.log.push(priceEvent)
+  commitTraderStock(state, defs, def, plan, fillScale, applied.newPrice)
+  asset.priceCents = applied.newPrice
+}
+
+/**
  * Advance one day, in this step's end-of-day order:
  * apply calendar outcome and event effects to fair value, step prices, drift the environment,
  * pre-roll day+3, then generate the next day's feed on the info stream.
@@ -400,11 +481,16 @@ export function stepMarketDay(
   const inPlay = new Set<string>()
   for (const event of effects) if (event.kind === 'effectApplied') inPlay.add(event.asset)
   const partyDay = startPartyDay(state, defs)
+  const tradersOn = traderModelOn(state, defs)
 
   for (const def of defs.assets) {
     if (def.kind !== 'stock') continue
     const asset = state.assets[def.id]
     const z = nextNormal(state.streams.market)
+    if (tradersOn) {
+      priceWithTraders(state, defs, def, z, orderFlow?.[def.id] ?? 0)
+      continue
+    }
     const previous = asset.priceCents
     const fair = asset.fairValue
     const pull = ((fair - previous) * FAIR_VALUE_PULL_NUMERATOR) / FAIR_VALUE_PULL_DENOMINATOR

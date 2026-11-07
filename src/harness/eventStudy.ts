@@ -187,7 +187,7 @@ function readEffects(study: EventStudy, log: readonly LogEvent[]): void {
     if (event.kind === 'priceStep' && study.stockIds.has(event.asset)) {
       study.stockDays += 1
       if (event.capped) study.cappedStockDays += 1
-      study.maxGapPercent = Math.max(study.maxGapPercent, (Math.abs(event.gapAfter) / event.fair) * 100)
+      study.maxGapPercent = Math.max(study.maxGapPercent, (Math.abs(event.gapAfter) / (event.anchor ?? event.fair)) * 100)
       if (event.flow !== undefined) study.maxFlowPercent = Math.max(study.maxFlowPercent, (Math.abs(event.flow) / event.previous) * 100)
     }
     if (event.kind !== 'effectApplied' || event.dayIndex !== 0 || event.delta === 0) continue

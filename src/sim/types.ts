@@ -487,10 +487,16 @@ export type PriceStepEvent = {
   asset: string
   previous: number
   fair: number
+  /** Traders model only: fair value times the carry, the anchor value traders aim at. */
+  anchor?: number
   pull: number
   noise: number
   /** Cents moved by order-flow parties beyond the pull and the noise. Absent when 0. */
   flow?: number
+  /** Traders model only: market makers' depth scale, logged when below 1. */
+  depthScale?: number
+  /** Traders model only: share of the traders' wanted move that filled, logged when the cap bound. */
+  fillScale?: number
   rawMove: number
   cappedMove: number
   capped: boolean
@@ -503,7 +509,7 @@ export type ParticipantFlowEvent = {
   kind: 'participantFlow'
   day: number
   asset: string
-  party: 'informed' | 'news' | 'crowd' | 'momentum' | 'consensus' | 'player'
+  party: 'informed' | 'news' | 'crowd' | 'momentum' | 'consensus' | 'player' | 'value' | 'noise' | 'trend' | 'contrarian'
   /** Signed cents of demand. Positive buys. */
   demandCents: number
   depthCents: number

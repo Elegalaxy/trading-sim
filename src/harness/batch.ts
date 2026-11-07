@@ -3,11 +3,11 @@
 // moved from here. The per-day market log is not printed. Every batch also
 // prints the event study (eventStudy.ts), which reads only the market.
 
-import { MARKET_DEFINITIONS } from '../content/index.ts'
 import { createGame, endDay } from '../sim/game.ts'
 import { tradingEquity } from '../sim/trading.ts'
 import { RNG_STREAM_NAMES, type GameState, type LogEvent, type MarketDefinitions } from '../sim/types.ts'
 import { createEventStudy, finishStudyRun, recordStudyDay, startStudyRun, studyLines, type EventStudy } from './eventStudy.ts'
+import { definitionsFor, type ModelName } from './model.ts'
 import { csvRelativePath, reportLines, writeCsv, type BatchStats, type LargestMove, type RunRecord } from './report.ts'
 import { actDay, createBotMemory, createRandomStream, type StrategyName } from './strategies.ts'
 
@@ -19,6 +19,8 @@ export type BatchRequest = {
   days: number
   batch: number
   strategy: StrategyName
+  /** Market model; omitted means `current`. */
+  model?: ModelName
 }
 
 type RunTotals = {
@@ -249,9 +251,10 @@ export function runBatch(request: BatchRequest): void {
   if (!Number.isSafeInteger(request.days) || request.days < 1) {
     throw new Error(`[DEBUG batch] days must be a positive safe integer, received ${String(request.days)}`)
   }
-  const defs = MARKET_DEFINITIONS
+  const model = request.model ?? 'current'
+  const defs = definitionsFor(model)
   console.log(
-    `[DEBUG batch] seed=${request.seed} runs=${request.batch} days=${request.days} strategy=${request.strategy} index=${INDEX_ID}`,
+    `[DEBUG batch] seed=${request.seed} runs=${request.batch} days=${request.days} strategy=${request.strategy} index=${INDEX_ID}${model === 'current' ? '' : ` model=${model}`}`,
   )
   const stats: BatchStats = {
     runs: request.batch,

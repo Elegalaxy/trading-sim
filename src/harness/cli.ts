@@ -15,11 +15,13 @@ import type { GameState, LogEvent } from '../sim/types.ts'
 import { runBatch } from './batch.ts'
 import { careLines, careRows } from './care.ts'
 import { layoffLines, layoffRows } from './layoffs.ts'
+import { MODEL_NAMES, definitionsFor, isModelName, type ModelName } from './model.ts'
 import { STRATEGY_NAMES, isStrategyName, type StrategyName } from './strategies.ts'
 
 const USAGE = [
   'usage: npm run sim -- --seed <seed> --days <1-1000> [--quiet] [--asset <id>] [--events-only] [--feed]',
   `       npm run sim -- --seed <seed> --days <1-1000> --batch <1-5000> --strategy <${STRATEGY_NAMES.join('|')}>`,
+  `       add --model <${MODEL_NAMES.join('|')}> to a single or batch run to choose the price model`,
   '       npm run sim -- --seed <seed> --days <1-1000> --care <1-5000>',
   '       npm run sim -- --seed <seed> --days <1-1000> --layoffs <1-5000>',
 ].join('\n')
@@ -37,6 +39,7 @@ type SingleOptions = {
   eventsOnly: boolean
   feed: boolean
   asset: string | undefined
+  model: ModelName
 }
 
 type BatchOptions = {
@@ -45,6 +48,7 @@ type BatchOptions = {
   days: number
   batch: number
   strategy: StrategyName
+  model: ModelName
 }
 
 type CareOptions = {
@@ -140,6 +144,7 @@ function parseArgs(argv: readonly string[]): CliOptions {
   let eventsOnly = false
   let feed = false
   let asset: string | undefined
+  let model: string | undefined
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i] ?? ''
@@ -204,6 +209,13 @@ function parseArgs(argv: readonly string[]): CliOptions {
       i += read.consumed
       continue
     }
+    if (name === '--model') {
+      if (model !== undefined) fail('duplicate --model')
+      const read = readOptionValue(argv, i, 'model', inline)
+      model = read.value
+      i += read.consumed
+      continue
+    }
     if (name === '--strategy') {
       if (strategy !== undefined) fail('duplicate --strategy')
       const read = readOptionValue(argv, i, 'strategy', inline)
@@ -222,7 +234,13 @@ function parseArgs(argv: readonly string[]): CliOptions {
     fail(`missing ${missing.join(' and ')}`, true)
   }
 
+  if (model !== undefined && !isModelName(model)) {
+    fail(`unknown model ${JSON.stringify(model)}. models: ${MODEL_NAMES.join(', ')}`)
+  }
+  const chosenModel: ModelName = model === undefined || !isModelName(model) ? 'current' : model
+
   if (layoffs !== undefined) {
+    if (model !== undefined) fail('--layoffs cannot be combined with --model')
     if (care !== undefined || batch !== undefined || strategy !== undefined || quiet || eventsOnly || feed || asset !== undefined) {
       fail('--layoffs cannot be combined with other options')
     }
@@ -230,6 +248,7 @@ function parseArgs(argv: readonly string[]): CliOptions {
   }
 
   if (care !== undefined) {
+    if (model !== undefined) fail('--care cannot be combined with --model')
     if (batch !== undefined || strategy !== undefined || quiet || eventsOnly || feed || asset !== undefined) {
       fail('--care cannot be combined with other options')
     }
@@ -248,10 +267,10 @@ function parseArgs(argv: readonly string[]): CliOptions {
     if (quiet || eventsOnly || feed || asset !== undefined) {
       fail('--batch cannot be combined with --quiet, --asset, --events-only, or --feed')
     }
-    return { mode: 'batch', seed, days, batch, strategy }
+    return { mode: 'batch', seed, days, batch, strategy, model: chosenModel }
   }
 
-  return { mode: 'single', seed, days, quiet, eventsOnly, feed, asset }
+  return { mode: 'single', seed, days, quiet, eventsOnly, feed, asset, model: chosenModel }
 }
 
 function isPriceKind(kind: LogEvent['kind']): boolean {
@@ -372,7 +391,7 @@ function closeTable(ids: readonly string[], rows: readonly CloseRow[]): string[]
 }
 
 function run(options: SingleOptions): void {
-  const defs = MARKET_DEFINITIONS
+  const defs = definitionsFor(options.model)
   const ids = defs.assets.map((asset) => asset.id)
   const game = createGame(defs, options.seed)
   console.log(`[sim] seed=${options.seed} days=${options.days} assets=${ids.join(',')}`)

@@ -1,11 +1,13 @@
-// Trader definitions check and per-run trader book (price-model plan, Step P1).
-// No behaviour yet: nothing reads the book. The mix is drawn once from the market stream of
+// Trader definitions check, per-run trader book (price-model plan, Step P1) and the core engine
+// (Step P2, at the end of this file). The mix is drawn once from the market stream of
 // `${seed}#traders` (one float per type in fixed order, then one for news efficiency), so the
 // four main streams keep their draw order. Mix is clamped to each type's range and scaled so
 // the sum of base x mix equals the sum of base (the same every run), found by bisection.
 
+import { expectedDrift } from './drift.ts'
+import { depthCents } from './participants.ts'
 import { createRng, nextFloat } from './rng.ts'
-import { TRADER_TYPES, type MarketDefinitions, type MarketState, type TraderBook, type TraderDefinitions, type TraderType } from './types.ts'
+import { TRADER_TYPES, type AssetDefinition, type MarketDefinitions, type MarketState, type TraderBook, type TraderDefinitions, type TraderType } from './types.ts'
 
 function fail(message: string): never {
   throw new Error(`[DEBUG traders] ${message}`)
@@ -112,4 +114,122 @@ export function createTraderBook(defs: MarketDefinitions, seed: string, market: 
     book.lastFlow[asset.id] = 0
   }
   return book
+}
+
+// ---------------------------------------------------------------------------------------------
+// Core engine (price-model plan, Step P2). Only the value and noise types trade here; informed,
+// news, consensus, crowd and trend stay at zero until P3 and P4. `planTraderStock` works out one
+// stock's wanted trades and the raw move, `market.ts` applies the cap, and `commitTraderStock`
+// books what filled. Positions are dimensionless, in depth units: a trade of dq moves the price by
+// about dq x price. Nothing here draws: the one normal per stock comes from the market stream.
+
+/** True when the traders model prices today's step. `state.day` is the day being computed. */
+export function traderModelOn(state: MarketState, defs: MarketDefinitions): boolean {
+  const book = state.participants?.book
+  return defs.traders !== undefined && defs.participants !== undefined && book !== undefined && state.day >= book.activeFromDay
+}
+
+/** One stock's day before the cap: the wanted trade per type and the raw move in cents. */
+export type TraderPlan = {
+  anchor: number
+  depthScale: number
+  depthCents: number
+  previous: number
+  /** Wanted trade per type, in depth units. Types that are not active yet are 0. */
+  dq: Record<TraderType, number>
+  /** The player's order flow in depth units (not a position). */
+  playerDq: number
+  rawMove: number
+}
+
+function clampNumber(value: number, low: number, high: number): number {
+  return Math.min(high, Math.max(low, value))
+}
+
+/** Value traders' target position: dead band, linear to full weight, steeper beyond the deep gap, capped. */
+export function valueTarget(t: TraderDefinitions, weight: number, price: number, seenAnchor: number): number {
+  const gap = seenAnchor / price - 1
+  const size = Math.abs(gap)
+  if (size <= t.valueDeadBand) return 0
+  let multiple = Math.min(1, (size - t.valueDeadBand) / t.valueFullGap)
+  if (size > t.valueDeepGap) multiple += (t.valueDeepSlope * (size - t.valueDeepGap)) / t.valueFullGap
+  multiple = Math.min(multiple, t.valueMaxMultiple)
+  return weight * Math.sign(gap) * multiple
+}
+
+/** Market makers' depth scale from the volatility EWMA: thinner when a stock has been moving more than usual. */
+export function depthScaleFor(t: TraderDefinitions, vol: number, dailyVolatility: number): number {
+  if (!(dailyVolatility > 0)) return 1
+  const excess = Math.max(0, vol / dailyVolatility - 1)
+  return clampNumber(1 / (1 + t.volSens * excess), t.depthScaleMin, 1)
+}
+
+/**
+ * Advance the anchor (carry, lagged anchor) and work out the wanted trades. Mutates the book's
+ * `carry` and `seenAnchor`. `z` is the stock's single market-stream normal. Call once per stock
+ * per step; the caller must be inside `traderModelOn`.
+ */
+export function planTraderStock(
+  state: MarketState,
+  defs: MarketDefinitions,
+  def: AssetDefinition,
+  z: number,
+  playerCents: number,
+): TraderPlan {
+  const t = defs.traders
+  const p = defs.participants
+  const book = state.participants?.book
+  if (t === undefined || p === undefined || book === undefined) fail('traders model is not on')
+  const asset = state.assets[def.id]
+  const previous = asset.priceCents
+  const carry = (book.carry[def.id] ?? 1) * (1 - expectedDrift(defs, def, state.environment) + t.premiumPerDay)
+  book.carry[def.id] = carry
+  const anchor = asset.fairValue * carry
+  const lag = 1 - 0.5 ** (1 / t.anchorHalfLifeDays)
+  const seen = (book.seenAnchor[def.id] ?? asset.fairValue) + lag * (anchor - (book.seenAnchor[def.id] ?? asset.fairValue))
+  book.seenAnchor[def.id] = seen
+  const pos = book.pos[def.id]
+  if (pos === undefined) fail(`book has no positions for ${def.id}`)
+
+  const dq = zeroPositions()
+  const weight = (type: TraderType): number => t.types[type].base * book.mix[type]
+  dq.value = t.types.value.rate * (valueTarget(t, weight('value'), previous, seen) - pos.value)
+  // The noise size is the stock's volatility share times the run's noise mix, not a weight in depth units.
+  const sigma = def.dailyVolatility * t.noiseShare * book.mix.noise
+  dq.noise = t.types.noise.rate * (t.noiseAr * pos.noise + sigma * z - pos.noise)
+
+  const depth = depthCents(def, p)
+  const playerDq = playerCents / depth
+  let demand = playerDq
+  for (const type of TRADER_TYPES) demand += dq[type]
+  const depthScale = depthScaleFor(t, book.vol[def.id] ?? 0, def.dailyVolatility)
+  return { anchor, depthScale, depthCents: depth, previous, dq, playerDq, rawMove: (previous * demand) / depthScale }
+}
+
+/**
+ * Book what filled. `fillScale` is the share of the wanted move that the cap let through (1 when
+ * the cap did not bind); the unfilled part stays wanted because the position only moves by what
+ * filled. Also updates the volatility EWMA and yesterday's net non-noise flow.
+ */
+export function commitTraderStock(
+  state: MarketState,
+  defs: MarketDefinitions,
+  def: AssetDefinition,
+  plan: TraderPlan,
+  fillScale: number,
+  newPrice: number,
+): void {
+  const t = defs.traders
+  const book = state.participants?.book
+  if (t === undefined || book === undefined) fail('traders model is not on')
+  const pos = book.pos[def.id]
+  let others = 0
+  for (const type of TRADER_TYPES) {
+    pos[type] += fillScale * plan.dq[type]
+    if (type !== 'noise') others += plan.dq[type]
+  }
+  book.lastFlow[def.id] = fillScale * others
+  const move = Math.abs(newPrice / plan.previous - 1)
+  const vol = book.vol[def.id] ?? 0
+  book.vol[def.id] = vol + t.volEwma * (move - vol)
 }

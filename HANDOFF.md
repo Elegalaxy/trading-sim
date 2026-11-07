@@ -1,42 +1,23 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** The market depth plan (M0 to M13) and the fill history plan (H1 to H4) are built. What is left is playtesting and two balance questions. The Step 26 playtests and a market-depth playtest are still open.
-- **Fill history (`doc/plans/2026-11-04-save-fill-history.md`), all four steps done:**
-  - H1 to H3 (`e256d83`): `GameState.fills` ledger (`src/sim/fills.ts`). One row per market order, limit fill, TP, SL, liquidation and forced sale. History, P&L and chart marks read it.
-  - H4: `GameState.past` (`src/sim/past.ts`, `recordPastDay`, `assertPast`, `previewCopy`). After each End day it keeps the session bars, the closes and the closing equity. A record only.
-  - `save.ts`: `fills` and `past` are optional in `inspectSave`, so old saves load with them empty; `continueGame` fills them in and runs `assertPast`. `social` and `orderFlow` are optional too.
-  - UI: `run.closes` is gone; `Dashboard.tsx` builds the chart from `game.past`. The Equity tab restarts from one point per past day (intraday points of past days are not kept).
-  - `previewCopy` (a state copy without `past` and `fills`) is used by the order preview (`resting.ts`, `OrderPanel.tsx`) and the margin test; without it the 200-seed margin test took 94 s instead of 8 s. Save size is about 650 KB at day 119.
-  - The Guide has a History section (page Orders, `Guide.tsx`).
-- **Market depth (`doc/plans/2026-11-03-market-depth.md`):** M7 calendar consensus, M9 liquidity grabs, M10 social feed (`GameState.social`), M13 player orders in the order flow (`GameState.orderFlow`), M11 cap review (8% kept), M12 docs and a "Who else trades" Guide page. Open for the user: (1) the 50x short bot's upper tail returned after M13 (GAME_DESIGN section 16): more depth days or more slippage? (2) Only market orders add flow; stops, limit fills and liquidations do not yet. (3) The seeded playtest.
-- **Checks on the merge of the H4 branch with main:** typecheck and lint clean, `npm test` 248 passed (38 files). Browser check of H4 (before the merge, seed `demo`): trade, End day twice, reload; the Buy mark shows on 1D and 15m and the Equity line keeps days 1 to 3.
+- **Current Goal:** Plan `doc/plans/2026-11-07-layoffs-loans-deposits.md` is built (N0, Y1-Y5, B1-B3, D1-D3, G1). What is left is playtesting and balance. Earlier plans (market depth M0-M13, fill history H1-H4, items and lifestyle L0-L6) are also built.
+- **Layoffs (`src/sim/layoffs.ts`, `src/content/layoffs.ts`):**
+  - Roll days 10, 40, 70 use a separate stream (`${seed}#layoffs`, exactly 2 draws per roll day), so market hashes and `tests/fixtures` are unchanged. A rumour is real 60%; decision 10 days later; layoff on the next payday; severance 0.5 month; employer barred (`rehireBlocked`); +8 stress on a confirmed notice. Freelance is exempt.
+  - `notice.real` is hidden: the UI must never read it in the rumour stage.
+  - UI: Job card risk chips and `NoticeCard`, `NoticeStrip.tsx` above the views, `Ticker.tsx`/`ticker.ts` (news, calendar and employer headlines, rotates every 5 s, news is blurred like the News panel), calendar rows, report lines.
+  - `npm run sim -- --seed abc --layoffs <runs>` prints cut rates by job.
+- **Loan (`src/sim/loan.ts`):** daily interest, up to 3 payday instalments (first at least 7 days after the draw), free early repayment, missed payment forces a sale (positions, savings, deposits), warning 5 days ahead, `previewLoanSale`. Net worth subtracts the loan. `LoanPanel`, `LoanDueBanner`, End day second-click confirm.
+- **Fixed deposits (`src/sim/deposits.ts`, `src/ui/Deposits.tsx`):** 30/60/90 days, rate = policy - 1.5 + 1/2/3 points fixed at opening, min $100, max 3, break = principal - 2% and interest lost. Matures into savings after savings accrual in `endDay`; interest counts as passive income. Break value counts in the bill cover check; last step of a forced loan sale (cash, whole deposit). Break buttons in the bill and loan banners.
+- **Saves:** `employer`, `deposits` and the new loan keys are optional; `continueGame` upgrades old saves. Key `trading-sim.save.v1`.
 - **Active Decisions / Constraints:**
-  - Fill history: sim ledger and closed-day record, old saves load empty, no mid-day saves.
-  - The 15-minute clock step costs nothing (`[CONFIRMED]`). Liquidations keep paying slippage. Win rule: open losses count (`[PROVISIONAL]`).
-  - `GameState.fills` and `GameState.past` are required: any hand-built GameState needs `fills: []` and `past: []`.
+  - New rules are `[PROVISIONAL]` in `GAME_DESIGN.md` (section 6 Jobs, section 12). Home stays comfort, not income. Transport was dropped.
+  - Deposit rates are real-world-like on purpose; revisit after a playtest.
+  - `GameState.fills`, `past` required; any hand-built GameState needs `fills: []`, `past: []`.
   - The user wants every commit followed by a push and a merge into `main`.
-  - The dev server serves stale modules after edits; restart on a ReferenceError. It may pick another port, which has its own localStorage. `.claude/launch.json` is untracked, so a worktree needs its own copy and a `node_modules` junction.
+  - Dev server serves stale modules after edits; restart on a ReferenceError. `.claude/launch.json` is untracked.
   - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Items and lifestyle (`doc/plans/2026-11-04-items-and-lifestyle.md`), built 2026-11-04, steps L0 to L6:**
-  - Eight items (`content/consumables.ts`) with optional `nextEnergy`/`nextStress` (End day applies them as `consumeNext`), `requiresHome` (kitchen, Home tier 1) and `freeWithHealth`. `consumablePrice` and `tierOf` are the helpers.
-  - Home recovers energy and stress each night after a full sleep (`HOME_RECOVERY_*`, cause `homeRecovery`). Tier 2: short-sleep penalty halved. Tier 3: drawdown and margin-warning stress halved. Feed tier 1: first read free; tier 2: Verify costs no energy.
-  - New lifestyle categories Health (gym free, job stress capped at 90) and Equipment (tier 1 halves blur and delay, tier 2 fee 0.08%). `LifestyleState.health/equipment` are optional; `tierOf` reads them.
-  - Saves from before load with Health/Equipment at 0 and get the current item menu (`continueGame`).
-  - `npm run sim -- --seed abc --days 120 --care 30` prints item spend and warning days by job and Home tier (`harness/care.ts`).
-  - UI: `Consumables.tsx`, `LifestylePanel.tsx`, `NewsFeed.tsx`, `effects.ts`, a Guide page "Food, sleep and home". Tests: `care.test.ts`, plus updated stats, lifestyle, content, save and old-save tests (271 pass).
-  - Open for the user (plan section 8): Home does not repay its monthly cost in item savings; the night-shift job needs Home 1 (96% warning days at Home 0).
-- **UI hierarchy pass (2026-11-06):**
-  - Life tab: Job, Lifestyle (every category and course) and Food are selection cards. `Badges.tsx` has the chips (energy green, stress teal, harm amber, perks neutral). `content/lifestyle.ts` offers now hold `tiers` with badges instead of `benefits` text. Tier rows show an amber edge on the current tier and a right-aligned `+$/mo` tag; food rows are one button with name, chips, and a price pill. Job rows pick a job, then "Switch to X".
-  - Top bar (`DayTimeline.tsx`): schedule pills and the clock on the left (study buttons under them), a divider, then Open market, the +15 min / +1 hour / To close segmented control and End day on the right.
-  - Positions: row hover, and the TP/SL editor joins each input with its quick buttons into one control (`.exit-control`), aligned in columns.
-  - New CSS is at the end of `styles.css`. The Life grid uses `grid-auto-rows: max-content` so cards keep their height.
-  - User decision: Home stays comfort, not income (items plan section 8, question 1).
-- **Screen behaviour with no plan or design entry (only here and in commits):**
-  - Chart (`PriceChart.tsx`): wheel zoom (10 to 400 candles), drag to pan through all history and up to half a screen past the newest candle, drag or wheel on the price scale to stretch it, double-click it or press Auto to fit, "Back to now", a dashed last-price line, and fill marks (Buy, Sell, TP, SL, Liquidated, Forced sale) that stay and come back after a reload.
-  - Result window at the end of a run (`RunEnd.tsx`): a breakdown that folds into a banner; its text was not opened in the browser.
-  - TP/SL editor (`Positions.tsx`): both levels at once, quick steps, break-even, live % and P&L, wrong-side warning.
-  - Bill banner (`BillBanner.tsx`): outlined buttons, amber Pay bill once cash covers it.
-  - Top bar shows Trading equity; Equity tab restarts from one point per past day after a reload.
-- **Ideas with no plan yet (from `GAME_DESIGN.md` `[OPEN]` and `[LATER]`):** bank loan numbers (size, term, margin, early repayment, warning before a forced sale); savings accounts with lock periods; layoffs announced in advance; number and candle distortion and order errors from stress; how the player learns news-source hit rates; a currency pair as a new asset; meta-progression; a pre-market hour (more trading time); Transport lifestyle (smaller daily job energy cost); tolerance for repeated items. Writing the screen behaviour above into `GAME_DESIGN.md` section 13 is also open.
-- **Exact Next Step:** The user plays the seeded playtest (Step 26, a jobless run with research and a course, the market-depth playtest, and a night-shift run for the new care loop) and answers the balance questions: the market-depth two, and the two in the items plan section 8. 
+- **Not browser-checked:** deposit break/maturity/banners and reload; red (confirmed) notice strip and ticker states; ticker reduced-motion and focus pause; BillBanner severance line; loan UI visuals.
+- **Open for the user:** the 50x short bot tail and order flow from stops/limits/liquidations (market depth plan); night-shift job needs Home 1 (left alone); deposit and layoff balance after playtest.
+- **Ideas with no plan yet:** partial deposit breaks, number and candle distortion and order errors from stress, learning news-source hit rates, a currency pair, meta-progression, a pre-market hour, tolerance for repeated items, savings with lock periods beyond deposits.
+- **Exact Next Step:** The user plays a seeded run (warehouse job to a layoff notice, a loan to a forced-sale preview, a deposit opened, matured and broken, reload in between) and reports balance and UI findings. Then browser-check the unverified items above.

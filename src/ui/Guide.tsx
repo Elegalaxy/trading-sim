@@ -479,6 +479,7 @@ const TOPICS: readonly Topic[] = [
           <li>Cash pays bills, food and drink, lifestyle and courses.</li>
           <li>The trading account pays for positions. Move money between accounts in the Accounts panel.</li>
           <li>Savings earn interest that follows the policy rate.</li>
+          <li>Fixed deposits lock money for 30, 60 or 90 days (see below).</li>
         </ul>
         <h3>Payday</h3>
         <p>Every 30th day, at the close (the top bar counts down to it):</p>
@@ -492,7 +493,27 @@ const TOPICS: readonly Topic[] = [
         <ul>
           <li>An unpaid bill blocks End day. Move money into cash, withdraw savings or take a loan, then pay it.</li>
           <li>If everything you have together cannot cover it, the run is lost.</li>
-          <li>Unpaid loan interest sells your worst positions, then savings.</li>
+          <li>A missed loan instalment sells your worst positions, then savings, then deposits.</li>
+          <li>A deposit can be broken to pay a bill, so locked money never ends a run on its own.</li>
+        </ul>
+        <h3>Bank loan</h3>
+        <ul>
+          <li>Interest is the policy rate plus 4 points a year, charged daily.</li>
+          <li>Repay in up to 3 instalments on paydays, the first at least 7 days after you borrow. Paying early is free.</li>
+          <li>You get a warning 5 days before an instalment you cannot cover, with a preview of what would be sold.</li>
+        </ul>
+        <h3>Fixed deposits</h3>
+        <ul>
+          <li>Terms of 30, 60 or 90 days. Longer terms pay more. The rate is fixed on the day you open it.</li>
+          <li>At least $100, at most 3 open. You cannot open one while a bill or loan payment is due.</li>
+          <li>At the end of the term the money and its interest go to savings.</li>
+          <li>Breaking early costs 2% of the principal and you lose the interest.</li>
+        </ul>
+        <h3>Job security</h3>
+        <ul>
+          <li>Most jobs can be cut. Around days 10, 40 and 70 a rumour of cuts may appear; some are false.</li>
+          <li>A real one is confirmed 10 days later and you leave on the next payday with half a month of pay.</li>
+          <li>You cannot rejoin that employer in this run. A confirmed notice adds stress. Freelance work is safe.</li>
         </ul>
         <h3>Winning</h3>
         <p>

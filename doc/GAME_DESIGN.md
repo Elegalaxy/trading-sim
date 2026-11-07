@@ -187,7 +187,8 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 - `[PROVISIONAL]` Transfers between cash, trading and savings are instant and free.
 - `[PROVISIONAL]` Starting money is about 6E, split 3E in cash and 3E in the trading account. Tuning will set the real value.
 - `[CONFIRMED]` Gains are not taxed at first.
-- `[LATER]` FD and high-interest savings accounts (section 12).
+- `[PROVISIONAL]` Fixed deposits (section 12) lock money for 30, 60 or 90 days at a rate fixed on the day they open.
+- `[LATER]` High-interest savings accounts (section 12).
 
 ### Jobs
 
@@ -204,6 +205,9 @@ Added 2026-11-01 at the user's request. Built in plan Step 32. Numbers are place
 | Night-shift warehouse | 2 | 1.3E | None | Quiet breaks: one free news read a day | 20 and 12 |
 | Trading-floor assistant | 2 | 1.0E | Finance course | Industry contacts: one extra rumour source | 12 and 15 |
 | Freelance analyst | 1 | 0.8E | Finance course | Analyst tools: fewer noise items in the feed | 6 and 6 |
+
+- `[PROVISIONAL]` Layoffs (plan 2026-11-07). On days 10, 40 and 70 each employed job rolls for a rumour, using a separate seeded stream. The chance comes from the job's base chance, the growth print and its sector's 20-day move. A rumour is real 60% of the time; the decision comes 10 days later and a real one lands on the next payday. Severance is half a month of pay, the employer is barred for the rest of the run, and a confirmed notice adds 8 stress. The freelance analyst has no employer and is exempt.
+
 
 ### Free time: research and courses `[PROVISIONAL]`
 
@@ -385,7 +389,16 @@ The loan was going to wait for a later version. On 2026-10-22 it became one of t
 - `[CONFIRMED]` The limit is set by job and lifestyle.
 - `[CONFIRMED]` Interest follows the policy rate.
 - `[CONFIRMED]` Missed interest forces selling: trading positions (worst-performing first), then savings. It does not downgrade lifestyle. A missed payment is a bill the player cannot cover, and lifestyle downgrade is not a way to pay one (section 6).
-- `[OPEN]` Loan size, term, the margin over the policy rate, early repayment, whether loan money can be used for trading, and the warning before a forced sale.
+- `[PROVISIONAL]` Loan numbers (plan 2026-11-07). Limit 2E plus 0.25E per tier. Rate is the policy rate plus 4 points, accruing daily. Repaid in up to 3 instalments on paydays, the first at least 7 days after the draw. Early repayment is free. A missed instalment is collected by a forced sale (positions, then savings, then deposits). The player gets a warning 5 days ahead and a sale preview. Net worth subtracts the loan.
+
+### Fixed deposits `[PROVISIONAL]`
+
+- Terms of 30, 60 or 90 days. The rate is the policy rate minus 1.5 points plus 1, 2 or 3 points for the term, fixed on opening. Minimum $100, at most 3 open.
+- Opened from cash or savings, but not while a bill or loan payment is pending.
+- At maturity, principal plus interest go into savings. The interest counts as passive income.
+- Breaking early returns the principal minus 2% and loses the interest.
+- A deposit's break value counts when checking whether a bill can be covered, and deposits are the last step of a loan forced sale. A deposit may mature after day 120; net worth counts it pro rata.
+- Rates are real-world-like on purpose (a rate lock and a discipline tool, not income). Revisit after a playtest.
 
 ### Market depth ideas
 
@@ -627,6 +640,7 @@ Balance values are testable starting hypotheses. Provisional rules are not decis
 - 2026-11-04: Plan Step M4. Informed money trades ahead of leaked events (section 5, hidden fair value and price). The price log fixture was regenerated on purpose; every non-price line of it is identical to before and the four main streams are unchanged. Old saves are rejected only if their shape is wrong (the new `participants` key is optional).
 - 2026-11-04: Plan Step M3. Large market orders, stops and liquidations pay slippage against the bar volume (section 7). Limit orders and take profits do not. The order panel and the Guide show it. No market stream moved.
 - 2026-11-04: Plan Step M2. Stocks have `sharesOutstanding` and `liquidityNotionalCents`. Session volume scales per stock and the header shows market cap. Prices, draws and fixtures are unchanged. Guide company pages say large or small, thin or deep.
+- 2026-11-07: Added layoffs, loan numbers and fixed deposits (plan [2026-11-07-layoffs-loans-deposits.md](plans/2026-11-07-layoffs-loans-deposits.md)). All `[PROVISIONAL]`. Old saves still load.
 - 2026-11-03 (later): Made leveraged trading more like a perpetual future. Liquidation is also checked after every 15-minute bar, a liquidation costs a 0.5% fee, and funding (0.01% a day plus a crowd charge) replaces margin interest and the short borrow fee. Old saves still load.
 - 2026-11-03: Leverage is now chosen per position, 1x to 50x (user decision), replacing the account-wide 5x cap. Margin is value over leverage. The 15% and 10% marks, read against the required margin, are unchanged. Above about 10x the backstop can be used.
 - 2026-11-01: Added limit orders, take profit and stop loss (plan Step 32), and order sizing by quantity, cost or value in the order panel. Old saves are rejected as damaged again.

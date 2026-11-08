@@ -1,23 +1,16 @@
 # Project Handoff State
 
 - **Last Updated By:** Claude
-- **Current Goal:** Plan `doc/plans/2026-11-07-layoffs-loans-deposits.md` is built (N0, Y1-Y5, B1-B3, D1-D3, G1). What is left is playtesting and balance. Earlier plans (market depth M0-M13, fill history H1-H4, items and lifestyle L0-L6) are also built.
-- **Layoffs (`src/sim/layoffs.ts`, `src/content/layoffs.ts`):**
-  - Roll days 10, 40, 70 use a separate stream (`${seed}#layoffs`, exactly 2 draws per roll day), so market hashes and `tests/fixtures` are unchanged. A rumour is real 60%; decision 10 days later; layoff on the next payday; severance 0.5 month; employer barred (`rehireBlocked`); +8 stress on a confirmed notice. Freelance is exempt.
-  - `notice.real` is hidden: the UI must never read it in the rumour stage.
-  - UI: Job card risk chips and `NoticeCard`, `NoticeStrip.tsx` above the views, `Ticker.tsx`/`ticker.ts` (news, calendar and employer headlines, rotates every 5 s, news is blurred like the News panel), calendar rows, report lines.
-  - `npm run sim -- --seed abc --layoffs <runs>` prints cut rates by job.
-- **Loan (`src/sim/loan.ts`):** daily interest, up to 3 payday instalments (first at least 7 days after the draw), free early repayment, missed payment forces a sale (positions, savings, deposits), warning 5 days ahead, `previewLoanSale`. Net worth subtracts the loan. `LoanPanel`, `LoanDueBanner`, End day second-click confirm.
-- **Fixed deposits (`src/sim/deposits.ts`, `src/ui/Deposits.tsx`):** 30/60/90 days, rate = policy - 1.5 + 1/2/3 points fixed at opening, min $100, max 3, break = principal - 2% and interest lost. Matures into savings after savings accrual in `endDay`; interest counts as passive income. Break value counts in the bill cover check; last step of a forced loan sale (cash, whole deposit). Break buttons in the bill and loan banners.
-- **Saves:** `employer`, `deposits` and the new loan keys are optional; `continueGame` upgrades old saves. Key `trading-sim.save.v1`.
-- **Active Decisions / Constraints:**
-  - New rules are `[PROVISIONAL]` in `GAME_DESIGN.md` (section 6 Jobs, section 12). Home stays comfort, not income. Transport was dropped.
-  - Deposit rates are real-world-like on purpose; revisit after a playtest.
-  - `GameState.fills`, `past` required; any hand-built GameState needs `fills: []`, `past: []`.
-  - The user wants every commit followed by a push and a merge into `main`.
-  - Dev server serves stale modules after edits; restart on a ReferenceError. `.claude/launch.json` is untracked.
-  - Cents stay inside `src/sim`. Never remove `// admin code`. Do not import `rpg/`.
-- **Browser-checked 2026-11-07 (seed demo):** deposit open, reload, break (2% penalty to savings), break from the bill banner and pay the bill, confirmed notice strip and ticker line. **Still unchecked:** deposit maturity into savings in the UI, loan forced-sale banner with a deposit, ticker reduced-motion and focus pause, BillBanner severance line. Note: banner Break deposit has no confirm step (label shows the amount); the Accounts one does.
-- **Open for the user:** the 50x short bot tail and order flow from stops/limits/liquidations (market depth plan); night-shift job needs Home 1 (left alone); deposit and layoff balance after playtest.
-- **Ideas with no plan yet:** partial deposit breaks, number and candle distortion and order errors from stress, learning news-source hit rates, a currency pair, meta-progression, a pre-market hour, tolerance for repeated items, savings with lock periods beyond deposits.
-- **Exact Next Step:** The user plays a seeded run (warehouse job to a layoff notice, a loan to a forced-sale preview, a deposit opened, matured and broken, reload in between) and reports balance and UI findings. Then browser-check the unverified items above.
+- **Current Goal:** Plan `doc/plans/2026-11-08-price-model.md` is built (P0-P7, P9 docs). P8 (spreads widen with volatility) is deferred. Left: playtest, balance, and the misses below. Earlier plans (layoffs/loans/deposits, market depth, fill history, items/lifestyle) are built.
+- **Price model (the live market now):**
+  - Eight trader types trade once a day against depth with a hidden per-run mix (`src/sim/traders.ts`, numbers in `src/content/traders.ts`, `TRADER_DEFINITIONS` is in `MARKET_DEFINITIONS`). Own stream `${seed}#traders`; `TraderBook` on `participants.book`.
+  - Anchor = fairValue x carry; value traders trade the price-to-anchor gap; news traders trade surprise (public impact minus priced in); crowd legs per rumour in `eventPos`; unwinding positions are absorbed; market makers thin depth with volatility. Events, calendar and fair value code unchanged.
+  - Old saves: `createOldSaveBook` in `continueGame`; old model closes the current day, new model starts `market.day + 2`.
+  - Harness: `--model current|traders` (`current` strips `traders`); batch prints `[sim] mix` lines.
+  - Only `tests/fixtures/demo-30-price-log.txt` was regenerated (P6); a test checks all non-price line kinds match a no-traders run.
+- **Number-only inputs:** `src/ui/numberInput.ts` (`wholeNumberText`, `moneyText`) used by order, deposit, account and loan boxes.
+- **Earlier systems:** layoffs (`#layoffs` stream, rumour 60% real, `notice.real` hidden from UI), loan (`loan.ts`), fixed deposits (`deposits.ts`); saves key `trading-sim.save.v1`, new keys optional.
+- **Known misses (P5, seed abc, 300 runs):** `maxShortIndex` median $1,164 (target 2,600-3,400) and `maxLongIndex` 33% above it; HRBU realised vol 2.1x base (needs per-stock scale or smaller HRBU events); `longIndex1x` $2,921 (target 2,950); `longNova10` liquidations 0.66x old; pre-news d-3 -0.67; no reversal when news efficiency > 1.
+- **Constraints:** GAME_DESIGN price rules reworded with user approval (section 5, changelog 2026-11-08). Hand-built GameState needs `fills: []`, `past: []`. Cents stay in `src/sim`. Never remove `// admin code`. Do not import `rpg/`. Every commit is followed by push to `main`. Dev server can serve stale modules; restart on ReferenceError. `.claude/launch.json` untracked.
+- **Unchecked in the UI:** deposit maturity, loan forced-sale banner with a deposit, ticker reduced-motion/focus pause, BillBanner severance line, loading an old save into the traders model.
+- **Exact Next Step:** The user plays a seeded run and reports price feel and balance (index bots, HRBU volatility). Then decide on P8, per-stock trader scaling, and the unchecked UI items.

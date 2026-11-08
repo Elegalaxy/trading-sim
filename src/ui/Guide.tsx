@@ -188,8 +188,8 @@ const TOPICS: readonly Topic[] = [
       <>
         <h3>Fair value</h3>
         <p>
-          Every stock has a hidden fair value: what it is really worth. News changes it. The price drifts toward it over
-          time, with everyday noise on top.
+          Every stock has a hidden fair value: what it is really worth. News changes it. Traders pull the price toward it
+          over time, with everyday noise on top.
         </p>
         <h3>Timing</h3>
         <ul>
@@ -367,6 +367,15 @@ const TOPICS: readonly Topic[] = [
           <li>
             <strong>Trend followers.</strong> They buy what has been rising and sell what has been falling, until the
             trend turns.
+          </li>
+          <li>
+            <strong>Value buyers.</strong> They compare the price with what they think a stock is worth, buying when it looks cheap and selling when it looks stretched. They pull a price back slowly, never at once.
+          </li>
+          <li>
+            <strong>News traders.</strong> They react to how surprising news is, not to how good it sounds. News that was already expected or rumoured can fall on the day.
+          </li>
+          <li>
+            <strong>Contrarians.</strong> They bet against sharp runs and against the crowd.
           </li>
           <li>
             <strong>Level hunters.</strong> Prices sometimes poke through obvious levels, such as round numbers or a

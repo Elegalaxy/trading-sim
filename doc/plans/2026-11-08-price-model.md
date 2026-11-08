@@ -71,7 +71,7 @@ Each step leaves typecheck, lint and tests green. The new path runs only when `d
 | P2 | **Core engine: value (anchor, carry, lag), noise AR(1), market makers, player flow, fill scale.** Branch in `stepMarketDay`. Extend `ParticipantFlowEvent.party` union; optional `anchor`, `depthScale`, `fillScale` on `PriceStepEvent`; update `log.ts`, the exhaustive switches in `summary.ts` and `batch.ts`. Event study `maxGapPercent` measures against the anchor. Harness flag `--model traders` uses `{...MARKET_DEFINITIONS, traders: TRADER_DEFINITIONS}` | `market.ts`, `traders.ts`, `types.ts`, `log.ts`, `summary.ts`, `cli.ts`, `batch.ts`, `eventStudy.ts` | without traders fixtures identical; capped day scales positions and carries the rest; session preview close equals End day close with traders; 50 seeds x 1,000 days value and noise only: mean daily log change of anchor and price within +-0.01% + premium | `npm test`; `npm run sim -- --seed abc --days 120 --batch 200 --strategy longIndex1x --model traders` | done |
 | P3 | **Information traders: news (surprise vs pricedIn), informed (with hand-off), consensus (hold and decay).** Build an event-type `Map` once per defs (WeakMap cache) instead of `defs.events.find` in loops | `traders.ts`, tests | calendar result equal to consensus moves less than a surprise; an unrumoured event reacts at about e x public impact; a true size below average reverts by day 5 | `npm test`; batch with `--model traders`, read event-study d0/after3 | done |
 | P4 | **Crowd, trend, contrarians, market-maker volatility thinning; keep `mood` updated** | `traders.ts`, tests | loop gain < 1 + kappa at every mix corner; 300 seeds x 120 days: no NaN, max abs(P/A - 1) < 35%; a false rumour pumps then unwinds; a hot true rumour can close red on its day | `npm test`; `--model traders` batches | done |
-| P5 | **Tuning and mix report.** `[sim] mix` lines (results by dominant type). Change only `src/content/traders.ts` until section 4 passes | `content/traders.ts`, `report.ts` | report line test | the section 4 batch with `--model traders` | todo |
+| P5 | **Tuning and mix report.** `[sim] mix` lines (results by dominant type). Change only `src/content/traders.ts` until section 4 passes | `content/traders.ts`, `report.ts` | report line test | the section 4 batch with `--model traders` | done |
 | P6 | **Wire in and regenerate the fixture (isolated).** Add `traders` to `MARKET_DEFINITIONS`. Regenerate `tests/fixtures/demo-30-price-log.txt`. Test that every non-price line kind (`eventRoll`, `eventDirection`, `eventMagnitude`, `effectApplied`, `fairValueChange`, `envDrift`, `calendarItem`, `headline`, `rumourGenerated`, `noiseRoll`) matches the old file line by line. Noise and step7 fixtures pass untouched. Any other failing test must be an exact price number: update each with a one-line reason (expected: `content.test.ts`, `orderFlow.test.ts`, `socialFeed.test.ts`, `study.test.ts`, `strategies.test.ts`, UI tests using `MARKET_DEFINITIONS`) | `content/index.ts`, fixture, listed tests | pump-and-dump test still loses on average; idle equals idle; small orders equal idle | `npm test`; `git diff --stat tests/fixtures` shows only the price log | todo |
 | P7 | **Old saves.** In `continueGame`, when `definitions.traders` is set and `market.participants.book` is missing: `createTraderBook(defs, save.seed, market)` with `activeFromDay = market.day + 2` and value positions seeded at their current target (no jump on load) | `store.ts`, `oldSaves.test.ts` | pre-P6 save loads; End day prints the session's last bar; the next day runs the new model | `npm test` | todo |
 | P8 | **Optional (question 3): market makers widen the spread.** `spreadWidens` / `halfSpreadCents` scale with `book.vol` | `trading.ts`, tests, Guide | spread rises on a volatile day; order-panel estimate matches the fill | batch: random bot and liquidation numbers again | deferred |
@@ -237,3 +237,54 @@ Rumours (toClaim, claim+2, signed % of close): true high +1.28 / +1.61 (old high
 Stock `after3` +0.35 is inside the target (+0.2 to +1.0). Patterns: rumoured events show a smaller day 0 than unrumoured ones (+1.00 against +2.45: the crowd sold into the news and priced-in is subtracted); true-rumoured positive stock headlines close red on their day 42.2% of the time (80 seeds x 120 days, 5,246 events with an up crowd leg; target 20% to 45%; with a leg above 1% of depth 53%; unrumoured 21.5%); false rumours go nowhere. Drift of the held stocks: mean 120-day change +7.8, +9.9, +11.3, +8.2% (index +9.3%, SE 1.6), unchanged from P3 and above the 0 to +4% target. The pre-news d-3 is -0.95 for stocks (old model -0.39): not changed by P4's fix, not investigated.
 
 Open points for P5: (1) followHeadlines under target, leveraged index bots far off; (2) efficiency range and informed weight (rumoured day 0 is small); (3) hot-rumour red share 53% against 45%: crowd base and tier weights; (4) pre-news d-3 of -0.95; (5) index mean 120-day drift +9%; (6) any-asset capped day share 7.95% while stock-days are 2.3%.
+
+
+### P5 (done 2026-11-08; only `src/content/traders.ts` changed in the model; `tests/fixtures` untouched, 386 tests pass, typecheck and lint clean)
+**Report.** `src/harness/report.ts`: `dominantTraderType` (the type whose mix sits highest inside its own range) and `mixLines`; `RunRecord` gained optional `dominant` and `cappedDays` (set by `batch.ts` only when the run has a trader book). The batch prints `[sim] mix dominant=<type> n= medianFinalEquityCents= liquidations= cappedDays= cappedDayShare=` after the report lines, one per type. Test: `src/harness/report.test.ts`. Test edits forced by content: `traders.test.ts` reads the efficiency bounds from the content; the P2b drift test in `tradersModel.test.ts` now expects the anchor at `premium + (carryCorrection - 0.0005)` because the correction was lowered on purpose.
+
+**Changes (old -> new, why).**
+| Parameter | Old | New | Reason |
+| --- | --- | --- | --- |
+| `carryCorrectionPerDay` | 0.0005 | 0.0001 | index and stock drift was +8 to +11% per 120 days; the correction was sized for an anchor at the premium, the targets want about 0 |
+| `premiumPerDay` | 0.0002 | 0.0002 (tried 0.0001, 0.00015) | final value kept: with the lower correction stock means were slightly under 0 at 0.00015 |
+| `types.news.rate` | 1 | 0.7 | news traders took the whole move on day 0; spreading it over two days cut realised volatility (HRBU 3.3x to 2.1x of `dailyVolatility`) and capped days (0.25% of stock-days), and left a post-headline drift for `followHeadlines` |
+| `efficiencyMin` / `efficiencyMax` | 0.5 / 1.3 | 0.4 / 1.2 | with rate 0.7 the old range was a little high; 0.3 to 0.8 overshot (after3 +1.16, follow 3,215) |
+| `types.informed.base` | 0.03 | 0.02 | pre-news run-up (d-3) was -0.95 against old -0.39; now -0.67 |
+| `types.crowd.base` | 0.015 | 0.012 | same run-up; the crowd's rumour leg sells the news less hard, red-on-day share 53% to 44.5% with a big leg |
+| `noiseShare` | 0.5 | 0.4 | NOVA realised volatility 0.96x to 0.93x, KSR to 1.41x; 0.3 would put NOVA at 0.82x |
+Not changed: value base, `anchorHalfLifeDays`, `volSens`, crowd tier weights (no effect worth the risk), consensus, trend, contrarian. Sweeps that changed nothing useful: cutting crowd, trend, contrarian and informed to near zero left index volatility at 1.87% and `maxShortIndex` median at 895.
+
+**Final numbers** (seed abc, 300 runs, 120 days, `--model traders`, $3,000; $ final trading equity). Bot rows are from the batch at `premiumPerDay` 0.00015 except the four re-run at 0.0002 (hold, longIndex1x, shortIndex1x, followHeadlines).
+| Target | Result | Status |
+| --- | --- | --- |
+| Per stock mean daily change in [0, +0.04]% | NOVA -0.006, BLSW +0.016, HRBU +0.009, KSR +0.000 (SE about 0.02) | met within SE (NOVA just below 0) |
+| Index mean 120-day change in [0, +4]% | +2.54% (SE 1.17), per stock +1.4 to +3.7% | met |
+| longIndex1x median >= 2,950 | 2,921 (mean 2,948 at 0.0002; 2,909 at 0.00015) | missed by $29 |
+| shortIndex1x median <= 3,050 | 2,889 | met |
+| maxShortIndex median 2,600 to 3,400, mean < 3,600, not the best bot | median 1,164, mean 2,284, not the best bot | median missed |
+| maxLongIndex within 25% of maxShortIndex | median 1,548 vs 1,164 (33%), mean 2,718 vs 2,284 | missed |
+| followHeadlines 3,000 to 3,300 | 3,067 (mean 3,080 at 0.0002) | met |
+| fadeHeadlines < 2,900 | 2,251 | met |
+| buyRumour 2,700 to 3,100 | 2,845 | met |
+| random 2,750 to 2,950 | 2,857 | met |
+| Liquidations per run vs P0 (0.7 to 1.5x) | longNova10 3.34 (0.66x), longNova20 2.08 (0.77x), longNova50 0.98 (0.98x), shortNova50 0.92 (1.01x) | met except longNova10 (0.04 under) |
+| Backstop at 50x <= 1.5x of P0; none at 5x | longNova50 $457k (0.98x), shortNova50 $440k (1.04x), longNova20 $25.8k (1.27x); maxLong/maxShort 0 | met |
+| Capped stock-days <= 3% | 0.22% (any-asset capped day share 0.84%) | met |
+| At most 3 capped days in a row | 2 (100 runs) | met |
+| p99 of abs(P/A - 1) <= 20% | 6.75% (max 14.4%; study maxGapPercent 14.6) | met |
+| Realised volatility per stock 0.8 to 1.5x `dailyVolatility` | NOVA 0.93, BLSW 1.12, HRBU 2.13, KSR 1.41; index 1.31% a day | HRBU missed |
+| True-rumoured positive headlines red on their day 20 to 45% | 34.1% (44.5% with a crowd run-up above 1%) | met |
+| Stock headline `after3` +0.2 to +1.0% | +0.90 (rumoured +0.92, unrumoured +0.78) | met |
+| e > 1 shows a reversal from d1 to d5 | no reversal (cumulative signed move at d1 / d5: e > 1 +1.66 / +2.22; e <= 1 +1.16 / +2.03) | missed |
+| Pre-news d-3 (old model -0.39) | -0.67 stocks, -0.38 market | closer, not equal |
+Speed: a 300-run hold batch takes about 45 s, the same order as P0's 24 s for 300 runs on the old model (the traders path is heavier; not measured against the 1.3x budget).
+
+**By dominant type** (hold, 300 runs): capped-day share is highest where crowd (1.22%) or trend (1.22%) dominate and lowest where consensus (0.51%) or news (0.58%) dominate. `maxShortIndex` median equity by dominant type runs from $798 (informed) to $1,655 (value); `maxLongIndex` from $989 (consensus) to $2,400 (informed).
+
+**What remains unmet and why.**
+1. `maxShortIndex` and `maxLongIndex` medians ($1,164 / $1,548 against 2,600 to 3,400). These bots re-open at 5x each day, so volatility drag and liquidations (2.2 and 1.3 per run) decide the result. Index volatility is 1.3% a day, set by sector and market events, which the trader parameters only shape: removing crowd, trend, contrarian and informed left it at 1.87% (was 1.9%), and news rate 0.5 with efficiency 0.3 to 0.8 gave 1.25% with a median of only 1,167. Long beating short by a third comes from the +2.5% index drift and the borrow fee. Reaching the target needs lower event sizes or index volatility, which is content outside `traders.ts` (events, calendar) or a decision on the targets.
+2. HRBU realised volatility 2.1x (KSR 1.4x, BLSW 1.1x). HRBU has `dailyVolatility` 1.0% but its news moves are 2 to 3% a day, the same as the old model (2.3x), and trader weights are not scaled per stock. Needs a per-stock scale in the sim or smaller events for HRBU.
+3. longIndex1x median 2,921 against 2,950: the two goals (index drift at most +4% a year-run, median of two index shares at least 2,950) pull against each other; the mean is 2,948.
+4. Reversal for e > 1: efficiency up to 1.5 was tried and the price still reaches the anchor from below (the average event is full size at e about 1.1); a reversal needs e of about 2 or a hold-and-decay on news positions, which is a sim change.
+5. longNova10 liquidations 0.66x of P0 (target 0.7x): lower volatility on NOVA; not worth raising noise for.
+6. Pre-news run-up of -0.67 against -0.39: informed and crowd build ahead of a rumoured event by design (buy the rumour); going lower weakens the crowd and informed patterns.

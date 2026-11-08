@@ -8,7 +8,7 @@ import { tradingEquity } from '../sim/trading.ts'
 import { RNG_STREAM_NAMES, type GameState, type LogEvent, type MarketDefinitions } from '../sim/types.ts'
 import { createEventStudy, finishStudyRun, recordStudyDay, startStudyRun, studyLines, type EventStudy } from './eventStudy.ts'
 import { definitionsFor, type ModelName } from './model.ts'
-import { csvRelativePath, reportLines, writeCsv, type BatchStats, type LargestMove, type RunRecord } from './report.ts'
+import { csvRelativePath, dominantTraderType, mixLines, reportLines, writeCsv, type BatchStats, type LargestMove, type RunRecord } from './report.ts'
 import { actDay, createBotMemory, createRandomStream, type StrategyName } from './strategies.ts'
 
 const SEED_PATTERN = /^[A-Za-z0-9-]{1,32}$/
@@ -190,6 +190,7 @@ function runOne(
     backstopWriteOffCents: 0,
   }
   let played = 0
+  let cappedDays = 0
   for (let step = 0; step < days; step += 1) {
     if (game.runEnd !== null || game.bill !== null) break
     const before = marketPicture(game, defs)
@@ -214,7 +215,10 @@ function runOne(
       throw new Error(`[DEBUG batch] day ${game.market.day} seed=${seed} has no price step`)
     }
     recordStudyDay(study, game.market)
-    if (dayCapped.value) stats.cappedDays += 1
+    if (dayCapped.value) {
+      stats.cappedDays += 1
+      cappedDays += 1
+    }
     stats.runDays += 1
     played += 1
     readAccountDay(game, totals)
@@ -231,10 +235,14 @@ function runOne(
   if (!Number.isSafeInteger(equity)) {
     throw new Error(`[DEBUG batch] final equity is not a safe integer, received ${String(equity)}`)
   }
+  const book = game.market.participants?.book
+  const dominant =
+    book !== undefined && defs.traders !== undefined ? dominantTraderType(book.mix, defs.traders.types) : undefined
   return {
     run,
     seed,
     finalEquityCents: equity,
+    ...(dominant === undefined ? {} : { dominant, cappedDays }),
     liquidations: totals.liquidations,
     wipeOuts: totals.wipeOuts,
     backstopWriteOffCents: totals.backstopWriteOffCents,
@@ -283,6 +291,7 @@ export function runBatch(request: BatchRequest): void {
       liquidations: row.liquidations,
       wipeOuts: row.wipeOuts,
       backstopWriteOffCents: row.backstopWriteOffCents,
+      ...(row.dominant === undefined ? {} : { dominant: row.dominant, cappedDays: row.cappedDays }),
     })
     console.log(
       `[sim] batch run=${run} seed=${seed} strategy=${request.strategy} finalEquity=${row.finalEquityCents} liquidations=${row.liquidations}`,
@@ -296,5 +305,6 @@ export function runBatch(request: BatchRequest): void {
   writeCsv(stats)
   console.log(`[DEBUG batch] wrote csv=${relative} runs=${records.length}`)
   for (const line of reportLines(stats)) console.log(line)
+  for (const line of mixLines(records, request.days)) console.log(line)
   for (const line of studyLines(study)) console.log(line)
 }

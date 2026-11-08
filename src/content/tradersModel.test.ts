@@ -74,8 +74,11 @@ describe('traders model on the real market', () => {
     }
     const anchorPct = (anchorSum / count) * 100
     const pricePct = (priceSum / count) * 100
-    const premiumPct = TRADER_DEFINITIONS.premiumPerDay * 100
-    expect(Math.abs(anchorPct - premiumPct)).toBeLessThan(0.02)
+    // 0.0005 is the correction measured in P2b that puts the anchor's mean log change at the premium; P5
+    // lowers it on purpose so the held index drifts 0 to +4% in 120 days, which moves the anchor by the same amount.
+    const neutralCorrection = 0.0005
+    const expectedPct = (TRADER_DEFINITIONS.premiumPerDay + (TRADER_DEFINITIONS.carryCorrectionPerDay ?? 0) - neutralCorrection) * 100
+    expect(Math.abs(anchorPct - expectedPct)).toBeLessThan(0.02)
     expect(Math.abs(pricePct - anchorPct)).toBeLessThan(0.01)
   }, 120_000)
 

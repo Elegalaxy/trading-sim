@@ -43,8 +43,8 @@ describe('trader content', () => {
         expect(book.mix[type]).toBeGreaterThanOrEqual(row.mixMin)
         expect(book.mix[type]).toBeLessThanOrEqual(row.mixMax)
       }
-      expect(book.efficiency).toBeGreaterThanOrEqual(0.5)
-      expect(book.efficiency).toBeLessThanOrEqual(1.3)
+      expect(book.efficiency).toBeGreaterThanOrEqual(TRADER_DEFINITIONS.efficiencyMin)
+      expect(book.efficiency).toBeLessThanOrEqual(TRADER_DEFINITIONS.efficiencyMax)
       expect(weightSum(seed)).toBeCloseTo(baseSum, 9)
     }
   })

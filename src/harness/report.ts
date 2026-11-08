@@ -13,6 +13,10 @@ export type RunRecord = {
   liquidations: number
   wipeOuts: number
   backstopWriteOffCents: number
+  /** Traders model only: the type with the highest mix weight relative to its range. */
+  dominant?: string
+  /** Traders model only: days in this run on which any asset was capped. */
+  cappedDays?: number
 }
 
 export type LargestMove = {
@@ -87,6 +91,54 @@ export function percentileNearestRank(sortedAsc: readonly number[], percent: num
     throw new Error(`[DEBUG batch] percentile ${percent} is missing at index ${index}`)
   }
   return value
+}
+
+/** The trader type whose mix sits highest inside its own range (ties go to the first type). */
+export function dominantTraderType(
+  mix: Readonly<Record<string, number>>,
+  ranges: Readonly<Record<string, { mixMin: number; mixMax: number }>>,
+): string {
+  let best = ''
+  let bestShare = -Infinity
+  for (const type of Object.keys(ranges)) {
+    const range = ranges[type]
+    const weight = mix[type]
+    if (range === undefined || weight === undefined) continue
+    const width = range.mixMax - range.mixMin
+    const share = width > 0 ? (weight - range.mixMin) / width : 0
+    if (share > bestShare) {
+      bestShare = share
+      best = type
+    }
+  }
+  if (best === '') throw new Error('[DEBUG batch] no trader type to rank')
+  return best
+}
+
+/**
+ * Results grouped by dominant trader type (traders model only; empty when no record has one):
+ * n, median final equity in cents, liquidations, and capped days (any asset) over run days.
+ */
+export function mixLines(records: readonly RunRecord[], days: number): string[] {
+  const groups = new Map<string, RunRecord[]>()
+  for (const record of records) {
+    if (record.dominant === undefined) continue
+    const list = groups.get(record.dominant) ?? []
+    list.push(record)
+    groups.set(record.dominant, list)
+  }
+  const lines: string[] = []
+  for (const type of [...groups.keys()].sort()) {
+    const list = groups.get(type) ?? []
+    const equities = list.map((record) => record.finalEquityCents).sort((left, right) => left - right)
+    const liquidations = list.reduce((sum, record) => sum + record.liquidations, 0)
+    const capped = list.reduce((sum, record) => sum + (record.cappedDays ?? 0), 0)
+    const median = percentileNearestRank(equities, 50)
+    lines.push(
+      `[sim] mix dominant=${type} n=${list.length} medianFinalEquityCents=${median} liquidations=${liquidations} cappedDays=${capped} cappedDayShare=${formatFixed(capped / (list.length * days), 6, 'mix capped share')}`,
+    )
+  }
+  return lines
 }
 
 function reportLine(body: string): string {

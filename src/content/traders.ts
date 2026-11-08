@@ -11,20 +11,20 @@ export const TRADER_DEFINITIONS: TraderDefinitions = {
   types: {
     value: { base: 0.1, mixMin: 0.5, mixMax: 1.5, rate: 0.5 },
     noise: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 1 },
-    informed: { base: 0.03, mixMin: 0.3, mixMax: 2, rate: 0.7 },
-    news: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 1 },
+    informed: { base: 0.02, mixMin: 0.3, mixMax: 2, rate: 0.7 },
+    news: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 0.7 },
     consensus: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 0.7 },
-    crowd: { base: 0.015, mixMin: 0.3, mixMax: 2.5, rate: 0.6 },
+    crowd: { base: 0.012, mixMin: 0.3, mixMax: 2.5, rate: 0.6 },
     trend: { base: 0.015, mixMin: 0.3, mixMax: 2, rate: 0.5 },
     contrarian: { base: 0.015, mixMin: 0.3, mixMax: 2, rate: 0.5 },
   },
-  efficiencyMin: 0.5,
-  efficiencyMax: 1.3,
+  efficiencyMin: 0.4,
+  efficiencyMax: 1.2,
   premiumPerDay: 0.0002,
   // Measured (P2b, 100 seeds x 1,000 days x 4 stocks): fair value falls 0.0245 points a day faster than
   // `expectedDrift` and a mean log change sits 0.016 below the simple mean; 0.0005 (0.05 points) puts the
   // anchor's mean log change at the premium.
-  carryCorrectionPerDay: 0.0005,
+  carryCorrectionPerDay: 0.0001,
   // P3: 3 days (the plan's first guess) made value traders sell every fresh news move against a stale
   // anchor, so an average event gave back about a third of its day-0 move before recovering; 1.5 halves that.
   anchorHalfLifeDays: 0.75,
@@ -34,7 +34,7 @@ export const TRADER_DEFINITIONS: TraderDefinitions = {
   valueDeepSlope: 3,
   valueMaxMultiple: 3,
   noiseAr: 0.7,
-  noiseShare: 0.5,
+  noiseShare: 0.4,
   informedMagnitudeRefPercent: 5,
   informedHoldDays: 1,
   informedDecayDays: 3,

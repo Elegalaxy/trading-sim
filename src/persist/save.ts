@@ -208,8 +208,14 @@ function typeRecord(value: unknown, path: string): string | null {
 
 function checkBook(value: unknown): string | null {
   const path = 'state.market.participants.book'
-  if (!isRecord(value) || !sameKeys(value, ['activeFromDay', 'mix', 'efficiency', 'carry', 'seenAnchor', 'pos', 'eventPos', 'vol', 'lastFlow'])) {
+  if (!isRecord(value) || !keysWithin(value, ['activeFromDay', 'mix', 'efficiency', 'carry', 'seenAnchor', 'pos', 'eventPos', 'vol', 'lastFlow'], ['history'])) {
     return `shape:${path}`
+  }
+  if (value.history !== undefined) {
+    if (!isRecord(value.history)) return `shape:${path}.history`
+    for (const [id, list] of Object.entries(value.history)) {
+      if (!Array.isArray(list) || list.some((item) => typeof item !== 'number' || !Number.isFinite(item))) return `shape:${path}.history.${id}`
+    }
   }
   const day = finiteNumber(value.activeFromDay, `${path}.activeFromDay`)
   if (day !== null) return day

@@ -14,7 +14,7 @@ export const TRADER_DEFINITIONS: TraderDefinitions = {
     informed: { base: 0.03, mixMin: 0.3, mixMax: 2, rate: 0.7 },
     news: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 1 },
     consensus: { base: 0.03, mixMin: 0.5, mixMax: 1.5, rate: 0.7 },
-    crowd: { base: 0.03, mixMin: 0.3, mixMax: 2.5, rate: 0.6 },
+    crowd: { base: 0.015, mixMin: 0.3, mixMax: 2.5, rate: 0.6 },
     trend: { base: 0.015, mixMin: 0.3, mixMax: 2, rate: 0.5 },
     contrarian: { base: 0.015, mixMin: 0.3, mixMax: 2, rate: 0.5 },
   },
@@ -27,7 +27,7 @@ export const TRADER_DEFINITIONS: TraderDefinitions = {
   carryCorrectionPerDay: 0.0005,
   // P3: 3 days (the plan's first guess) made value traders sell every fresh news move against a stale
   // anchor, so an average event gave back about a third of its day-0 move before recovering; 1.5 halves that.
-  anchorHalfLifeDays: 1.5,
+  anchorHalfLifeDays: 0.75,
   valueDeadBand: 0.01,
   valueFullGap: 0.1,
   valueDeepGap: 0.2,

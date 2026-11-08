@@ -319,6 +319,9 @@ export type TraderDefinitions = {
   crowdReturnScale: number
   crowdCapitulation: number
   crowdMoodClamp: number
+  /** Crowd: weight of the clamped 5-day return in its mood (default 0.5, buys tops) and the mood it falls to when it capitulates (default -0.5). */
+  crowdReturnWeight?: number
+  crowdCapitulatedMood?: number
   /** Trend: look-back and scale. */
   trendDays: number
   trendScale: number
@@ -1687,6 +1690,8 @@ export type TraderBook = {
   vol: Record<string, number>
   /** Yesterday's net non-noise flow per stock. */
   lastFlow: Record<string, number>
+  /** The last closes per stock, oldest first, for the trend, crowd and contrarian windows (Step P4). Optional so older books load. */
+  history?: Record<string, number[]>
 }
 
 export type MarketState = {

@@ -401,10 +401,13 @@ function priceWithTraders(
   const applied = applyCappedMove(previous, rawMove)
   const fillScale = applied.capped && rawMove !== 0 ? applied.delta / rawMove : 1
   const parts: ParticipantFlowEvent[] = []
-  for (const party of ['value', 'noise', 'informed', 'news', 'consensus'] as const) {
+  for (const party of ['value', 'noise', 'informed', 'news', 'consensus', 'crowd', 'trend', 'contrarian'] as const) {
     const dq = plan.dq[party]
     if (dq === 0) continue
-    const events = [...new Set(plan.trades.filter((trade) => trade.type === party).map((trade) => trade.key.split('|')[0]))]
+    const events =
+      party === 'crowd'
+        ? [...plan.crowdEvents]
+        : [...new Set(plan.trades.filter((trade) => trade.type === party).map((trade) => trade.key.split('|')[0]))]
     parts.push({
       kind: 'participantFlow',
       day,

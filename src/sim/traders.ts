@@ -59,7 +59,7 @@ export function assertTraderDefinitions(defs: TraderDefinitions): void {
 }
 
 /** Mix per type, each inside its range, with sum(base x mix) equal to sum(base). */
-function normalisedMix(defs: TraderDefinitions, draws: readonly number[]): Record<TraderType, number> {
+export function normalisedMix(defs: TraderDefinitions, draws: readonly number[]): Record<TraderType, number> {
   const raw = TRADER_TYPES.map((type, index) => {
     const row = defs.types[type]
     return row.mixMin + draws[index] * (row.mixMax - row.mixMin)
@@ -114,6 +114,7 @@ export function createTraderBook(defs: MarketDefinitions, seed: string, market: 
     eventPos: {},
     vol: {},
     lastFlow: {},
+    history: {},
   }
   for (const asset of defs.assets) {
     if (asset.kind !== 'stock') continue
@@ -124,13 +125,14 @@ export function createTraderBook(defs: MarketDefinitions, seed: string, market: 
     book.pos[asset.id] = zeroPositions()
     book.vol[asset.id] = 0
     book.lastFlow[asset.id] = 0
+    book.history![asset.id] = []
   }
   return book
 }
 
 // ---------------------------------------------------------------------------------------------
-// Core engine (price-model plan, Step P2) and information traders (Step P3). Value, noise, informed,
-// news and consensus trade here; crowd, trend and contrarian stay at zero until P4. `planTraderStock` works out one
+// Core engine (price-model plan, Step P2), information traders (Step P3) and crowd, trend and
+// contrarians (Step P4). All eight types trade here. `planTraderStock` works out one
 // stock's wanted trades and the raw move, `market.ts` applies the cap, and `commitTraderStock`
 // books what filled. Positions are dimensionless, in depth units: a trade of dq moves the price by
 // about dq x price. Nothing here draws: the one normal per stock comes from the market stream.
@@ -153,7 +155,41 @@ export type TraderPlan = {
   playerDq: number
   /** Today's per-event trades of the information types (already included in `dq`). Booked by `commitTraderStock`. */
   trades: readonly TraderEventTrade[]
+  /** The crowd's mood after the return chase and capitulation (clamped). */
+  crowdMood: number
+  /** The rumoured events the crowd holds a leg of today and each leg's wanted trade (the legs are part of `dq.crowd`). */
+  crowdEvents: readonly string[]
+  crowdLegs: Readonly<Record<string, number>>
   rawMove: number
+}
+
+const CROWD_RETURN_WEIGHT = 0.5
+const CROWD_CAPITULATED_MOOD = -0.5
+
+/** Return over `days` closes back from the last one (0 when there is not enough history). */
+function returnOver(closes: readonly number[], days: number): number {
+  if (closes.length <= days) return 0
+  return closes[closes.length - 1] / closes[closes.length - 1 - days] - 1
+}
+
+/** Fall from the highest close of the last `days` closes (0 or negative). */
+function drawdownOver(closes: readonly number[], days: number): number {
+  const recent = closes.slice(-(days + 1))
+  if (recent.length === 0) return 0
+  return recent[recent.length - 1] / Math.max(...recent) - 1
+}
+
+/**
+ * Self-reinforcing gain of the trend and crowd types per unit of 5-day return, at one mix and heat,
+ * and the value traders' pull per unit of gap, both per day (rate x weight x slope). The loop is
+ * stable while the first stays below 1 + the second (price-model plan, section 2 "Stability").
+ */
+export function loopGains(t: TraderDefinitions, mix: Record<TraderType, number>, heat: number): { selfGain: number; valuePull: number } {
+  const weight = (type: TraderType): number => t.types[type].base * mix[type]
+  const trend = t.types.trend.rate * (weight('trend') / t.trendScale)
+  const crowd = t.types.crowd.rate * weight('crowd') * heat * ((t.crowdReturnWeight ?? CROWD_RETURN_WEIGHT) / t.crowdReturnScale)
+  const valuePull = (t.types.value.rate * weight('value')) / t.valueFullGap
+  return { selfGain: trend + crowd, valuePull }
 }
 
 function clampNumber(value: number, low: number, high: number): number {
@@ -216,6 +252,41 @@ export function planTraderStock(
   const sigma = def.dailyVolatility * t.noiseShare * book.mix.noise
   dq.noise = t.types.noise.rate * (t.noiseAr * pos.noise + sigma * z - pos.noise)
 
+  // Crowd, trend and contrarians read the stock's own closes (kept by `startPartyDay`, newest last, the
+  // last one is the open of this step) and the crowd's mood from the feed (`participants.mood`: the
+  // rumour shares and headline chase, written by `startPartyDay`).
+  const participants = state.participants
+  // The book keeps its own closes (the old trend followers' list is short and shared with the hash): this
+  // step's open is pushed first, so the last entry is yesterday's close.
+  const history = (book.history ??= {})
+  const closes = (history[def.id] ??= [])
+  closes.push(previous)
+  while (closes.length > Math.max(t.trendDays, t.crowdReturnDays, t.crowdDrawdownDays) + 1) closes.shift()
+  const feedMood = participants?.mood[def.id] ?? 0
+  const heat = participants?.heat ?? 1
+  const ret5 = returnOver(closes, t.crowdReturnDays)
+  let mood = feedMood + (t.crowdReturnWeight ?? CROWD_RETURN_WEIGHT) * clampNumber(ret5 / t.crowdReturnScale, -1, 1)
+  if (drawdownOver(closes, t.crowdDrawdownDays) < t.crowdCapitulation && mood > 0) mood = t.crowdCapitulatedMood ?? CROWD_CAPITULATED_MOOD
+  mood = clampNumber(mood, -t.crowdMoodClamp, t.crowdMoodClamp)
+  const crowdSize = weight('crowd') * heat
+  dq.crowd = t.types.crowd.rate * (crowdSize * mood - pos.crowd)
+  // Trend: the last trendDays closes. Contrarians fade a stretched 5-day move, the crowd's mood and yesterday's
+  // net non-noise flow (`book.lastFlow`). Crowd and trend are the self-reinforcing terms checked by `loopGains`.
+  const trendTarget = weight('trend') * clampNumber(returnOver(closes, t.trendDays) / t.trendScale, -1, 1)
+  dq.trend = t.types.trend.rate * (trendTarget - pos.trend)
+  const flowSignal = clampNumber((book.lastFlow[def.id] ?? 0) / t.contrarianFlowScale, -1, 1)
+  const stretch = clampNumber((Math.abs(ret5) - t.contrarianThreshold) / t.contrarianScale, 0, 1) * Math.sign(ret5)
+  const contrarianTarget = -weight('contrarian') * (stretch + t.contrarianMoodWeight * mood + t.contrarianFlowWeight * flowSignal)
+  dq.contrarian = t.types.contrarian.rate * (contrarianTarget - pos.contrarian)
+  // The crowd's holding is split into one leg per rumoured event (`${event}|${stock}|crowd` in `eventPos`,
+  // read by the news traders as priced in) and the rest (return chase, headline chase, capitulation). A
+  // leg builds toward its share of the crowd's money at the crowd's rate; the legs are part of `dq.crowd`.
+  const crowdEvents = participants === undefined ? [] : Object.keys(participants.shares).filter((id) => crowdAssets(defs, id).includes(def.id))
+  const crowdLegs: Record<string, number> = {}
+  for (const id of crowdEvents) {
+    crowdLegs[id] = t.types.crowd.rate * (crowdSize * (participants?.shares[id] ?? 0) - (book.eventPos[positionKey(id, def.id, 'crowd')] ?? 0))
+  }
+
   const trades = traderDay?.trades[def.id] ?? []
   // A position that is only being wound back (after its hold) is handed to the market without a price
   // impact: the anchor, not the unwinding, decides where the price settles. See `TraderEventTrade.absorbed`.
@@ -226,7 +297,27 @@ export function planTraderStock(
   let demand = playerDq
   for (const type of TRADER_TYPES) demand += dq[type]
   const depthScale = depthScaleFor(t, book.vol[def.id] ?? 0, def.dailyVolatility)
-  return { anchor, depthScale, depthCents: depth, previous, dq, playerDq, trades, rawMove: (previous * demand) / depthScale }
+  return {
+    anchor,
+    depthScale,
+    depthCents: depth,
+    previous,
+    dq,
+    playerDq,
+    trades,
+    crowdMood: mood,
+    crowdEvents,
+    crowdLegs,
+    rawMove: (previous * demand) / depthScale,
+  }
+}
+
+/** The stocks a rumoured event id (`type:target:day`) reaches; [] for an unknown type. */
+function crowdAssets(defs: MarketDefinitions, eventId: string): string[] {
+  const [typeId, target] = eventId.split(':')
+  const type = eventTypeMap(defs).get(typeId)
+  if (type === undefined || target === undefined) return []
+  return affectedAssets(type.scope, target, defs.assets)
 }
 
 /**
@@ -258,6 +349,17 @@ export function commitTraderStock(
     if (type !== 'noise') others += plan.dq[type]
   }
   book.lastFlow[def.id] = fillScale * others
+  // The crowd's legs (what it holds on each rumoured event) book what filled; legs of events that are no
+  // longer rumoured (the claimed day passed) are dropped, so that part of the position is sold with the rest.
+  const live = new Set(plan.crowdEvents)
+  for (const key of Object.keys(book.eventPos)) {
+    const [eventId, asset, type] = key.split('|')
+    if (asset === def.id && type === 'crowd' && !live.has(eventId)) delete book.eventPos[key]
+  }
+  for (const eventId of plan.crowdEvents) {
+    const key = positionKey(eventId, def.id, 'crowd')
+    book.eventPos[key] = (book.eventPos[key] ?? 0) + fillScale * plan.crowdLegs[eventId]
+  }
   const move = Math.abs(newPrice / plan.previous - 1)
   const vol = book.vol[def.id] ?? 0
   book.vol[def.id] = vol + t.volEwma * (move - vol)

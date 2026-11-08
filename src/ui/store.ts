@@ -844,8 +844,8 @@ type ReportStart = {
   cash: number
   energy: number
   stress: number
-  /** Price at the clock and the side held, per asset. */
-  prices: Record<string, { cents: number; held: 'long' | 'short' | null }>
+  /** Price at the clock, the price the day opened at (yesterday's close) and the side held, per asset. */
+  prices: Record<string, { cents: number; open: number; held: 'long' | 'short' | null }>
   filtered: number
   verified: boolean
 }
@@ -854,7 +854,11 @@ function reportStart(game: GameState): ReportStart {
   const prices: ReportStart['prices'] = {}
   for (const def of definitions.assets) {
     const shares = game.positions[def.id]?.signedShares ?? 0
-    prices[def.id] = { cents: sessionPrice(game, def.id), held: shares > 0 ? 'long' : shares < 0 ? 'short' : null }
+    prices[def.id] = {
+      cents: sessionPrice(game, def.id),
+      open: game.market.assets[def.id]?.priceCents ?? 0,
+      held: shares > 0 ? 'long' : shares < 0 ? 'short' : null,
+    }
   }
   return {
     day: game.market.day,
@@ -977,8 +981,10 @@ function buildReport(game: GameState, start: ReportStart): DayReport {
   for (const def of definitions.assets) {
     const from = start.prices[def.id]
     const close = game.market.assets[def.id]?.priceCents
-    if (from === undefined || close === undefined || from.cents <= 0) continue
-    moves.push({ asset: def.id, percent: ((close - from.cents) / from.cents) * 100, held: from.held })
+    // The day's move: from where the day opened (yesterday's close), not from the clock, so ending the day
+    // at the close still shows how the stock did.
+    if (from === undefined || close === undefined || from.open <= 0) continue
+    moves.push({ asset: def.id, percent: ((close - from.open) / from.open) * 100, held: from.held })
   }
   return {
     day: playerDay(start.day),

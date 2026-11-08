@@ -1,6 +1,6 @@
 // End-of-day popup. It opens after End day with what the close did to the account: the
 // trading equity change, money in and out (salary, bills, interest, funding, fees), each
-// asset's move since the clock, energy and stress, and anything to act on. Payday, a bill,
+// asset's move over the day, energy and stress, and anything to act on. Payday, a bill,
 // a liquidation or a job change always opens it. Quiet days open it only while
 // "Show after every day" is on. It also says how many feed items stress bent that
 // day, since bent items carry no mark while the day is played.
@@ -117,7 +117,7 @@ export function DayReport({ report }: { report: Report | null }) {
         <p className="report-moves">
           {held.length > 0 ? (
             <>
-              Your positions:{' '}
+              Your positions (day move):{' '}
               {held.map((move, index) => (
                 <span key={move.asset}>
                   {index > 0 ? ', ' : ''}
@@ -133,7 +133,7 @@ export function DayReport({ report }: { report: Report | null }) {
           ) : null}
           {others.length > 0 ? (
             <span className="report-muted">
-              {held.length > 0 ? 'Others: ' : 'Moves since the clock: '}
+              {held.length > 0 ? 'Others: ' : 'Day moves: '}
               {others.map((move) => `${move.asset} ${move.percent > 0 ? '+' : ''}${move.percent.toFixed(2)}%`).join(', ')}.
             </span>
           ) : null}

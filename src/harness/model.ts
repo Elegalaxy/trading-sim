@@ -1,9 +1,8 @@
 // Market model choice for the harness (price-model plan, Step P2). `current` is
-// MARKET_DEFINITIONS as shipped; `traders` adds the trader definitions so the traders model
-// prices the run. Both batch and single runs read it from --model.
+// MARKET_DEFINITIONS with `traders` stripped (the old price model); `traders` is the shipped
+// MARKET_DEFINITIONS (traders wired in at P6). Both batch and single runs read it from --model.
 
-import { MARKET_DEFINITIONS } from '../content/index.ts'
-import { TRADER_DEFINITIONS } from '../content/traders.ts'
+import { MARKET_DEFINITIONS, TRADER_DEFINITIONS } from '../content/index.ts'
 import type { MarketDefinitions } from '../sim/types.ts'
 
 export const MODEL_NAMES = ['current', 'traders'] as const
@@ -14,5 +13,7 @@ export function isModelName(value: string): value is ModelName {
 }
 
 export function definitionsFor(model: ModelName): MarketDefinitions {
-  return model === 'traders' ? { ...MARKET_DEFINITIONS, traders: TRADER_DEFINITIONS } : MARKET_DEFINITIONS
+  if (model === 'traders') return { ...MARKET_DEFINITIONS, traders: TRADER_DEFINITIONS }
+  const { traders: _traders, ...withoutTraders } = MARKET_DEFINITIONS
+  return withoutTraders
 }

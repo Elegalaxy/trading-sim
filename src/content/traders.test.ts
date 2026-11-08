@@ -18,9 +18,9 @@ function weightSum(seed: string): number {
 }
 
 describe('trader content', () => {
-  it('passes the definitions check and is not wired into the market', () => {
+  it('passes the definitions check and is wired into the market', () => {
     expect(() => assertTraderDefinitions(TRADER_DEFINITIONS)).not.toThrow()
-    expect(MARKET_DEFINITIONS).not.toHaveProperty('traders')
+    expect(MARKET_DEFINITIONS.traders).toBe(TRADER_DEFINITIONS)
     expect(TRADER_DEFINITIONS.types.crowd.mixMin).toBe(0.3)
     expect(TRADER_DEFINITIONS.types.crowd.mixMax).toBe(2.5)
   })

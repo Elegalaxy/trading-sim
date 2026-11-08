@@ -7,6 +7,7 @@ import { LAYOFF_DEFINITIONS } from './layoffs.ts'
 import { PARTICIPANT_DEFINITIONS } from './participants.ts'
 import { SOCIAL_DEFINITIONS } from './socialFeed.ts'
 import { SOURCE_DEFINITIONS } from './sources.ts'
+import { TRADER_DEFINITIONS } from './traders.ts'
 
 export const MARKET_DEFINITIONS = {
   assets: ASSET_DEFINITIONS,
@@ -17,6 +18,7 @@ export const MARKET_DEFINITIONS = {
   calendar: CALENDAR_DEFINITIONS,
   sources: SOURCE_DEFINITIONS,
   layoffs: LAYOFF_DEFINITIONS,
+  traders: TRADER_DEFINITIONS,
 } satisfies MarketDefinitions
 
 export { ASSET_DEFINITIONS } from './assets.ts'
@@ -27,6 +29,7 @@ export { LAYOFF_DEFINITIONS } from './layoffs.ts'
 export { PARTICIPANT_DEFINITIONS } from './participants.ts'
 export { SOCIAL_DEFINITIONS } from './socialFeed.ts'
 export { SOURCE_DEFINITIONS } from './sources.ts'
+export { TRADER_DEFINITIONS } from './traders.ts'
 export { CONSUMABLE_DEFINITIONS } from './consumables.ts'
 export { JOB_DEFINITIONS } from './jobs.ts'
 export { SOCIAL_POST_DEFINITIONS, SOCIAL_POST_SOURCE_ID } from './socialPosts.ts'

@@ -5,7 +5,7 @@ import { shownFeed } from '../sim/distortion.ts'
 import { createMarket, stepMarketDay } from '../sim/market.ts'
 import { createRng } from '../sim/rng.ts'
 import { formatEvent } from '../sim/log.ts'
-import type { FairValueChangeEvent, LogEvent } from '../sim/types.ts'
+import type { FairValueChangeEvent, LogEvent, MarketDefinitions } from '../sim/types.ts'
 import { CALENDAR_DEFINITIONS } from './calendar.ts'
 import { ENVIRONMENT_DEFINITIONS } from './environment.ts'
 import { EVENT_DEFINITIONS } from './events.ts'
@@ -193,6 +193,29 @@ describe('provisional content', () => {
         `rate type=${eventType.id} rolls=${tally.rolls} fires=${tally.fires} rate=${rate} expected=${expected} base=${eventType.chance} relative=${relative}`,
       )
       expect(relative).toBeLessThanOrEqual(0.1)
+    }
+  })
+
+  it('keeps every non-price line of the demo 30-day log equal to the old price model', () => {
+    // P6: wiring in traders changes price lines only. The old model is MARKET_DEFINITIONS without traders.
+    const { traders: _traders, ...oldDefinitions } = MARKET_DEFINITIONS
+    const run = (defs: MarketDefinitions): string[] => {
+      const state = createMarket(defs, 'demo')
+      const events: LogEvent[] = [...state.log]
+      for (let day = 0; day < 30; day += 1) {
+        stepMarketDay(state, defs)
+        for (const event of state.log) events.push(event)
+      }
+      return events.map((event) => formatEvent(event))
+    }
+    const priceKinds = ['kind=priceStep', 'kind=indexStep', 'kind=participantFlow']
+    const nonPrice = (lines: string[]): string[] => lines.filter((line) => !priceKinds.some((kind) => line.includes(kind)))
+    const oldLines = nonPrice(run(oldDefinitions))
+    const newLines = nonPrice(run(MARKET_DEFINITIONS))
+    expect(newLines.length).toBeGreaterThan(1500)
+    expect(newLines).toEqual(oldLines)
+    for (const kind of ['eventRoll', 'eventDirection', 'eventMagnitude', 'effectApplied', 'fairValueChange', 'envDrift', 'calendarItem', 'headline', 'rumourGenerated', 'noiseRoll']) {
+      expect(newLines.some((line) => line.includes(`kind=${kind} `))).toBe(true)
     }
   })
 

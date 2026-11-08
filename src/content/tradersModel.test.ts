@@ -17,11 +17,13 @@ const stocks = defs.assets.filter((asset) => asset.kind === 'stock')
 
 describe('traders model on the real market', () => {
   it('leaves the current market unchanged when traders are not in the definitions', () => {
-    const a = createMarket(MARKET_DEFINITIONS, 'same')
-    const b = createMarket(MARKET_DEFINITIONS, 'same')
+    // P6: MARKET_DEFINITIONS now carries traders, so the old model is the same set with traders removed.
+    const { traders: _traders, ...old } = MARKET_DEFINITIONS
+    const a = createMarket(old, 'same')
+    const b = createMarket(old, 'same')
     for (let i = 0; i < 30; i += 1) {
-      stepMarketDay(a, MARKET_DEFINITIONS)
-      stepMarketDay(b, MARKET_DEFINITIONS)
+      stepMarketDay(a, old)
+      stepMarketDay(b, old)
     }
     expect(a.participants?.book).toBeUndefined()
     expect(stateHash(a)).toBe(stateHash(b))

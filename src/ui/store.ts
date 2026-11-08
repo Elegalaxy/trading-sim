@@ -18,6 +18,7 @@ import { loanWarning, pendingSale, saleText } from './loanText.ts'
 import { copyConsumables } from '../sim/stats.ts'
 import { assertResting, upgradeResting } from '../sim/resting.ts'
 import { sessionPrice } from '../sim/session.ts'
+import { createOldSaveBook } from '../sim/traders.ts'
 import { bentPostCount } from '../sim/social.ts'
 import { daySummary, type DaySummary } from '../sim/summary.ts'
 import type { ForcedSaleEvent, GameState, LiquidationEvent } from '../sim/types.ts'
@@ -331,6 +332,19 @@ export function continueGame(save: SaveFile): string | null {
       throw new Error('save has no order-flow parties')
     }
     if ((definitions.social !== undefined) !== (game.social !== undefined)) throw new Error('save has no social feed')
+    // A save from before the traders model gets a book. The session's previewed close for today is kept
+    // (the old code prints it); the new model starts on the next End day.
+    const parts = game.market.participants
+    if (definitions.traders !== undefined && parts !== undefined && parts.book === undefined) {
+      const closes: Record<string, number> = {}
+      if (game.session.day === game.market.day) {
+        for (const [id, bars] of Object.entries(game.session.bars)) {
+          const last = bars[bars.length - 1]
+          if (last !== undefined) closes[id] = last.close
+        }
+      }
+      parts.book = createOldSaveBook(definitions, checked.save.seed, game.market, closes)
+    }
   } catch (error) {
     console.error('[save] rejected reason=shape', error)
     debugLog('[save]', 'rejected reason=shape')

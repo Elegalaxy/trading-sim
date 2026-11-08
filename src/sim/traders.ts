@@ -130,6 +130,29 @@ export function createTraderBook(defs: MarketDefinitions, seed: string, market: 
   return book
 }
 
+/**
+ * A book for a save made before the traders model (Step P7). The session already holds today's
+ * previewed close, which End day will print with the old code, so the model starts one day later:
+ * `activeFromDay` is market.day + 2. The lagged anchor starts at the price the model will see on
+ * that first day (the previewed close when given, else today's price), so value traders open
+ * with no gap to trade and nothing jumps on load; they then pull toward the real anchor.
+ */
+export function createOldSaveBook(
+  defs: MarketDefinitions,
+  seed: string,
+  market: MarketState,
+  previewCloses?: Readonly<Record<string, number>>,
+): TraderBook {
+  const book = createTraderBook(defs, seed, market)
+  book.activeFromDay = market.day + 2
+  for (const asset of defs.assets) {
+    if (asset.kind !== 'stock') continue
+    const close = previewCloses?.[asset.id]
+    book.seenAnchor[asset.id] = close !== undefined && Number.isFinite(close) && close > 0 ? close : market.assets[asset.id].priceCents
+  }
+  return book
+}
+
 // ---------------------------------------------------------------------------------------------
 // Core engine (price-model plan, Step P2), information traders (Step P3) and crowd, trend and
 // contrarians (Step P4). All eight types trade here. `planTraderStock` works out one

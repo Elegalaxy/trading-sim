@@ -3,20 +3,21 @@ import { describe, expect, it } from 'vitest'
 import { MARKET_DEFINITIONS as defs } from '../content/index.ts'
 import { DAMAGED_SAVE_MESSAGE, SAVE_VERSION, type SaveFile } from '../persist/save.ts'
 import { applyCommand, createGame, endDay } from '../sim/game.ts'
-import type { GameState } from '../sim/types.ts'
+import { stateHash } from '../sim/hash.ts'
+import type { GameState, MarketDefinitions } from '../sim/types.ts'
 import { continueGame, getSnapshot } from './store.ts'
 
 function useTradingStoreSnapshot() {
   return getSnapshot().run
 }
 
-function save(mutate: (state: Record<string, any>) => void, days = 0): SaveFile {
-  const game = createGame(defs, 'old')
+function save(mutate: (state: Record<string, any>) => void, days = 0, rules: MarketDefinitions = defs): SaveFile {
+  const game = createGame(rules, 'old')
   for (let day = 0; day < days; day += 1) {
-    applyCommand(game, defs, { type: 'skip' })
-    endDay(game, defs)
+    applyCommand(game, rules, { type: 'skip' })
+    endDay(game, rules)
   }
-  applyCommand(game, defs, { type: 'skip' })
+  applyCommand(game, rules, { type: 'skip' })
   const state = structuredClone(game) as unknown as Record<string, any>
   mutate(state)
   return { version: SAVE_VERSION, savedAt: '2026-11-04T00:00:00.000Z', mode: 'seeded', seed: 'old', state: state as unknown as GameState }
@@ -110,6 +111,58 @@ describe('saves from before the market depth work', () => {
       s.market.calendarRolls.forEach((roll: Record<string, unknown>) => delete roll.expected)
     }, 8)
     expect(continueGame(withRoll)).toBe(DAMAGED_SAVE_MESSAGE)
+  })
+
+  describe('a save from before the traders model', () => {
+    // Played with the old rules, as a pre-P6 save was: its session preview is the old model's.
+    const pre = () => save(() => {}, 3, (({ traders: _traders, ...rest }) => rest)(defs))
+    const loadedGame = (file: SaveFile): GameState => {
+      expect(continueGame(file)).toBeNull()
+      return structuredClone(getSnapshot().run!.game)
+    }
+    const anchors = (game: GameState): number[] =>
+      game.market.log.flatMap((e) => (e.kind === 'priceStep' && e.anchor !== undefined ? [e.anchor] : []))
+
+    it('gets a book that starts two days on, with the lagged anchor at the previewed close', () => {
+      const game = loadedGame(pre())
+      const book = game.market.participants?.book
+      expect(book?.activeFromDay).toBe(game.market.day + 2)
+      for (const [id, seen] of Object.entries(book!.seenAnchor)) {
+        const bars = game.session.bars[id]
+        expect(seen).toBe(bars[bars.length - 1].close)
+      }
+    })
+
+    it('prints the session close on the next End day, then runs the new model the day after', () => {
+      const game = loadedGame(pre())
+      const closes = Object.fromEntries(Object.entries(game.session.bars).map(([id, bars]) => [id, bars[bars.length - 1].close]))
+      applyCommand(game, defs, { type: 'skip' })
+      endDay(game, defs)
+      for (const [id, close] of Object.entries(closes)) expect(game.market.assets[id].priceCents).toBe(close)
+      expect(anchors(game)).toEqual([])
+      applyCommand(game, defs, { type: 'skip' })
+      endDay(game, defs)
+      expect(anchors(game).length).toBeGreaterThan(0)
+    })
+
+    it('is deterministic', () => {
+      const run = (): string => {
+        const game = loadedGame(pre())
+        for (let i = 0; i < 4; i += 1) {
+          applyCommand(game, defs, { type: 'skip' })
+          endDay(game, defs)
+        }
+        return stateHash(game.market)
+      }
+      expect(run()).toBe(run())
+    })
+
+    it('leaves a save that already has a book untouched', () => {
+      const file = save(() => {}, 3)
+      const before = structuredClone(file.state.market.participants?.book)
+      expect(before).toBeDefined()
+      expect(loadedGame(file).market.participants?.book).toEqual(before)
+    })
   })
 
   it.each([

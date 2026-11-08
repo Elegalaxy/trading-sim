@@ -3334,3 +3334,47 @@ dl.estimate dd {
 .deposit-term-on .deposit-term-gain {
   color: #eaecef;
 }
+
+/* Guide search: the box sits in the head; results replace the topic list and body. */
+.guide-head {
+  gap: var(--gap-m, 12px);
+}
+
+.exchange .guide-head .guide-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 320px;
+  margin-left: auto;
+}
+
+.guide-results {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+}
+
+.exchange .guide-results button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+.exchange .guide-results button span {
+  color: #b7bdc6;
+  font-size: 0.9em;
+}
+
+.guide-empty {
+  color: #b7bdc6;
+  padding: 8px 10px;
+}

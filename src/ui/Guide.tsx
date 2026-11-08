@@ -5,7 +5,8 @@
 // margin, payday) keep their exact numbers. It does not add a mechanic. When a rule
 // changes, change the matching topic here.
 
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { searchTopics } from './guideSearch'
 
 type Topic = { id: string; title: string; body: ReactNode }
 
@@ -601,7 +602,10 @@ const TOPICS: readonly Topic[] = [
 
 export function Guide({ onClose }: { onClose: () => void }) {
   const [topic, setTopic] = useState(TOPICS[0]?.id ?? 'day')
+  const [query, setQuery] = useState('')
   const current = TOPICS.find((item) => item.id === topic) ?? TOPICS[0]
+  const hits = useMemo(() => searchTopics(TOPICS, query), [query])
+  const searching = query.trim() !== ''
 
   return (
     <div className="report-backdrop" onClick={onClose}>
@@ -617,18 +621,48 @@ export function Guide({ onClose }: { onClose: () => void }) {
       >
         <div className="guide-head">
           <h2 id="guide-title">Guide</h2>
+          <input
+            type="search"
+            className="guide-search"
+            placeholder="Search the guide"
+            aria-label="Search the guide"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
           <button type="button" className="primary" autoFocus onClick={onClose}>
             Close
           </button>
         </div>
-        <nav className="guide-topics" aria-label="Guide topics">
-          {TOPICS.map((item) => (
-            <button key={item.id} type="button" aria-pressed={item.id === topic} onClick={() => setTopic(item.id)}>
-              {item.title}
-            </button>
-          ))}
-        </nav>
-        <div className="guide-body">{current?.body}</div>
+        {searching ? (
+          <ul className="guide-results" aria-label="Search results">
+            {hits.length === 0 ? <li className="guide-empty">No topic matches &ldquo;{query.trim()}&rdquo;.</li> : null}
+            {hits.map((hit) => (
+              <li key={hit.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTopic(hit.id)
+                    setQuery('')
+                  }}
+                >
+                  <strong>{hit.title}</strong>
+                  <span>{hit.snippet}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <nav className="guide-topics" aria-label="Guide topics">
+              {TOPICS.map((item) => (
+                <button key={item.id} type="button" aria-pressed={item.id === topic} onClick={() => setTopic(item.id)}>
+                  {item.title}
+                </button>
+              ))}
+            </nav>
+            <div className="guide-body">{current?.body}</div>
+          </>
+        )}
       </section>
     </div>
   )
